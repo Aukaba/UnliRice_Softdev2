@@ -17,19 +17,20 @@ Before you begin, ensure you have the following installed:
 1.  **Clone the repository**
     Open your terminal and run:
     ```bash
-    git clone [https://github.com/Scorch879/t_racks_softdev_1.git](https://github.com/Scorch879/t_racks_softdev_1.git)
+    
+    git clone [https://github.com/Aukaba/UnliRice_Softdev2.git](https://github.com/Aukaba/UnliRice_Softdev2.git)
     ```
     or
     Open Github Desktop and on the toolbar select File > Clone Repository  > URL Tab and then paste the following:
      ```bash
-     https://github.com/Scorch879/t_racks_softdev_1.git
+     https://github.com/Aukaba/UnliRice_Softdev2.git
      ```
     Check the local path to ensure you're putting the cloned repository in your desired directory.
 
     
 3.  **Navigate to the project directory**
     ```bash
-    cd t_racks_softdev_1
+    cd UnliRice_Softdev2
     ```
 
 4.  **Install dependencies**
