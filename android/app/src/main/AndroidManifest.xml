@@ -6,7 +6,7 @@
     <uses-feature android:name="android.hardware.location.gps" />
 
     <application
-        android:label="not_joyride"
+        android:label="AutoMate"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <!-- Google Maps API key should be declared *inside the application tag*.

@@ -1,4 +1,4 @@
-// Basic widget tests for the Not JOYride application.
+// Basic widget tests for the AutoMate application.
 //
 // Verifies that the home page displays appropriate elements and that tapping
 // the start/end button records rides correctly.
@@ -6,13 +6,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:not_joyride/main.dart';
+import 'package:automate/main.dart';
 
 void main() {
   // Skipped: GoogleMap cannot render in widget tests reliably
   testWidgets('Initial home page shows map placeholder and nearby list',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const NotJoyrideApp());
+    await tester.pumpWidget(const AutoMateApp());
 
     // basic elements still present
     expect(find.text('Nearby Mechanics'), findsOneWidget);
@@ -23,13 +23,13 @@ void main() {
 
   // we can also verify GoogleMap widget exists at runtime once running on device
   testWidgets('Home page contains GoogleMap widget', (WidgetTester tester) async {
-    await tester.pumpWidget(const NotJoyrideApp());
+    await tester.pumpWidget(const AutoMateApp());
     expect(find.byType(GoogleMap), findsOneWidget);
   }, skip: true);
 
   testWidgets('Tapping different bottom nav items switches pages',
       (WidgetTester tester) async {
-    await tester.pumpWidget(const NotJoyrideApp());
+    await tester.pumpWidget(const AutoMateApp());
 
     // home content is map placeholder (may appear twice in nav)
     expect(find.byIcon(Icons.map), findsWidgets);

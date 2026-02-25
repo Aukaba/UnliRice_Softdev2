@@ -1,16 +1,3 @@
-// The Google Maps API key is injected via environment variables to avoid
-// committing it to source control. Create a `.env` file at the project root
-// (example included) containing:
-//
-//     GOOGLE_MAPS_API_KEY=your_real_key_here
-//
-// Android: the build.gradle uses manifest placeholders to substitute the
-//         variable into AndroidManifest.xml. See android/app/build.gradle.
-// iOS: you can read dotenv at runtime and set the key in Info.plist or use the
-//      Xcode build settings to pass it similarly.
-//
-// The app loads the .env file at startup using flutter_dotenv.
-
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
@@ -21,7 +8,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // start loading .env in background; don't block app startup
+  
   dotenv.load(fileName: ".env").then((_) {
     debugPrint('dotenv loaded: ${dotenv.env}');
   }).catchError((e, st) {
@@ -29,16 +16,16 @@ void main() {
     debugPrint('$st');
   });
 
-  runApp(const NotJoyrideApp());
+  runApp(const AutoMateApp());
 }
 
-class NotJoyrideApp extends StatelessWidget {
-  const NotJoyrideApp({super.key});
+class AutoMateApp extends StatelessWidget {
+  const AutoMateApp({super.key});
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Not JOYride',
+      title: 'AutoMate',
       theme: ThemeData(
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
@@ -65,7 +52,7 @@ class _LoginPageState extends State<LoginPage> {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setBool('logged_in', true);
     await prefs.setBool('first_time', true);
-    // push to main page which will progress to registration automatically
+    
     if (mounted) {
       Navigator.of(context).pushReplacement(
           MaterialPageRoute(builder: (_) => const MainPage()));
@@ -171,7 +158,7 @@ class _MainPageState extends State<MainPage> {
     if (_loggedIn) {
       _firstTime = prefs.getBool('first_time') ?? true;
       if (_firstTime) {
-        // send to registration flow
+        
         WidgetsBinding.instance.addPostFrameCallback((_) {
           Navigator.of(context).push(MaterialPageRoute(
               builder: (_) => const RegistrationPage()));
@@ -286,14 +273,14 @@ class RideHomePage extends StatefulWidget {
 }
 
 class _RideHomePageState extends State<RideHomePage> {
-  // no ride logic on map page; keeping placeholder list of nearby items
+  
   final List<String> _nearby = ['Mechanic A', 'Mechanic B', 'Mechanic C'];
 
-  // controller for google map (unused but may be helpful later)
+  
   late GoogleMapController _mapController;
 
   static const CameraPosition _initialPosition = CameraPosition(
-    target: LatLng(14.5995, 120.9842), // example coords (Manila)
+    target: LatLng(14.5995, 120.9842), 
     zoom: 12,
   );
 
@@ -303,7 +290,7 @@ class _RideHomePageState extends State<RideHomePage> {
 
     serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
-      // Location services are not enabled don't continue
+      
       return;
     }
 
@@ -334,7 +321,7 @@ class _RideHomePageState extends State<RideHomePage> {
       backgroundColor: Colors.grey[200],
       body: Column(
         children: [
-          // header section
+          
           SafeArea(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
@@ -347,7 +334,7 @@ class _RideHomePageState extends State<RideHomePage> {
                   ),
                   const SizedBox(width: 8),
                   const Expanded(
-                      child: Text('Not JOYride',
+                      child: Text('AutoMate',
                           style: TextStyle(color: Colors.white))),
                   IconButton(
                     icon: const Icon(Icons.notifications, color: Colors.white),
@@ -357,7 +344,7 @@ class _RideHomePageState extends State<RideHomePage> {
               ),
             ),
           ),
-          // map occupies remaining space
+          
           Expanded(
             child: GoogleMap(
               initialCameraPosition: _initialPosition,
@@ -365,8 +352,8 @@ class _RideHomePageState extends State<RideHomePage> {
                 _mapController = controller;
                 _goToMyLocation();
               },
-              myLocationEnabled: true, // shows blue dot
-              myLocationButtonEnabled: true, // shows locate button
+              myLocationEnabled: true, 
+              myLocationButtonEnabled: true, 
               zoomControlsEnabled: false,
             ),
           ),

@@ -1,6 +1,6 @@
 {
-    "name": "not_joyride",
-    "short_name": "not_joyride",
+    "name": "AutoMate",
+    "short_name": "AutoMate",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
