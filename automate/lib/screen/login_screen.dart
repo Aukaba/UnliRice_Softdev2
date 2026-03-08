@@ -1,9 +1,85 @@
 import 'package:flutter/material.dart';
-import '../main.dart'; // To access MyHomePage
-import 'signup_screen.dart'; // To access SignupScreen
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'signup_screen.dart';
 
-class LoginScreen extends StatelessWidget {
+class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
+
+  @override
+  State<LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+  bool _isLoading = false;
+  String? _errorMessage;
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _login() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
+    try {
+      final supabase = Supabase.instance.client;
+
+      final response = await supabase.auth.signInWithPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+      );
+
+      if (response.user == null) {
+        throw Exception('Login failed. Please check your credentials.');
+      }
+
+      final uid = response.user!.id;
+
+      // Check which table this user belongs to
+      final mechanic = await supabase
+          .from('mechanic')
+          .select('uid')
+          .eq('uid', uid)
+          .maybeSingle();
+
+      if (!mounted) return;
+
+      if (mechanic != null) {
+        // Navigate to Mechanic home
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const Scaffold(
+              body: Center(child: Text('Mechanic Home Screen')),
+            ),
+          ),
+        );
+      } else {
+        // Navigate to Driver/User home
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const Scaffold(
+              body: Center(child: Text('Driver Home Screen')),
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      setState(() {
+        _errorMessage = e.toString().replaceAll('Exception: ', '');
+      });
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -23,50 +99,68 @@ class LoginScreen extends StatelessWidget {
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 32),
-              const TextField(
-                decoration: InputDecoration(
+
+              // Email
+              TextField(
+                controller: _emailController,
+                keyboardType: TextInputType.emailAddress,
+                decoration: const InputDecoration(
                   labelText: 'Email',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.email),
                 ),
               ),
               const SizedBox(height: 16),
-              const TextField(
+
+              // Password
+              TextField(
+                controller: _passwordController,
                 obscureText: true,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Password',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.lock),
                 ),
               ),
               const SizedBox(height: 24),
+
+              // Error message
+              if (_errorMessage != null)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: Text(
+                    _errorMessage!,
+                    style: const TextStyle(color: Colors.red),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+
+              // Login Button
               ElevatedButton(
-                onPressed: () {
-                  // Connects login to main
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const MyHomePage(title: 'Main Screen'),
-                    ),
-                  );
-                },
+                onPressed: _isLoading ? null : _login,
                 style: ElevatedButton.styleFrom(
                   minimumSize: const Size(double.infinity, 50),
                 ),
-                child: const Text('Login'),
+                child: _isLoading
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Text('Login'),
               ),
               const SizedBox(height: 16),
+
+              // Go to Sign Up
               TextButton(
                 onPressed: () {
-                  // Navigate to Signup screen
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (context) => const SignupScreen(),
-                    ),
+                        builder: (context) => const SignupScreen()),
                   );
                 },
-                child: const Text('Don\'t have an account? Sign up'),
+                child: const Text("Don't have an account? Sign up"),
               ),
             ],
           ),
