@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../Logic/auth_logic.dart';
 import 'signup_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -29,30 +30,14 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final supabase = Supabase.instance.client;
-
-      final response = await supabase.auth.signInWithPassword(
+      final accountType = await AuthLogic.login(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
-      if (response.user == null) {
-        throw Exception('Login failed. Please check your credentials.');
-      }
-
-      final uid = response.user!.id;
-
-      // Check which table this user belongs to
-      final mechanic = await supabase
-          .from('mechanic')
-          .select('uid')
-          .eq('uid', uid)
-          .maybeSingle();
-
       if (!mounted) return;
 
-      if (mechanic != null) {
-        // Navigate to Mechanic home
+      if (accountType == 'mechanic') {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -62,7 +47,6 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         );
       } else {
-        // Navigate to Driver/User home
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
@@ -99,8 +83,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 32),
-
-              // Email
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
@@ -111,8 +93,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-
-              // Password
               TextField(
                 controller: _passwordController,
                 obscureText: true,
@@ -122,9 +102,22 @@ class _LoginScreenState extends State<LoginScreen> {
                   prefixIcon: Icon(Icons.lock),
                 ),
               ),
-              const SizedBox(height: 24),
-
-              // Error message
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                          builder: (context) =>
+                              const ForgotPasswordScreen()),
+                    );
+                  },
+                  child: const Text('Forgot Password?'),
+                ),
+              ),
+              const SizedBox(height: 8),
               if (_errorMessage != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
@@ -134,8 +127,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     textAlign: TextAlign.center,
                   ),
                 ),
-
-              // Login Button
               ElevatedButton(
                 onPressed: _isLoading ? null : _login,
                 style: ElevatedButton.styleFrom(
@@ -150,8 +141,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     : const Text('Login'),
               ),
               const SizedBox(height: 16),
-
-              // Go to Sign Up
               TextButton(
                 onPressed: () {
                   Navigator.push(

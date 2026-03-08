@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+import '../Logic/auth_logic.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -15,9 +15,7 @@ class _SignupScreenState extends State<SignupScreen> {
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  // Account type: 'mechanic' or 'driver'
   String _accountType = 'driver';
-
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -38,34 +36,14 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     try {
-      final supabase = Supabase.instance.client;
-
-      // 1. Create auth user
-      final authResponse = await supabase.auth.signUp(
+      await AuthLogic.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
+        firstName: _firstNameController.text.trim(),
+        lastName: _lastNameController.text.trim(),
+        phoneNumber: _phoneController.text.trim(),
+        accountType: _accountType,
       );
-
-      final uid = authResponse.user?.id;
-      if (uid == null) throw Exception('Sign up failed. Please try again.');
-
-      final data = {
-        'uid': uid,
-        'first_name': _firstNameController.text.trim(),
-        'last_name': _lastNameController.text.trim(),
-        'email': _emailController.text.trim(),
-        'phone_number': _phoneController.text.trim(),
-      };
-
-      // 2. Insert into the correct table based on account type
-      if (_accountType == 'mechanic') {
-        await supabase.from('mechanic').insert({
-          ...data,
-          'verified': false,
-        });
-      } else {
-        await supabase.from('user').insert(data);
-      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -78,7 +56,7 @@ class _SignupScreenState extends State<SignupScreen> {
             backgroundColor: Colors.green,
           ),
         );
-        Navigator.pop(context); // Go back to login
+        Navigator.pop(context);
       }
     } catch (e) {
       setState(() {
@@ -108,7 +86,7 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               const SizedBox(height: 24),
 
-              // ── Account Type Toggle ──
+              // Account type toggle
               const Text(
                 'I am signing up as a:',
                 style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
@@ -134,7 +112,7 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               const SizedBox(height: 24),
 
-              // First Name & Last Name
+              // First & Last Name
               Row(
                 children: [
                   Expanded(
@@ -174,7 +152,7 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Phone Number
+              // Phone
               TextField(
                 controller: _phoneController,
                 keyboardType: TextInputType.phone,
@@ -198,7 +176,7 @@ class _SignupScreenState extends State<SignupScreen> {
               ),
               const SizedBox(height: 16),
 
-              // Error message
+              // Error
               if (_errorMessage != null)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 12),
@@ -209,7 +187,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   ),
                 ),
 
-              // Sign Up Button
+              // Sign Up button
               ElevatedButton(
                 onPressed: _isLoading ? null : _signUp,
                 style: ElevatedButton.styleFrom(
