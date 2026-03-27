@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../Logic/auth_logic.dart';
+import '../../Logic/auth_logic.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
 

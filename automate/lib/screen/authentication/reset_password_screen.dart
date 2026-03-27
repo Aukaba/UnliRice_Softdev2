@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../Logic/auth_logic.dart';
+import '../../Logic/auth_logic.dart';
 import 'login_screen.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
