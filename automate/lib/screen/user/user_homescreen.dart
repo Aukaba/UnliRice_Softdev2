@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'user_dashboard.dart';
 
 class UserHomeScreen extends StatefulWidget {
   const UserHomeScreen({super.key});
@@ -200,7 +201,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () {
-            // TODO: Navigate to ask for help flow
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const UserDashboardScreen()),
+            );
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
