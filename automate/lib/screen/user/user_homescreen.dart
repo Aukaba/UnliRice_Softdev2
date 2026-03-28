@@ -3,14 +3,15 @@ import 'package:google_fonts/google_fonts.dart';
 import 'user_dashboard.dart';
 
 class UserHomeScreen extends StatefulWidget {
-  const UserHomeScreen({super.key});
+  const UserHomeScreen({
+    super.key,
+  });
 
   @override
   State<UserHomeScreen> createState() => _UserHomeScreenState();
 }
 
 class _UserHomeScreenState extends State<UserHomeScreen> {
-  int _currentIndex = 0; // Default active index is Map
 
   @override
   Widget build(BuildContext context) {
@@ -118,7 +119,6 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 
@@ -227,61 +227,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
       ),
     );
   }
-
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade300, width: 1)),
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        backgroundColor: Colors.white,
-        type: BottomNavigationBarType.fixed,
-        elevation: 0,
-        selectedItemColor: const Color(0xFF2B5A82), // Deep Blue specified
-        unselectedItemColor: Colors.grey.shade400,
-        selectedLabelStyle: GoogleFonts.inriaSans(fontSize: 12, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: GoogleFonts.inriaSans(fontSize: 12),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(bottom: 4.0),
-              child: Icon(Icons.location_on),
-            ),
-            label: 'Map',
-          ),
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(bottom: 4.0),
-              child: Icon(Icons.notifications_none),
-            ),
-            label: 'Activity',
-          ),
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(bottom: 4.0),
-              child: Icon(Icons.chat_bubble_outline),
-            ),
-            label: 'Messages',
-          ),
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(bottom: 4.0),
-              child: Icon(Icons.person_outline),
-            ),
-            label: 'Profile',
-          ),
-        ],
-      ),
-    );
-  }
 }
+
 
 /// Reusable stateless widget for Recent Activity cards
 class ActivityCard extends StatelessWidget {

@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/calendar_widget.dart';
-
 class UserDashboardScreen extends StatefulWidget {
   const UserDashboardScreen({super.key});
 
@@ -10,7 +9,6 @@ class UserDashboardScreen extends StatefulWidget {
 }
 
 class _UserDashboardScreenState extends State<UserDashboardScreen> {
-  int _currentIndex = 0; // Standard bottom nav index for Map
   bool isEmergency = true; // State for Service Type toggle
 
   @override
@@ -315,61 +313,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
-    );
-  }
-
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade300, width: 1)),
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        backgroundColor: Colors.white,
-        type: BottomNavigationBarType.fixed,
-        elevation: 0,
-        selectedItemColor: const Color(0xFF2B5A82), // Theme deep blue
-        unselectedItemColor: Colors.grey.shade400,
-        selectedLabelStyle: GoogleFonts.inriaSans(fontSize: 12, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: GoogleFonts.inriaSans(fontSize: 12),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(bottom: 4.0),
-              child: Icon(Icons.location_on),
-            ),
-            label: 'Map',
-          ),
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(bottom: 4.0),
-              child: Icon(Icons.notifications_none),
-            ),
-            label: 'Activity',
-          ),
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(bottom: 4.0),
-              child: Icon(Icons.chat_bubble_outline),
-            ),
-            label: 'Messages',
-          ),
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(bottom: 4.0),
-              child: Icon(Icons.person_outline),
-            ),
-            label: 'Profile',
-          ),
-        ],
-      ),
     );
   }
 }
+

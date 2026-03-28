@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../../Logic/auth_logic.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
-import '../user/user_homescreen.dart';
+import '../user/navigation_shell.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -53,7 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => const UserHomeScreen(),
+            builder: (context) => const UserNavigationShell(),
           ),
         );
       }
