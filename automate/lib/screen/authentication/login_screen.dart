@@ -4,6 +4,7 @@ import '../../Logic/auth_logic.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
 import '../user/navigation_shell.dart';
+import '../admin/admin_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -40,7 +41,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
-      if (accountType == 'mechanic') {
+      if (accountType == 'admin') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const AdminDashboardScreen(),
+          ),
+        );
+      } else if (accountType == 'mechanic') {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
