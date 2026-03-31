@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'user_homescreen.dart';
 import '../messages/user_message_list.dart';
 import 'user_activity.dart';
+import 'user_profile.dart';
 
 class UserNavigationShell extends StatefulWidget {
   const UserNavigationShell({super.key});
@@ -46,20 +47,8 @@ class _UserNavigationShellState extends State<UserNavigationShell> {
           // Index 1: Activity
           const UserActivityScreen(),
           const UserMessageListScreen(),
-          // Profile Placeholder
-          Container(
-            color: Colors.white,
-            child: Center(
-              child: Text(
-                "Profile Page Placeholder",
-                style: GoogleFonts.montserrat(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black54,
-                ),
-              ),
-            ),
-          ),
+          // Index 3: Profile
+          const UserProfileScreen(),
         ],
       ),
       bottomNavigationBar: Container(
