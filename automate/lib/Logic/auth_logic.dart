@@ -74,7 +74,8 @@ class AuthLogic {
 
   // ---------- public API ----------
 
-  /// Signs in the user and returns the table they belong to: 'mechanic' or 'driver'.
+  /// Signs in the user and returns the role they belong to:
+  /// 'admin' | 'mechanic' | 'driver'.
   static Future<String> login({
     required String email,
     required String password,
@@ -91,13 +92,24 @@ class AuthLogic {
 
       final uid = response.user!.id;
 
+      // Check admin first
+      final admin = await _supabase
+          .from('admin')
+          .select('uid')
+          .eq('uid', uid)
+          .maybeSingle();
+      if (admin != null) return 'admin';
+
+      // Then mechanic
       final mechanic = await _supabase
           .from('mechanic')
           .select('uid')
           .eq('uid', uid)
           .maybeSingle();
+      if (mechanic != null) return 'mechanic';
 
-      return mechanic != null ? 'mechanic' : 'driver';
+      // Default to driver
+      return 'driver';
     } on AuthException catch (e) {
       throw Exception(_friendly(e));
     } on PostgrestException catch (e) {
@@ -134,6 +146,44 @@ class AuthLogic {
         throw Exception('Sign-up failed. Please try again.');
       }
       // Profile row is inserted automatically by the on_auth_user_created trigger.
+    } on AuthException catch (e) {
+      throw Exception(_friendly(e));
+    } on PostgrestException catch (e) {
+      throw Exception(_friendly(e));
+    } catch (e) {
+      if (e is Exception) rethrow;
+      throw Exception(_friendly(e));
+    }
+  }
+
+  /// Signs up a new admin account.
+  /// The DB trigger [on_auth_admin_created] automatically inserts a row into
+  /// the [admin] table using the metadata passed here.
+  ///
+  /// Fields stored: first_name, last_name, email, position.
+  static Future<void> signUpAdmin({
+    required String email,
+    required String password,
+    required String firstName,
+    required String lastName,
+    required String position,
+  }) async {
+    try {
+      final authResponse = await _supabase.auth.signUp(
+        email: email,
+        password: password,
+        data: {
+          'first_name': firstName,
+          'last_name': lastName,
+          'position': position,
+          'account_type': 'admin', // triggers handle_new_admin()
+        },
+      );
+
+      if (authResponse.user == null) {
+        throw Exception('Admin sign-up failed. Please try again.');
+      }
+      // Admin row is inserted automatically by the on_auth_admin_created trigger.
     } on AuthException catch (e) {
       throw Exception(_friendly(e));
     } on PostgrestException catch (e) {
