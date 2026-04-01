@@ -1,9 +1,40 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'user_looking_mechanic.dart';
 
-class UserDashHelpScreen extends StatelessWidget {
-  const UserDashHelpScreen({super.key});
+class UserLookingMechanicScreen extends StatefulWidget {
+  const UserLookingMechanicScreen({super.key});
+
+  @override
+  State<UserLookingMechanicScreen> createState() => _UserLookingMechanicScreenState();
+}
+
+class _UserLookingMechanicScreenState extends State<UserLookingMechanicScreen>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _pulseController;
+  late Animation<double> _scaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    // Setup pulse animation
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1000),
+    )..repeat(reverse: true);
+
+    _scaleAnimation = Tween<double>(begin: 0.90, end: 1.1).animate(
+      CurvedAnimation(
+        parent: _pulseController,
+        curve: Curves.easeInOut,
+      ),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -141,7 +172,7 @@ class UserDashHelpScreen extends StatelessWidget {
                     ],
                   ),
                   child: Text(
-                    "Your mechanic can view your location and is currently on the way.",
+                    "Currently searching for a mechanic.",
                     style: GoogleFonts.montserrat(
                       color: Colors.white,
                       fontSize: 13,
@@ -180,141 +211,92 @@ class UserDashHelpScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      "The mechanic is on the way",
+                      "Looking for a mechanic",
                       style: GoogleFonts.inriaSans(
                         fontSize: 22,
                         fontWeight: FontWeight.w700,
                         color: Colors.black,
                       ),
                     ),
-                    const SizedBox(height: 6),
-                    Text(
-                      "Pickup location is shown on the map (near CIT-U)",
-                      style: GoogleFonts.montserrat(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w400,
-                        color: Colors.black87,
-                      ),
-                    ),
-                    const SizedBox(height: 24),
+                    const SizedBox(height: 16),
 
-                    // Mechanic Profile Card
+                    // Location Box
                     Container(
                       width: double.infinity,
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        borderRadius: BorderRadius.circular(16),
+                        borderRadius: BorderRadius.circular(12),
                         border: Border.all(color: Colors.grey.shade300),
                       ),
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
+                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
+                      child: Row(
                         children: [
-                          // Profile Row
-                          Row(
-                            children: [
-                              // Avatar
-                              Container(
-                                width: 56,
-                                height: 56,
+                          // Blue ring icon
+                          Container(
+                            width: 20,
+                            height: 20,
+                            decoration: const BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: Color(0xFF005BAC), // Inner solid blue
+                            ),
+                            child: Center(
+                              child: Container(
+                                width: 8,
+                                height: 8,
                                 decoration: const BoxDecoration(
                                   shape: BoxShape.circle,
-                                  color: Color(0xFF0F2644), // Very dark blue bg
-                                ),
-                                child: Center(
-                                  child: Icon(
-                                    Icons.person,
-                                    size: 38,
-                                    color: const Color(0xFF19456B).withOpacity(0.8), // Inner outline color
-                                  ),
+                                  color: Colors.white,
                                 ),
                               ),
-                              const SizedBox(width: 16),
-                              // Name & Rating
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      "ROMEL ESCAPE",
-                                      style: GoogleFonts.inriaSans(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w700,
-                                        color: Colors.black,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Text(
-                                          "5.0",
-                                          style: GoogleFonts.montserrat(
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.w600,
-                                            color: Colors.black87,
-                                          ),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        const Icon(
-                                          Icons.star,
-                                          color: Color(0xFFFFC107),
-                                          size: 14,
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              // Plate or Mechanic Code
-                              Text(
-                                "HDHSIKE",
-                                style: GoogleFonts.inriaSans(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.black,
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          // Chat Box Button Area
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade300),
-                              borderRadius: BorderRadius.circular(24),
                             ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.sms_outlined, // Speech bubble with dots
-                                  color: Colors.grey.shade400,
-                                  size: 24,
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  "Chat with your mechanic",
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w400,
-                                    color: Colors.grey.shade600,
-                                  ),
-                                ),
-                              ],
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              "Cebu Institute of Technology - University",
+                              style: GoogleFonts.montserrat(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w400,
+                                color: Colors.black87,
+                              ),
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                         ],
                       ),
                     ),
 
-                    const SizedBox(height: 32),
+                    const SizedBox(height: 48),
+
+                    // Breathing Logo Area
+                    Center(
+                      child: SizedBox(
+                        height: 120, // Control logo size
+                        child: AnimatedBuilder(
+                          animation: _scaleAnimation,
+                          builder: (context, child) {
+                            return Transform.scale(
+                              scale: _scaleAnimation.value,
+                              child: child,
+                            );
+                          },
+                          child: Image.asset(
+                            'assets/images/AutoMate_logo.png',
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+                    ),
+
+                    const SizedBox(height: 48),
 
                     // Cancel Booking Button
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
                         onPressed: () {
-                          // Handle cancel booking
+                          // Handle cancel searching
                           Navigator.pop(context);
                         },
                         style: ElevatedButton.styleFrom(
@@ -332,36 +314,6 @@ class UserDashHelpScreen extends StatelessWidget {
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Temporary Button to Navigate to UserLookingMechanicScreen
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const UserLookingMechanicScreen(),
-                            ),
-                          );
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueGrey,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: Text(
-                          "TEMP: Go to Looking Mechanic",
-                          style: GoogleFonts.inriaSans(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
