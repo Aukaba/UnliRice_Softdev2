@@ -2,8 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'user_successful_booking.dart';
 
-class UserDashboardMatchScreen extends StatelessWidget {
+class UserDashboardMatchScreen extends StatefulWidget {
   const UserDashboardMatchScreen({super.key});
+
+  @override
+  State<UserDashboardMatchScreen> createState() => _UserDashboardMatchScreenState();
+}
+
+class _UserDashboardMatchScreenState extends State<UserDashboardMatchScreen> {
+  final TextEditingController _chatController = TextEditingController();
+
+  @override
+  void dispose() {
+    _chatController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -276,32 +289,49 @@ class UserDashboardMatchScreen extends StatelessWidget {
                             ],
                           ),
                           const SizedBox(height: 20),
-                          // Chat Box Button Area
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.shade300),
-                              borderRadius: BorderRadius.circular(24),
-                            ),
-                            child: Row(
-                              children: [
-                                Icon(
-                                  Icons.sms_outlined, // Speech bubble with dots
-                                  color: Colors.grey.shade400,
-                                  size: 24,
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  "Chat with your mechanic",
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w400,
-                                    color: Colors.grey.shade600,
+                          // Chat Input Row
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                                  decoration: BoxDecoration(
+                                    border: Border.all(color: Colors.grey.shade300),
+                                    borderRadius: BorderRadius.circular(24),
+                                  ),
+                                  child: TextField(
+                                    controller: _chatController,
+                                    decoration: InputDecoration(
+                                      icon: Icon(Icons.sms_outlined, color: Colors.grey.shade400, size: 22),
+                                      hintText: "Chat with your mechanic",
+                                      hintStyle: GoogleFonts.montserrat(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w400,
+                                        color: Colors.grey.shade500,
+                                      ),
+                                      border: InputBorder.none,
+                                      isDense: true,
+                                    ),
                                   ),
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 10),
+                              GestureDetector(
+                                onTap: () {
+                                  if (_chatController.text.trim().isNotEmpty) {
+                                    _chatController.clear();
+                                  }
+                                },
+                                child: Container(
+                                  padding: const EdgeInsets.all(10),
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF19456B),
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),

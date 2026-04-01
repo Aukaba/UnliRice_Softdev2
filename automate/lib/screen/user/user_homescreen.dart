@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'user_dashboard.dart';
+import 'user_activity.dart';
 
 class UserHomeScreen extends StatefulWidget {
+  final VoidCallback? onViewAllActivity;
   const UserHomeScreen({
     super.key,
+    this.onViewAllActivity,
   });
 
   @override
@@ -17,107 +20,117 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          // Header Section
-          _buildHeader(),
-          
-          // Main Body Scrollable Section
-          Expanded(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Primary Action Button
-                    _buildAskForHelpButton(),
-                    
-                    const SizedBox(height: 32),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Header Section
+            _buildHeader(),
+            
+            // Main Body Section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Primary Action Button
+                  _buildAskForHelpButton(),
+                  
+                  const SizedBox(height: 32),
 
-                    // Recent Activity Header
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.access_time, size: 24, color: Colors.black),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Recent Activity',
-                              style: GoogleFonts.montserrat(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.black,
-                              ),
+                  // Recent Activity Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.access_time, size: 24, color: Colors.black),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Recent Activity',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black,
                             ),
-                          ],
-                        ),
-                        Text(
+                          ),
+                        ],
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          if (widget.onViewAllActivity != null) {
+                            widget.onViewAllActivity!();
+                          } else {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const UserActivityScreen()),
+                            );
+                          }
+                        },
+                        child: Text(
                           'View All',
                           style: GoogleFonts.inriaSans(
                             fontSize: 14,
                             color: const Color(0xFF2B5A82),
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
 
-                    // Recent Activity Cards
-                    const ActivityCard(
-                      title: 'Engine Check',
-                      timeAgo: 'Completed 2 hours ago',
-                    ),
-                    const SizedBox(height: 12),
-                    const ActivityCard(
-                      title: 'Tire Replacement',
-                      timeAgo: 'Completed yesterday',
-                    ),
-                    const SizedBox(height: 12),
-                    const ActivityCard(
-                      title: 'Oil Change',
-                      timeAgo: 'Completed 3 days ago',
-                    ),
-                    
-                    const SizedBox(height: 32),
+                  // Recent Activity Cards
+                  const ActivityCard(
+                    title: 'Engine Check',
+                    timeAgo: 'Completed 2 hours ago',
+                  ),
+                  const SizedBox(height: 12),
+                  const ActivityCard(
+                    title: 'Tire Replacement',
+                    timeAgo: 'Completed yesterday',
+                  ),
+                  const SizedBox(height: 12),
+                  const ActivityCard(
+                    title: 'Oil Change',
+                    timeAgo: 'Completed 3 days ago',
+                  ),
+                  
+                  const SizedBox(height: 32),
 
-                    // Your Stats Header
-                    Text(
-                      'Your Stats',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
+                  // Your Stats Header
+                  Text(
+                    'Your Stats',
+                    style: GoogleFonts.montserrat(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Stats Card Placeholder
+                  Container(
+                    width: double.infinity,
+                    height: 100, // Matching the proportion shown in design
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE0E0E0),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      'Total Requests',
+                      style: GoogleFonts.inriaSans(
+                        fontSize: 15,
+                        color: Colors.black54,
                       ),
                     ),
-                    const SizedBox(height: 16),
-
-                    // Stats Card Placeholder
-                    Container(
-                      width: double.infinity,
-                      height: 100, // Matching the proportion shown in design
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE0E0E0),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Text(
-                        'Total Requests',
-                        style: GoogleFonts.inriaSans(
-                          fontSize: 15,
-                          color: Colors.black54,
-                        ),
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 24),
-                  ],
-                ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
