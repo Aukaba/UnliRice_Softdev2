@@ -1,19 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:math' as math;
-
-// Basic placeholder for the Next Screen as requested
-class ResetPasswordScreen extends StatelessWidget {
-  const ResetPasswordScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Reset Password')),
-      body: const Center(child: Text('Reset Password Screen coming soon')),
-    );
-  }
-}
+import '../../Logic/authentication/reset_password.dart';
+import 'reset_password_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -26,6 +15,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _emailController = TextEditingController();
   final _otpController = TextEditingController();
 
+  bool _isSending = false;
+  bool _isSubmitting = false;
+  String? _errorMessage;
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -33,17 +26,63 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     super.dispose();
   }
 
-  void _sendOtp() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('OTP command executed!')),
-    );
+  Future<void> _sendOtp() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      if (mounted) {
+        setState(() => _errorMessage = 'Please enter your email.');
+      }
+      return;
+    }
+
+    setState(() {
+      _errorMessage = null;
+      _isSending = true;
+    });
+
+    try {
+      await ResetPasswordLogic.forgotPassword(email: email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('OTP sent to your email!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) setState(() => _errorMessage = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
   }
 
-  void _submit() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
-    );
+  Future<void> _submit() async {
+    final email = _emailController.text.trim();
+    final otp = _otpController.text.trim();
+    
+    if (email.isEmpty || otp.isEmpty) {
+      if (mounted) {
+        setState(() => _errorMessage = 'Please enter email and OTP.');
+      }
+      return;
+    }
+
+    setState(() {
+      _errorMessage = null;
+      _isSubmitting = true;
+    });
+
+    try {
+      await ResetPasswordLogic.verifyOtp(email: email, token: otp);
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
+        );
+      }
+    } catch (e) {
+      if (mounted) setState(() => _errorMessage = e.toString().replaceFirst('Exception: ', ''));
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
   }
 
   @override
@@ -163,7 +202,31 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           ),
                         ),
                         
-                        const SizedBox(height: 48),
+                        if (_errorMessage != null) ...[
+                          const SizedBox(height: 16),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(8),
+                              border: Border.all(color: Colors.red.shade200),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.error_outline, color: Colors.red.shade700, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    _errorMessage!,
+                                    style: TextStyle(color: Colors.red.shade700, fontSize: 13),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        
+                        const SizedBox(height: 24),
 
                         // Enter Email Field mapped correctly
                         Align(
@@ -203,7 +266,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
                                   child: ElevatedButton(
-                                    onPressed: _sendOtp,
+                                    onPressed: _isSending ? null : _sendOtp,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(0xFF5584AC), // Exact requested Blue
                                       foregroundColor: Colors.white,
@@ -213,13 +276,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                       elevation: 0,
                                       padding: const EdgeInsets.symmetric(horizontal: 24),
                                     ),
-                                    child: Text(
-                                      'Send',
-                                      style: GoogleFonts.montserrat(
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 14,
-                                      ),
-                                    ),
+                                    child: _isSending
+                                        ? const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                          )
+                                        : Text(
+                                            'Send',
+                                            style: GoogleFonts.montserrat(
+                                              fontWeight: FontWeight.w500,
+                                              fontSize: 14,
+                                            ),
+                                          ),
                                   ),
                                 ),
                               ],
@@ -267,7 +336,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           width: double.infinity,
                           height: 56,
                           child: ElevatedButton(
-                            onPressed: _submit,
+                            onPressed: _isSubmitting ? null : _submit,
                             style: ElevatedButton.styleFrom(
                               backgroundColor: const Color(0xFF9F9F9F), // Exact requested deep grey
                               foregroundColor: Colors.white,
@@ -276,13 +345,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               ),
                               elevation: 0,
                             ),
-                            child: Text(
-                              'Enter',
-                              style: GoogleFonts.montserrat(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
+                            child: _isSubmitting
+                                ? const SizedBox(
+                                    width: 24,
+                                    height: 24,
+                                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                  )
+                                : Text(
+                                    'Enter',
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                           ),
                         ),
 

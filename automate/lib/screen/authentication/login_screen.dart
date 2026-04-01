@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../../Logic/auth_logic.dart';
+import '../../Logic/authentication/login.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
 import '../user/navigation_shell.dart';
@@ -65,7 +65,7 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final accountType = await AuthLogic.login(
+      final accountType = await LoginLogic.login(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
