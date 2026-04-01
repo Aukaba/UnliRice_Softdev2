@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'user_dashboard_match.dart';
 
 class UserLookingMechanicScreen extends StatefulWidget {
   const UserLookingMechanicScreen({super.key});
@@ -314,6 +315,36 @@ class _UserLookingMechanicScreenState extends State<UserLookingMechanicScreen>
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
                             letterSpacing: 0.5,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    // Temporary Button to Navigate to UserDashHelpScreen
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const UserDashboardMatchScreen(),
+                            ),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blueGrey,
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                        child: Text(
+                          "TEMP: Go to Dash Help",
+                          style: GoogleFonts.inriaSans(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
