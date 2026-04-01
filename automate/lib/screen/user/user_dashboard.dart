@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/calendar_widget.dart';
-import 'user_dash_help.dart';
+import 'user_looking_mechanic.dart';
 
 class UserDashboardScreen extends StatefulWidget {
   const UserDashboardScreen({super.key});
@@ -329,7 +329,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (context) => const UserDashHelpScreen(),
+                                  builder: (context) => const UserLookingMechanicScreen(),
                                 ),
                               );
                             },

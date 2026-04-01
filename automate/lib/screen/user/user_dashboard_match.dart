@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'user_looking_mechanic.dart';
+import 'user_successful_booking.dart';
 
-class UserDashHelpScreen extends StatelessWidget {
-  const UserDashHelpScreen({super.key});
+class UserDashboardMatchScreen extends StatelessWidget {
+  const UserDashboardMatchScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -337,7 +337,7 @@ class UserDashHelpScreen extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    // Temporary Button to Navigate to UserLookingMechanicScreen
+                    // Temporary Button to Navigate to UserMatchMechScreen
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton(
@@ -345,7 +345,7 @@ class UserDashHelpScreen extends StatelessWidget {
                           Navigator.push(
                             context,
                             MaterialPageRoute(
-                              builder: (context) => const UserLookingMechanicScreen(),
+                              builder: (context) => const UserSuccessfulBookingScreen(),
                             ),
                           );
                         },
@@ -358,7 +358,7 @@ class UserDashHelpScreen extends StatelessWidget {
                           ),
                         ),
                         child: Text(
-                          "TEMP: Go to Looking Mechanic",
+                          "TEMP: Go to Match Mech",
                           style: GoogleFonts.inriaSans(
                             fontSize: 15,
                             fontWeight: FontWeight.w700,
