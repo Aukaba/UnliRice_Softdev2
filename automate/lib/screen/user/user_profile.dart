@@ -35,7 +35,7 @@ class UserProfileScreen extends StatelessWidget {
                   // Vehicle Section
                   _buildSectionTitle(Icons.directions_car, 'Vehicle'),
                   const SizedBox(height: 12),
-                  _buildVehicleCard(),
+                  _buildVehicleCard(context),
                   const SizedBox(height: 24),
                   // Contact Info Section
                   _buildSectionTitle(Icons.phone_in_talk_outlined, 'Contact Info'),
@@ -49,7 +49,7 @@ class UserProfileScreen extends StatelessWidget {
                   _buildContactInfoCard(
                     icon: Icons.phone_outlined,
                     label: 'Phone',
-                    value: 'KimMinji@gmail.com', // Matching the mockup exactly
+                    value: '0987 678 6578',
                   ),
                   const SizedBox(height: 40),
                 ],
@@ -195,7 +195,7 @@ class UserProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildVehicleCard() {
+  Widget _buildVehicleCard(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -213,21 +213,86 @@ class UserProfileScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Vehicle',
-            style: GoogleFonts.montserrat(
-              fontSize: 13,
-              color: Colors.grey.shade600,
-              fontWeight: FontWeight.w500,
-            ),
+          // Header row: label + Add/Edit button
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Vehicle',
+                style: GoogleFonts.montserrat(
+                  fontSize: 13,
+                  color: Colors.grey.shade600,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Row(
+                children: [
+                  // Add vehicle button
+                  GestureDetector(
+                    onTap: () {
+                      _showVehicleDialog(context, isEdit: false);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF19456B),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.add, color: Colors.white, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Add',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: 8),
+                  // Edit vehicle button
+                  GestureDetector(
+                    onTap: () {
+                      _showVehicleDialog(context, isEdit: true);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFBC02D),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.edit, color: Colors.white, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Edit',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
           ),
-          const SizedBox(height: 4),
+          const SizedBox(height: 8),
           Text(
             'Honda Civic 2021',
             style: GoogleFonts.montserrat(
               fontSize: 18,
               fontWeight: FontWeight.bold,
-              color: const Color(0xFF19456B), // Deep Blue mapping App's primary
+              color: const Color(0xFF19456B),
             ),
           ),
           const SizedBox(height: 20),
@@ -238,7 +303,7 @@ class UserProfileScreen extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Vehicle',
+                      'Plate No.',
                       style: GoogleFonts.montserrat(
                         fontSize: 13,
                         color: Colors.grey.shade600,
@@ -282,6 +347,69 @@ class UserProfileScreen extends StatelessWidget {
                 ),
               ),
             ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showVehicleDialog(BuildContext context, {required bool isEdit}) {
+    final nameController = TextEditingController(text: isEdit ? 'Honda Civic 2021' : '');
+    final plateController = TextEditingController(text: isEdit ? 'CA 1A2B3C' : '');
+    final mileageController = TextEditingController(text: isEdit ? '24.5K km' : '');
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          isEdit ? 'Edit Vehicle' : 'Add Vehicle',
+          style: GoogleFonts.montserrat(fontWeight: FontWeight.bold),
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: nameController,
+              decoration: InputDecoration(
+                labelText: 'Vehicle Name',
+                labelStyle: GoogleFonts.montserrat(),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: plateController,
+              decoration: InputDecoration(
+                labelText: 'Plate Number',
+                labelStyle: GoogleFonts.montserrat(),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: mileageController,
+              decoration: InputDecoration(
+                labelText: 'Mileage',
+                labelStyle: GoogleFonts.montserrat(),
+                border: const OutlineInputBorder(),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text('Cancel', style: GoogleFonts.montserrat(color: Colors.grey)),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF19456B),
+            ),
+            child: Text(
+              isEdit ? 'Save' : 'Add',
+              style: GoogleFonts.montserrat(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),

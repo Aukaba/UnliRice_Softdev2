@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import '../messages/user_message_list.dart';
 
 class UserActivityScreen extends StatelessWidget {
-  const UserActivityScreen({super.key});
+  final VoidCallback? onMessageTap;
+  const UserActivityScreen({super.key, this.onMessageTap});
 
   @override
   Widget build(BuildContext context) {
@@ -56,6 +58,7 @@ class UserActivityScreen extends StatelessWidget {
                     padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
                     children: [
                       _buildActivityCard(
+                        context: context,
                         name: 'Romel Escape',
                         service: 'Engine Diagnostics',
                         status: 'Completed',
@@ -63,8 +66,10 @@ class UserActivityScreen extends StatelessWidget {
                         price: '₱5,000',
                         rating: '4.8',
                         avatarColor: const Color(0xFF6A8FB0),
+                        onMessageTap: onMessageTap,
                       ),
                       _buildActivityCard(
+                        context: context,
                         name: 'Sarah Johnson',
                         service: 'Tire Replacement',
                         status: 'Completed',
@@ -72,8 +77,10 @@ class UserActivityScreen extends StatelessWidget {
                         price: '₱3,067',
                         rating: '5.0',
                         avatarColor: const Color(0xFF6A8FB0),
+                        onMessageTap: onMessageTap,
                       ),
                       _buildActivityCard(
+                        context: context,
                         name: 'Regin Mercado',
                         service: 'Oil Change',
                         status: 'Completed',
@@ -81,8 +88,10 @@ class UserActivityScreen extends StatelessWidget {
                         price: '₱3,067',
                         rating: '4.5',
                         avatarColor: const Color(0xFF6A8FB0),
+                        onMessageTap: onMessageTap,
                       ),
                       _buildActivityCard(
+                        context: context,
                         name: 'Mike Wilson',
                         service: 'Battery Check',
                         status: 'Canceled',
@@ -90,6 +99,7 @@ class UserActivityScreen extends StatelessWidget {
                         price: '₱3,067',
                         rating: '4.5',
                         avatarColor: const Color(0xFF6A8FB0),
+                        onMessageTap: onMessageTap,
                       ),
                     ],
                   ),
@@ -103,6 +113,7 @@ class UserActivityScreen extends StatelessWidget {
   }
 
   Widget _buildActivityCard({
+    required BuildContext context,
     required String name,
     required String service,
     required String status,
@@ -110,6 +121,7 @@ class UserActivityScreen extends StatelessWidget {
     required String price,
     required String rating,
     required Color avatarColor,
+    VoidCallback? onMessageTap,
   }) {
     bool isCompleted = status == 'Completed';
     return Container(
@@ -223,8 +235,18 @@ class UserActivityScreen extends StatelessWidget {
                 ),
                 const Spacer(),
                 InkWell(
+                  borderRadius: BorderRadius.circular(8),
                   onTap: () {
-                    // Navigate to message or handle click
+                    if (onMessageTap != null) {
+                      onMessageTap();
+                    } else {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const UserMessageListScreen(),
+                        ),
+                      );
+                    }
                   },
                   child: Padding(
                     padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),

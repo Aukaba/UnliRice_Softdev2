@@ -1,8 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class UserSuccessfulBookingScreen extends StatelessWidget {
+class UserSuccessfulBookingScreen extends StatefulWidget {
   const UserSuccessfulBookingScreen({super.key});
+
+  @override
+  State<UserSuccessfulBookingScreen> createState() => _UserSuccessfulBookingScreenState();
+}
+
+class _UserSuccessfulBookingScreenState extends State<UserSuccessfulBookingScreen> {
+  final TextEditingController _chatController = TextEditingController();
+  int _rating = 0; // 0 = no rating selected
+
+  @override
+  void dispose() {
+    _chatController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -68,20 +82,44 @@ class UserSuccessfulBookingScreen extends StatelessWidget {
                     style: GoogleFonts.montserrat(
                       fontSize: 14,
                       fontWeight: FontWeight.w500,
-                      color: Colors.black87,
+                      color: Colors.black,
                     ),
                   ),
                   const SizedBox(height: 12),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
-                    children: List.generate(
-                      5,
-                      (index) => const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 4.0),
-                        child: Icon(Icons.star, size: 40, color: Color(0xFFB0BEC5)), // Grey stars
+                    children: List.generate(5, (index) {
+                      final filled = index < _rating;
+                      return GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            _rating = index + 1;
+                          });
+                        },
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                          child: Icon(
+                            filled ? Icons.star : Icons.star_border,
+                            size: 40,
+                            color: filled ? const Color(0xFFFFC107) : const Color(0xFFB0BEC5),
+                          ),
+                        ),
+                      );
+                    }),
+                  ),
+                  if (_rating > 0) ...[  
+                    const SizedBox(height: 8),
+                    Center(
+                      child: Text(
+                        ["", "Poor", "Fair", "Good", "Very Good", "Excellent"][_rating],
+                        style: GoogleFonts.montserrat(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFFFFC107),
+                        ),
                       ),
                     ),
-                  ),
+                  ],
                 ],
               ),
             ),
@@ -157,32 +195,49 @@ class UserSuccessfulBookingScreen extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: 20),
-                  // Chat Box Button Area
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade300),
-                      borderRadius: BorderRadius.circular(24),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(
-                          Icons.sms_outlined, // Speech bubble with dots
-                          color: Colors.grey.shade400,
-                          size: 24,
-                        ),
-                        const SizedBox(width: 12),
-                        Text(
-                          "Chat with your mechanic",
-                          style: GoogleFonts.montserrat(
-                            fontSize: 14,
-                            fontWeight: FontWeight.w400,
-                            color: Colors.grey.shade600,
+                  // Chat Input Row
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 4.0),
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(24),
+                          ),
+                          child: TextField(
+                            controller: _chatController,
+                            decoration: InputDecoration(
+                              icon: Icon(Icons.sms_outlined, color: Colors.grey.shade400, size: 22),
+                              hintText: "Chat with your mechanic",
+                              hintStyle: GoogleFonts.montserrat(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
+                                color: Colors.grey.shade500,
+                              ),
+                              border: InputBorder.none,
+                              isDense: true,
+                            ),
                           ),
                         ),
-                      ],
-                    ),
+                      ),
+                      const SizedBox(width: 10),
+                      GestureDetector(
+                        onTap: () {
+                          if (_chatController.text.trim().isNotEmpty) {
+                            _chatController.clear();
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF19456B),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.send_rounded, color: Colors.white, size: 20),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -198,7 +253,7 @@ class UserSuccessfulBookingScreen extends StatelessWidget {
                     "Consumables Used:",
                     style: GoogleFonts.montserrat(
                       fontWeight: FontWeight.w700,
-                      color: Colors.grey.shade600,
+                      color: Colors.black,
                     ),
                   ),
                   const SizedBox(height: 16),
@@ -209,9 +264,9 @@ class UserSuccessfulBookingScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Tire: ₱2,500", style: GoogleFonts.montserrat(color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+                            Text("Tire: ₱2,500", style: GoogleFonts.montserrat(color: Colors.black, fontWeight: FontWeight.w500)),
                             const SizedBox(height: 8),
-                            Text("Gear Oil: ₱200", style: GoogleFonts.montserrat(color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+                            Text("Gear Oil: ₱200", style: GoogleFonts.montserrat(color: Colors.black, fontWeight: FontWeight.w500)),
                           ],
                         ),
                       ),
@@ -219,9 +274,9 @@ class UserSuccessfulBookingScreen extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text("Travel Cost: ₱40", style: GoogleFonts.montserrat(color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+                            Text("Travel Cost: ₱40", style: GoogleFonts.montserrat(color: Colors.black, fontWeight: FontWeight.w500)),
                             const SizedBox(height: 8),
-                            Text("Labor: ₱700", style: GoogleFonts.montserrat(color: Colors.grey.shade600, fontWeight: FontWeight.w500)),
+                            Text("Labor: ₱700", style: GoogleFonts.montserrat(color: Colors.black, fontWeight: FontWeight.w500)),
                           ],
                         ),
                       ),
@@ -235,7 +290,7 @@ class UserSuccessfulBookingScreen extends StatelessWidget {
                     "Total Bill: ₱3,440",
                     style: GoogleFonts.montserrat(
                       fontWeight: FontWeight.bold,
-                      color: Colors.grey.shade600,
+                      color: Colors.black,
                     ),
                   ),
                 ],

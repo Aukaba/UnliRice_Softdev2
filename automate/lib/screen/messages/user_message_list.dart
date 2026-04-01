@@ -68,98 +68,108 @@ class _UserMessageListScreenState extends State<UserMessageListScreen> {
                 // MechMate Top Card
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFFFBF00), width: 3),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.15),
-                          blurRadius: 10,
-                          offset: const Offset(0, 5),
+                  child: GestureDetector(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const UserChatSessionScreen(mechanicName: "MechMate"),
                         ),
-                      ],
-                    ),
-                    padding: const EdgeInsets.all(16.0),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: [
-                        // Robot Avatar with badge
-                        Stack(
-                          clipBehavior: Clip.none,
-                          children: [
-                            Container(
-                              width: 55,
-                              height: 55,
-                              decoration: BoxDecoration(
-                                shape: BoxShape.circle,
-                                color: Colors.blue.shade50,
-                                border: Border.all(color: Colors.blue.shade200, width: 2),
-                              ),
-                              child: const Icon(Icons.smart_toy, color: Colors.blue, size: 35),
-                            ),
-                            Positioned(
-                              top: -2,
-                              right: -2,
-                              child: Container(
-                                padding: const EdgeInsets.all(4),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE6C15B), // Gold badge
-                                  shape: BoxShape.circle,
-                                  border: Border.all(color: Colors.white, width: 1.5),
-                                ),
-                                child: Text(
-                                  "3",
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.white,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                      );
+                    },
+                    child: Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: const Color(0xFFFFBF00), width: 3),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.15),
+                            blurRadius: 10,
+                            offset: const Offset(0, 5),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(16.0),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: [
+                          // Robot Avatar with badge
+                          Stack(
+                            clipBehavior: Clip.none,
                             children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Text(
-                                    "MechMate ✨",
-                                    style: GoogleFonts.montserrat(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                  Text(
-                                    "Always Online",
-                                    style: GoogleFonts.montserrat(
-                                      fontSize: 10,
-                                      color: Colors.grey.shade400,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
+                              Container(
+                                width: 55,
+                                height: 55,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: Colors.blue.shade50,
+                                  border: Border.all(color: Colors.blue.shade200, width: 2),
+                                ),
+                                child: const Icon(Icons.smart_toy, color: Colors.blue, size: 35),
                               ),
-                              const SizedBox(height: 6),
-                              Text(
-                                "How can i Assist you today?",
-                                style: GoogleFonts.montserrat(
-                                  fontSize: 14,
-                                  color: Colors.black54,
-                                  fontWeight: FontWeight.w600,
+                              Positioned(
+                                top: -2,
+                                right: -2,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFE6C15B), // Gold badge
+                                    shape: BoxShape.circle,
+                                    border: Border.all(color: Colors.white, width: 1.5),
+                                  ),
+                                  child: Text(
+                                    "3",
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.white,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      "MechMate ✨",
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.black,
+                                      ),
+                                    ),
+                                    Text(
+                                      "Always Online",
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 10,
+                                        color: Colors.grey.shade400,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 6),
+                                Text(
+                                  "How can i Assist you today?",
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: 14,
+                                    color: Colors.black54,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
@@ -215,19 +225,33 @@ class _UserMessageListScreenState extends State<UserMessageListScreen> {
                             },
                           ),
                           _buildMechanicCard(
-                            name: "Sarah Johnson", // Duplicated intentionally matching mockup perfectly
-                            lastMessage: "Your tire replacement is complete!",
-                            time: "Yesterday",
+                            name: "Regin Mercado",
+                            lastMessage: "Oil change done, all good!",
+                            time: "3 days ago",
                             hasNewMessage: false,
-                            onTap: () {},
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const UserChatSessionScreen(mechanicName: "Regin Mercado"),
+                                ),
+                              );
+                            },
                           ),
                           _buildMechanicCard(
-                            name: "Sarah Johnson", // Duplicated intentionally matching mockup perfectly
-                            lastMessage: "Your tire replacement is complete!",
-                            time: "Yesterday",
+                            name: "Mike Wilson",
+                            lastMessage: "Booking was unfortunately canceled.",
+                            time: "1 week ago",
                             hasNewMessage: false,
                             isLast: true,
-                            onTap: () {},
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const UserChatSessionScreen(mechanicName: "Mike Wilson"),
+                                ),
+                              );
+                            },
                           ),
                         ],
                       ),

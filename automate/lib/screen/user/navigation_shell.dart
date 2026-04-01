@@ -40,12 +40,18 @@ class _UserNavigationShellState extends State<UserNavigationShell> {
             key: _mapNavigatorKey,
             onGenerateRoute: (settings) {
               return MaterialPageRoute(
-                builder: (context) => const UserHomeScreen(),
+                builder: (context) => UserHomeScreen(
+                  onViewAllActivity: () {
+                    _onItemTapped(1);
+                  },
+                ),
               );
             },
           ),
           // Index 1: Activity
-          const UserActivityScreen(),
+          UserActivityScreen(
+            onMessageTap: () => _onItemTapped(2),
+          ),
           const UserMessageListScreen(),
           // Index 3: Profile
           const UserProfileScreen(),
