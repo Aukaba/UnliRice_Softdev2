@@ -12,7 +12,9 @@ class _CalendarWidgetState extends State<CalendarWidget> {
   late DateTime _focusedMonth;
   late DateTime _selectedDate;
 
-  static const List<String> _dayLabels = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+  // Sunday-first order matching the design
+  static const List<String> _dayLabels = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
   static const List<String> _monthNames = [
     'January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December',
@@ -38,49 +40,54 @@ class _CalendarWidgetState extends State<CalendarWidget> {
     });
   }
 
-  /// Returns the days to display in the grid.
-  /// Each item: [day (int), isCurrentMonth (bool)]
+  /// Build all cells for the calendar grid (Sunday-first).
+  /// Each entry: { 'date': DateTime?, 'current': bool }
   List<Map<String, dynamic>> _buildCalendarDays() {
-    final firstDay = _focusedMonth;
-    // weekday: 1=Mon, 7=Sun
-    final startWeekday = firstDay.weekday; // 1-based, Mon=1
     final daysInMonth = DateUtils.getDaysInMonth(_focusedMonth.year, _focusedMonth.month);
+    final firstWeekday = _focusedMonth.weekday; // 1=Mon … 7=Sun
+    // Convert to Sunday-first index: Sun=0, Mon=1 … Sat=6
+    final leadingBlanks = firstWeekday % 7; // Mon→1, Tue→2 … Sun→0
+
     final prevMonth = DateTime(_focusedMonth.year, _focusedMonth.month - 1, 1);
     final daysInPrevMonth = DateUtils.getDaysInMonth(prevMonth.year, prevMonth.month);
 
-    final List<Map<String, dynamic>> days = [];
+    final List<Map<String, dynamic>> cells = [];
 
     // Leading days from previous month
-    for (int i = startWeekday - 1; i > 0; i--) {
-      days.add({'day': daysInPrevMonth - i + 1, 'current': false, 'date': null});
+    for (int i = leadingBlanks - 1; i >= 0; i--) {
+      cells.add({
+        'date': DateTime(prevMonth.year, prevMonth.month, daysInPrevMonth - i),
+        'current': false,
+      });
     }
 
     // Current month days
     for (int d = 1; d <= daysInMonth; d++) {
-      days.add({
-        'day': d,
-        'current': true,
+      cells.add({
         'date': DateTime(_focusedMonth.year, _focusedMonth.month, d),
+        'current': true,
       });
     }
 
-    // Trailing days from next month to fill remaining cells (up to 6 rows max)
+    // Trailing days to fill the last row
+    final nextMonth = DateTime(_focusedMonth.year, _focusedMonth.month + 1, 1);
     int trailing = 1;
-    while (days.length % 7 != 0) {
-      days.add({'day': trailing++, 'current': false, 'date': null});
+    while (cells.length % 7 != 0) {
+      cells.add({
+        'date': DateTime(nextMonth.year, nextMonth.month, trailing++),
+        'current': false,
+      });
     }
 
-    return days;
+    return cells;
   }
 
-  bool _isToday(DateTime? date) {
-    if (date == null) return false;
+  bool _isToday(DateTime date) {
     final now = DateTime.now();
     return date.year == now.year && date.month == now.month && date.day == now.day;
   }
 
-  bool _isSelected(DateTime? date) {
-    if (date == null) return false;
+  bool _isSelected(DateTime date) {
     return date.year == _selectedDate.year &&
         date.month == _selectedDate.month &&
         date.day == _selectedDate.day;
@@ -88,128 +95,142 @@ class _CalendarWidgetState extends State<CalendarWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final days = _buildCalendarDays();
-    final weeks = <List<Map<String, dynamic>>>[];
-    for (int i = 0; i < days.length; i += 7) {
-      weeks.add(days.sublist(i, i + 7));
+    final cells = _buildCalendarDays();
+    // Split into rows of 7
+    final rows = <List<Map<String, dynamic>>>[];
+    for (int i = 0; i < cells.length; i += 7) {
+      rows.add(cells.sublist(i, i + 7));
     }
-    // Only show first 2 rows to keep widget compact (matching the original design)
-    final displayWeeks = weeks.take(2).toList();
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 8),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
+        borderRadius: BorderRadius.circular(20),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+            color: Colors.black.withOpacity(0.06),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Month navigation header
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                GestureDetector(
-                  onTap: _prevMonth,
-                  child: const Icon(Icons.chevron_left, size: 22, color: Colors.black54),
-                ),
-                Text(
-                  '${_monthNames[_focusedMonth.month - 1]} ${_focusedMonth.year}',
-                  style: GoogleFonts.montserrat(
-                    fontSize: 15,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black,
-                  ),
-                ),
-                GestureDetector(
-                  onTap: _nextMonth,
-                  child: const Icon(Icons.chevron_right, size: 22, color: Colors.black54),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 14),
-          // Day labels
+          // ── Month navigation header ──
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              // Prev button — gold rounded square
+              GestureDetector(
+                onTap: _prevMonth,
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFBF00),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.arrow_back, color: Colors.white, size: 22),
+                ),
+              ),
+              // Month & Year title
+              Text(
+                '${_monthNames[_focusedMonth.month - 1]} ${_focusedMonth.year}',
+                style: GoogleFonts.montserrat(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                  color: const Color(0xFF19456B),
+                ),
+              ),
+              // Next button — gold rounded square
+              GestureDetector(
+                onTap: _nextMonth,
+                child: Container(
+                  width: 44,
+                  height: 44,
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFBF00),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.arrow_forward, color: Colors.white, size: 22),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+
+          // ── Day labels ──
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: _dayLabels
-                .map((d) => SizedBox(
-                      width: 36,
+                .map((d) => Expanded(
                       child: Center(
                         child: Text(
                           d,
                           style: GoogleFonts.montserrat(
-                            fontSize: 12,
+                            fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: Colors.black54,
+                            color: Colors.grey.shade500,
                           ),
                         ),
                       ),
                     ))
                 .toList(),
           ),
-          const SizedBox(height: 10),
-          // Date rows
-          for (final week in displayWeeks) ...[
+          const SizedBox(height: 12),
+
+          // ── Date rows ──
+          for (final row in rows) ...[
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: week.map((item) {
-                final DateTime? date = item['date'];
-                final bool isCurrent = item['current'] as bool;
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: row.map((cell) {
+                final DateTime date = cell['date'] as DateTime;
+                final bool isCurrent = cell['current'] as bool;
                 final bool selected = _isSelected(date);
                 final bool today = _isToday(date);
 
-                return GestureDetector(
-                  onTap: date == null
-                      ? null
-                      : () {
-                          setState(() {
-                            _selectedDate = date;
-                          });
-                        },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 180),
-                    width: 36,
-                    height: 36,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: selected
-                          ? const Color(0xFF19456B)
-                          : today
-                              ? const Color(0xFFFFBF00).withOpacity(0.25)
-                              : Colors.transparent,
-                      border: today && !selected
-                          ? Border.all(color: const Color(0xFFFFBF00), width: 1.5)
-                          : null,
-                    ),
-                    alignment: Alignment.center,
-                    child: Text(
-                      '${item['day']}',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 13,
-                        fontWeight: selected || today ? FontWeight.w700 : FontWeight.w500,
+                return Expanded(
+                  child: GestureDetector(
+                    onTap: isCurrent
+                        ? () => setState(() => _selectedDate = date)
+                        : null,
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 180),
+                      height: 40,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
                         color: selected
-                            ? Colors.white
-                            : !isCurrent
-                                ? Colors.grey.shade400
-                                : Colors.black87,
+                            ? const Color(0xFF19456B)
+                            : today
+                                ? const Color(0xFFFFBF00).withOpacity(0.2)
+                                : Colors.transparent,
+                        border: today && !selected
+                            ? Border.all(color: const Color(0xFFFFBF00), width: 2)
+                            : null,
+                      ),
+                      alignment: Alignment.center,
+                      child: Text(
+                        '${date.day}',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 16,
+                          fontWeight: selected || today
+                              ? FontWeight.w700
+                              : FontWeight.w600,
+                          color: selected
+                              ? Colors.white
+                              : !isCurrent
+                                  ? Colors.grey.shade400
+                                  : Colors.black87,
+                        ),
                       ),
                     ),
                   ),
                 );
               }).toList(),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 4),
           ],
         ],
       ),
