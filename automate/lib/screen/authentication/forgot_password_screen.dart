@@ -266,7 +266,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                 Padding(
                                   padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
                                   child: ElevatedButton(
-                                    onPressed: _sendOtp,
+                                    onPressed: _isSending ? null : _sendOtp,
                                     style: ElevatedButton.styleFrom(
                                       backgroundColor: const Color(0xFF5584AC), // Exact requested Blue
                                       foregroundColor: Colors.white,
@@ -276,13 +276,19 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                       elevation: 0,
                                       padding: const EdgeInsets.symmetric(horizontal: 24),
                                     ),
-                                    child: Text(
-                                      'Send',
-                                      style: GoogleFonts.montserrat(
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 14,
-                                      ),
-                                    ),
+                                    child: _isSending
+                                        ? const SizedBox(
+                                            width: 16,
+                                            height: 16,
+                                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                                          )
+                                        : Text(
+                                            'Send',
+                                            style: GoogleFonts.montserrat(
+                                              fontWeight: FontWeight.w500,
+                                              fontSize: 14,
+                                            ),
+                                          ),
                                   ),
                                 ),
                               ],
