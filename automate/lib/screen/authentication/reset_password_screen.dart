@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../Logic/auth_logic.dart';
+import '../../Logic/authentication/reset_password.dart';
 import 'login_screen.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
@@ -46,7 +46,7 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
     });
 
     try {
-      await AuthLogic.resetPassword(newPassword: newPass);
+      await ResetPasswordLogic.resetPassword(newPassword: newPass);
       if (mounted) _showSuccessDialog();
     } catch (e) {
       setState(() => _errorMessage = e.toString().replaceAll('Exception: ', ''));
