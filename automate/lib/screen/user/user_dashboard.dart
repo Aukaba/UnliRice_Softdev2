@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/calendar_widget.dart';
+import 'user_dash_help.dart';
+
 class UserDashboardScreen extends StatefulWidget {
   const UserDashboardScreen({super.key});
 
@@ -29,7 +31,9 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                 children: [
                   Positioned.fill(
                     child: Container(
-                      color: const Color(0xFFD4AF37).withOpacity(0.15), // Deep gold overlay
+                      color: const Color(
+                        0xFFD4AF37,
+                      ).withOpacity(0.15), // Deep gold overlay
                     ),
                   ),
                   // Map lines placeholder
@@ -46,7 +50,10 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                   // Search Bar
                   SafeArea(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 12.0),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20.0,
+                        vertical: 12.0,
+                      ),
                       child: Container(
                         decoration: BoxDecoration(
                           color: Colors.white,
@@ -66,9 +73,14 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                               color: Colors.grey.shade500,
                               fontWeight: FontWeight.w400,
                             ),
-                            prefixIcon: Icon(Icons.search, color: Colors.grey.shade500),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: Colors.grey.shade500,
+                            ),
                             border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(vertical: 16),
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 16,
+                            ),
                           ),
                         ),
                       ),
@@ -84,7 +96,11 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                         color: const Color(0xFF19456B).withOpacity(0.2),
                         shape: BoxShape.circle,
                       ),
-                      child: const Icon(Icons.location_on, size: 28, color: Color(0xFF19456B)),
+                      child: const Icon(
+                        Icons.location_on,
+                        size: 28,
+                        color: Color(0xFF19456B),
+                      ),
                     ),
                   ),
                 ],
@@ -95,7 +111,9 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
           // Foreground - Main White Card
           Positioned.fill(
             child: SingleChildScrollView(
-              padding: EdgeInsets.only(top: MediaQuery.of(context).size.height * 0.38),
+              padding: EdgeInsets.only(
+                top: MediaQuery.of(context).size.height * 0.38,
+              ),
               child: Container(
                 decoration: const BoxDecoration(
                   color: Colors.white,
@@ -104,7 +122,10 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                     topRight: Radius.circular(40),
                   ),
                 ),
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 24.0,
+                  vertical: 32.0,
+                ),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -139,9 +160,15 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                             fontWeight: FontWeight.w400,
                             color: Colors.black54,
                           ),
-                          suffixIcon: const Icon(Icons.location_on_outlined, color: Colors.black54),
+                          suffixIcon: const Icon(
+                            Icons.location_on_outlined,
+                            color: Colors.black54,
+                          ),
                           border: InputBorder.none,
-                          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
                         ),
                       ),
                     ),
@@ -163,10 +190,14 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               decoration: BoxDecoration(
-                                color: isEmergency ? const Color(0xFF19456B) : Colors.white,
+                                color: isEmergency
+                                    ? const Color(0xFF19456B)
+                                    : Colors.white,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: isEmergency ? const Color(0xFF19456B) : Colors.grey.shade300,
+                                  color: isEmergency
+                                      ? const Color(0xFF19456B)
+                                      : Colors.grey.shade300,
                                 ),
                               ),
                               alignment: Alignment.center,
@@ -174,8 +205,12 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                                 "Emergency",
                                 style: GoogleFonts.montserrat(
                                   fontSize: 14,
-                                  fontWeight: isEmergency ? FontWeight.w600 : FontWeight.w500,
-                                  color: isEmergency ? Colors.white : const Color(0xFF19456B),
+                                  fontWeight: isEmergency
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
+                                  color: isEmergency
+                                      ? Colors.white
+                                      : const Color(0xFF19456B),
                                 ),
                               ),
                             ),
@@ -188,10 +223,14 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 14),
                               decoration: BoxDecoration(
-                                color: !isEmergency ? const Color(0xFF19456B) : Colors.white,
+                                color: !isEmergency
+                                    ? const Color(0xFF19456B)
+                                    : Colors.white,
                                 borderRadius: BorderRadius.circular(12),
                                 border: Border.all(
-                                  color: !isEmergency ? const Color(0xFF19456B) : Colors.grey.shade300,
+                                  color: !isEmergency
+                                      ? const Color(0xFF19456B)
+                                      : Colors.grey.shade300,
                                 ),
                               ),
                               alignment: Alignment.center,
@@ -199,8 +238,12 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                                 "Scheduled",
                                 style: GoogleFonts.montserrat(
                                   fontSize: 14,
-                                  fontWeight: !isEmergency ? FontWeight.w600 : FontWeight.w500,
-                                  color: !isEmergency ? Colors.white : const Color(0xFF19456B),
+                                  fontWeight: !isEmergency
+                                      ? FontWeight.w600
+                                      : FontWeight.w500,
+                                  color: !isEmergency
+                                      ? Colors.white
+                                      : const Color(0xFF19456B),
                                 ),
                               ),
                             ),
@@ -209,7 +252,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                       ],
                     ),
                     const SizedBox(height: 20),
-                    
+
                     if (!isEmergency) ...[
                       Text(
                         "Select the date",
@@ -283,7 +326,12 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                           flex: 6,
                           child: GestureDetector(
                             onTap: () {
-                              // Perform logic then maybe Navigator.pop
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => const UserDashHelpScreen(),
+                                ),
+                              );
                             },
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 18),
@@ -293,7 +341,9 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                               ),
                               alignment: Alignment.center,
                               child: Text(
-                                isEmergency ? "Request Help" : "Request Service",
+                                isEmergency
+                                    ? "Request Help"
+                                    : "Request Service",
                                 style: GoogleFonts.montserrat(
                                   fontSize: 16,
                                   fontWeight: FontWeight.w600,
@@ -305,7 +355,9 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 20), // Padding below content before navigation bar
+                    const SizedBox(
+                      height: 20,
+                    ), // Padding below content before navigation bar
                   ],
                 ),
               ),
@@ -316,4 +368,3 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
     );
   }
 }
-
