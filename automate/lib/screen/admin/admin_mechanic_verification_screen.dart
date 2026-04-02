@@ -1,161 +1,188 @@
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
-class AdminMechanicVerificationScreen extends StatefulWidget {
-  const AdminMechanicVerificationScreen({super.key});
+// ── Shared content widget (used inside the tab) ──────────────────────────────
+// Fix: Extracted core content into AdminMechanicVerificationContent so it
+// works correctly inside AdminDashboardScreen's IndexedStack without
+// causing Navigator.pop to exit the whole dashboard.
+
+class AdminMechanicVerificationContent extends StatefulWidget {
+  final void Function(int)? onSwitchTab;
+
+  const AdminMechanicVerificationContent({super.key, this.onSwitchTab});
 
   @override
-  State<AdminMechanicVerificationScreen> createState() =>
-      _AdminMechanicVerificationScreenState();
+  State<AdminMechanicVerificationContent> createState() =>
+      _AdminMechanicVerificationContentState();
 }
 
-class _AdminMechanicVerificationScreenState
-    extends State<AdminMechanicVerificationScreen> {
-  static final _supabase = Supabase.instance.client;
+class _AdminMechanicVerificationContentState
+    extends State<AdminMechanicVerificationContent> {
+  // Dummy data — replace with Supabase later
+  // Fix: id is kept as int to match Supabase's default int type,
+  // preventing the type mismatch bug in removeWhere
+  final List<Map<String, dynamic>> _pendingMechanics = [
+    {
+      'id': 1,
+      'name': 'Aaron Barnaija',
+      'email': 'AaronBarnaija@gmail.com',
+      'contact': '09123456789',
+    },
+    {
+      'id': 2,
+      'name': 'Vince Bernante',
+      'email': 'VinceBernante@gmail.com',
+      'contact': '09987654321',
+    },
+    {
+      'id': 3,
+      'name': 'Maria Santos',
+      'email': 'MariaSantos@gmail.com',
+      'contact': '09112345678',
+    },
+  ];
 
-  List<Map<String, dynamic>> _pendingMechanics = [];
-  bool _isLoading = true;
+  // Fix: mechanicId is now int (not String) to match the stored id type,
+  // so removeWhere correctly finds and removes the card
+  void _removeCard(int mechanicId, String action) {
+    setState(() {
+      _pendingMechanics.removeWhere((m) => m['id'] == mechanicId);
+    });
 
-  @override
-  void initState() {
-    super.initState();
-    _loadPendingMechanics();
-  }
-
-  Future<void> _loadPendingMechanics() async {
-    try {
-      final data = await _supabase
-          .from('mechanics')
-          .select(
-            'id, first_name, last_name, email, contact, certification_url',
-          )
-          .eq('status', 'pending');
-
-      setState(() {
-        _pendingMechanics = List<Map<String, dynamic>>.from(data);
-      });
-    } catch (_) {
-      // Silently fail — screen still loads
-    } finally {
-      if (mounted) setState(() => _isLoading = false);
-    }
-  }
-
-  Future<void> _updateStatus(String mechanicId, String status) async {
-    try {
-      await _supabase
-          .from('mechanics')
-          .update({'status': status})
-          .eq('id', mechanicId);
-
-      setState(() {
-        _pendingMechanics.removeWhere((m) => m['id'] == mechanicId);
-      });
-
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            status == 'approved'
-                ? 'Mechanic approved successfully.'
-                : 'Mechanic rejected.',
-            style: GoogleFonts.inriaSans(),
-          ),
-          backgroundColor: status == 'approved'
-              ? const Color(0xFF009227)
-              : const Color(0xFFBF2D2D),
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(
+          action == 'approved'
+              ? 'Mechanic approved successfully.'
+              : 'Mechanic rejected.',
         ),
-      );
-    } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Something went wrong. Please try again.',
-            style: GoogleFonts.inriaSans(),
-          ),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
+        backgroundColor: action == 'approved'
+            ? const Color(0xFF009227)
+            : const Color(0xFFBF2D2D),
+        behavior: SnackBarBehavior.floating,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFFFBF00),
+      backgroundColor: Colors.white,
       body: SafeArea(
         bottom: false,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: Stack(
           children: [
-            // ── Header ──────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.fromLTRB(28, 28, 28, 24),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          'Mechanic Verification',
-                          style: GoogleFonts.montserrat(
-                            fontSize: 28,
-                            fontWeight: FontWeight.w700,
-                            color: const Color(0xFF121212),
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          'Review and approve pending mechanics.',
-                          style: GoogleFonts.inriaSans(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w400,
-                            color: const Color(0xFF121212),
-                          ),
-                        ),
-                      ],
-                    ),
+            // Sidebar layers
+            Positioned(
+              left: -28,
+              top: 87,
+              child: Container(
+                width: 258,
+                height: MediaQuery.of(context).size.height,
+                decoration: ShapeDecoration(
+                  color: const Color(0x4C164D83),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(19),
                   ),
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back_rounded),
-                    color: const Color(0xFF121212),
-                    tooltip: 'Back',
+                ),
+              ),
+            ),
+            Positioned(
+              left: -18,
+              top: 87,
+              child: Container(
+                width: 176,
+                height: MediaQuery.of(context).size.height,
+                decoration: ShapeDecoration(
+                  color: const Color(0x7F164D83),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(19),
                   ),
-                ],
+                ),
+              ),
+            ),
+            Positioned(
+              left: -18,
+              top: 87,
+              child: Container(
+                width: 103,
+                height: MediaQuery.of(context).size.height,
+                decoration: ShapeDecoration(
+                  color: const Color(0xFF164D83),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(19),
+                  ),
+                ),
               ),
             ),
 
-            // ── Body (white card) ────────────────────────────────────
-            Expanded(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(36),
-                    topRight: Radius.circular(36),
+            // Main content
+            Column(
+              children: [
+                // Header
+                // Fix: Removed Navigator.pop back button — since this widget
+                // lives inside an IndexedStack, popping would exit the whole
+                // dashboard back to login. Navigation is handled by the
+                // bottom nav bar instead.
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 70,
+                        height: 70,
+                        decoration: ShapeDecoration(
+                          image: const DecorationImage(
+                            image: NetworkImage("https://placehold.co/98x98"),
+                            fit: BoxFit.cover,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(9999),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      const Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Mechanic Verification',
+                            style: TextStyle(
+                              color: Color(0xFF1A1A1A),
+                              fontSize: 16,
+                              fontFamily: 'Poppins',
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Text(
+                            'Management System',
+                            style: TextStyle(
+                              color: Color(0xFF666666),
+                              fontSize: 12,
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.w400,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Spacer(),
+                      const Icon(
+                        Icons.notifications_outlined,
+                        color: Color(0xFF19456B),
+                        size: 28,
+                      ),
+                    ],
                   ),
                 ),
-                child: ClipRRect(
-                  borderRadius: const BorderRadius.only(
-                    topLeft: Radius.circular(36),
-                    topRight: Radius.circular(36),
-                  ),
-                  child: _isLoading
-                      ? const Center(
-                          child: CircularProgressIndicator(
-                            color: Color(0xFFFFBF00),
-                          ),
-                        )
-                      : _pendingMechanics.isEmpty
+
+                const SizedBox(height: 16),
+
+                // Cards list
+                Expanded(
+                  child: _pendingMechanics.isEmpty
                       ? _buildEmptyState()
                       : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(24, 32, 24, 32),
+                          padding: const EdgeInsets.fromLTRB(36, 0, 36, 24),
                           itemCount: _pendingMechanics.length,
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: 16),
@@ -163,19 +190,19 @@ class _AdminMechanicVerificationScreenState
                             final mechanic = _pendingMechanics[index];
                             return _MechanicCard(
                               mechanic: mechanic,
-                              onApprove: () => _updateStatus(
-                                mechanic['id'].toString(),
+                              onApprove: () => _removeCard(
+                                mechanic['id'] as int,
                                 'approved',
                               ),
-                              onReject: () => _updateStatus(
-                                mechanic['id'].toString(),
+                              onReject: () => _removeCard(
+                                mechanic['id'] as int,
                                 'rejected',
                               ),
                             );
                           },
                         ),
                 ),
-              ),
+              ],
             ),
           ],
         ),
@@ -196,19 +223,17 @@ class _AdminMechanicVerificationScreenState
           const SizedBox(height: 12),
           Text(
             'No pending mechanics',
-            style: GoogleFonts.montserrat(
+            style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
               color: Colors.grey.shade400,
+              fontFamily: 'Poppins',
             ),
           ),
           const SizedBox(height: 6),
           Text(
             'All mechanics have been reviewed.',
-            style: GoogleFonts.inriaSans(
-              fontSize: 13,
-              color: Colors.grey.shade400,
-            ),
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
           ),
         ],
       ),
@@ -216,7 +241,7 @@ class _AdminMechanicVerificationScreenState
   }
 }
 
-// ── Mechanic card widget ─────────────────────────────────────────────────────
+// ── Mechanic card ────────────────────────────────────────────────────────────
 
 class _MechanicCard extends StatelessWidget {
   final Map<String, dynamic> mechanic;
@@ -231,164 +256,143 @@ class _MechanicCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final name =
-        '${mechanic['first_name'] ?? ''} ${mechanic['last_name'] ?? ''}'.trim();
-    final email = mechanic['email'] ?? '—';
-    final contact = mechanic['contact'] ?? '—';
-    final certUrl = mechanic['certification_url'] ?? '';
-
     return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: ShapeDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE5E5E5)),
-        boxShadow: const [
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(width: 1, color: Color(0xFFE5E5E5)),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        shadows: const [
           BoxShadow(
-            color: Color(0x1A000000),
-            blurRadius: 8,
+            color: Color(0x3F000000),
+            blurRadius: 4,
             offset: Offset(0, 4),
+            spreadRadius: 0,
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Name row with pending badge
-          Row(
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFFFBF00).withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: const Icon(
-                  Icons.person_rounded,
-                  color: Color(0xFFFFBF00),
-                  size: 26,
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      name.isNotEmpty ? name : '—',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF121212),
-                      ),
-                    ),
-                    const SizedBox(height: 2),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 2,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFFFF3CD),
-                        borderRadius: BorderRadius.circular(6),
-                      ),
-                      child: Text(
-                        'Pending',
-                        style: GoogleFonts.inriaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: const Color(0xFF856404),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          // Name
+          const Text(
+            'Name:',
+            style: TextStyle(
+              color: Color(0xFF1A1A1A),
+              fontSize: 18,
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w600,
+            ),
           ),
+          Text(
+            mechanic['name'] ?? '—',
+            style: const TextStyle(
+              color: Color(0xFF1A1A1A),
+              fontSize: 16,
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
 
-          const SizedBox(height: 16),
-          const Divider(height: 1, color: Color(0xFFE5E5E5)),
-          const SizedBox(height: 16),
+          // Email
+          const Text(
+            'Email:',
+            style: TextStyle(
+              color: Color(0xFF1A1A1A),
+              fontSize: 16,
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            mechanic['email'] ?? '—',
+            style: const TextStyle(
+              color: Color(0xFF1A1A1A),
+              fontSize: 16,
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 8),
 
-          // Info rows
-          _InfoRow(icon: Icons.email_outlined, label: 'Email', value: email),
+          // Contact
+          const Text(
+            'Contact:',
+            style: TextStyle(
+              color: Color(0xFF1A1A1A),
+              fontSize: 16,
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          Text(
+            mechanic['contact'] ?? '—',
+            style: const TextStyle(
+              color: Color(0xFF1A1A1A),
+              fontSize: 16,
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          const SizedBox(height: 12),
+
+          // Certification
+          const Text(
+            'CERTIFICATION:',
+            style: TextStyle(
+              color: Color(0xFF1A1A1A),
+              fontSize: 16,
+              fontFamily: 'Poppins',
+              fontWeight: FontWeight.w600,
+              decoration: TextDecoration.underline,
+            ),
+          ),
           const SizedBox(height: 10),
-          _InfoRow(
-            icon: Icons.phone_outlined,
-            label: 'Contact',
-            value: contact,
-          ),
-
-          const SizedBox(height: 16),
 
           // See certification button
-          if (certUrl.isNotEmpty)
-            GestureDetector(
-              onTap: () {
-                // Open certification URL
-              },
-              child: Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF16477A).withOpacity(0.07),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(
-                    color: const Color(0xFF16477A).withOpacity(0.2),
+          Center(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 31, vertical: 8),
+              decoration: ShapeDecoration(
+                color: const Color(0xFF203C63),
+                shape: RoundedRectangleBorder(
+                  side: BorderSide(
+                    width: 1,
+                    color: Colors.black.withOpacity(0.50),
                   ),
-                ),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(
-                      Icons.verified_outlined,
-                      color: Color(0xFF16477A),
-                      size: 18,
-                    ),
-                    const SizedBox(width: 8),
-                    Text(
-                      'View Certification',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF16477A),
-                      ),
-                    ),
-                  ],
+                  borderRadius: BorderRadius.circular(19),
                 ),
               ),
-            )
-          else
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade100,
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(
-                    Icons.info_outline,
-                    color: Colors.grey.shade400,
-                    size: 18,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    'No certification uploaded',
-                    style: GoogleFonts.inriaSans(
-                      fontSize: 13,
-                      color: Colors.grey.shade400,
-                    ),
-                  ),
-                ],
+              child: const Text(
+                'See Certification Here',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
+          ),
+          const SizedBox(height: 12),
 
-          const SizedBox(height: 16),
+          // Waiting label
+          const Center(
+            child: Text(
+              'Waiting for approval',
+              style: TextStyle(
+                color: Color(0xFF666666),
+                fontSize: 12,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w400,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
 
           // Reject / Approve buttons
           Row(
@@ -397,21 +401,22 @@ class _MechanicCard extends StatelessWidget {
                 child: OutlinedButton(
                   onPressed: onReject,
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     side: const BorderSide(
                       color: Color(0xFFBF2D2D),
                       width: 1.5,
                     ),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      borderRadius: BorderRadius.circular(49),
                     ),
                   ),
-                  child: Text(
+                  child: const Text(
                     'Reject',
-                    style: GoogleFonts.montserrat(
-                      fontSize: 15,
+                    style: TextStyle(
+                      color: Color(0xFFBF2D2D),
+                      fontSize: 16,
+                      fontFamily: 'Poppins',
                       fontWeight: FontWeight.w600,
-                      color: const Color(0xFFBF2D2D),
                     ),
                   ),
                 ),
@@ -422,18 +427,20 @@ class _MechanicCard extends StatelessWidget {
                   onPressed: onApprove,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF009227),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(color: Color(0xFF22C55E)),
+                      borderRadius: BorderRadius.circular(49),
                     ),
                   ),
-                  child: Text(
+                  child: const Text(
                     'Approve',
-                    style: GoogleFonts.montserrat(
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
+                    style: TextStyle(
                       color: Colors.white,
+                      fontSize: 16,
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
@@ -442,48 +449,6 @@ class _MechanicCard extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-// ── Info row widget ──────────────────────────────────────────────────────────
-
-class _InfoRow extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-
-  const _InfoRow({
-    required this.icon,
-    required this.label,
-    required this.value,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        Icon(icon, size: 18, color: Colors.grey.shade500),
-        const SizedBox(width: 8),
-        Text(
-          '$label: ',
-          style: GoogleFonts.montserrat(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: const Color(0xFF121212),
-          ),
-        ),
-        Expanded(
-          child: Text(
-            value,
-            style: GoogleFonts.inriaSans(
-              fontSize: 13,
-              color: Colors.grey.shade700,
-            ),
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
     );
   }
 }

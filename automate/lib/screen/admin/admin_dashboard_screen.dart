@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'admin_mechanic_verification_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'admin_mechanic_verification_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -12,17 +12,21 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _currentIndex = 0;
 
-  final List<Widget> _screens = const [
-    _AdminDashboardTab(),
-    AdminMechanicVerificationScreen(),
-    _PlaceholderTab(label: 'Drivers'),
-    _PlaceholderTab(label: 'Settings'),
-  ];
+  void _switchTab(int index) {
+    setState(() => _currentIndex = index);
+  }
 
   @override
   Widget build(BuildContext context) {
+    final List<Widget> screens = [
+      _AdminDashboardTab(onSwitchTab: _switchTab),
+      AdminMechanicVerificationContent(onSwitchTab: _switchTab),
+      const _PlaceholderTab(label: 'Drivers'),
+      const _PlaceholderTab(label: 'Settings'),
+    ];
+
     return Scaffold(
-      body: IndexedStack(index: _currentIndex, children: _screens),
+      body: IndexedStack(index: _currentIndex, children: screens),
       bottomNavigationBar: Container(
         decoration: const BoxDecoration(
           color: Colors.white,
@@ -45,25 +49,25 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   icon: Icons.dashboard,
                   label: 'Dashboard',
                   isActive: _currentIndex == 0,
-                  onTap: () => setState(() => _currentIndex = 0),
+                  onTap: () => _switchTab(0),
                 ),
                 _NavItem(
                   icon: Icons.build,
                   label: 'Verification',
                   isActive: _currentIndex == 1,
-                  onTap: () => setState(() => _currentIndex = 1),
+                  onTap: () => _switchTab(1),
                 ),
                 _NavItem(
                   icon: Icons.people,
                   label: 'Drivers',
                   isActive: _currentIndex == 2,
-                  onTap: () => setState(() => _currentIndex = 2),
+                  onTap: () => _switchTab(2),
                 ),
                 _NavItem(
                   icon: Icons.settings,
                   label: 'Settings',
                   isActive: _currentIndex == 3,
-                  onTap: () => setState(() => _currentIndex = 3),
+                  onTap: () => _switchTab(3),
                 ),
               ],
             ),
@@ -130,8 +134,79 @@ class _NavItem extends StatelessWidget {
 
 // ── Dashboard tab ────────────────────────────────────────────────────────────
 
-class _AdminDashboardTab extends StatelessWidget {
-  const _AdminDashboardTab();
+class _AdminDashboardTab extends StatefulWidget {
+  final void Function(int) onSwitchTab;
+
+  const _AdminDashboardTab({required this.onSwitchTab});
+
+  @override
+  State<_AdminDashboardTab> createState() => _AdminDashboardTabState();
+}
+
+class _AdminDashboardTabState extends State<_AdminDashboardTab> {
+  static final _supabase = Supabase.instance.client;
+
+  bool _isLoading = true;
+  String _adminName = 'Admin';
+
+  // Counts loaded from Supabase — update table names to match yours
+  int _pendingMechanics = 0;
+  int _activeRequests = 0;
+  int _registeredDrivers = 0;
+  int _verifiedMechanics = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadData();
+  }
+
+  Future<void> _loadData() async {
+    try {
+      final uid = _supabase.auth.currentUser?.id;
+
+      // Load admin name
+      if (uid != null) {
+        final adminData = await _supabase
+            .from('admin')
+            .select('first_name')
+            .eq('uid', uid)
+            .single();
+        _adminName = adminData['first_name'] ?? 'Admin';
+      }
+
+      // Load counts — update table/column names to match your Supabase
+      final pending = await _supabase
+          .from('mechanics')
+          .select('id')
+          .eq('status', 'pending');
+
+      final active = await _supabase
+          .from('requests')
+          .select('id')
+          .eq('status', 'active');
+
+      final drivers = await _supabase.from('users').select('id');
+
+      final verified = await _supabase
+          .from('mechanics')
+          .select('id')
+          .eq('status', 'approved');
+
+      if (mounted) {
+        setState(() {
+          _pendingMechanics = (pending as List).length;
+          _activeRequests = (active as List).length;
+          _registeredDrivers = (drivers as List).length;
+          _verifiedMechanics = (verified as List).length;
+        });
+      }
+    } catch (_) {
+      // Silently fail — shows last known values or zeros
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -207,19 +282,19 @@ class _AdminDashboardTab extends StatelessWidget {
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Column(
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Admin',
-                            style: TextStyle(
+                            _adminName,
+                            style: const TextStyle(
                               color: Color(0xFF1A1A1A),
                               fontSize: 18,
                               fontFamily: 'Poppins',
                               fontWeight: FontWeight.w700,
                             ),
                           ),
-                          Text(
+                          const Text(
                             'Management System',
                             style: TextStyle(
                               color: Color(0xFF666666),
@@ -244,44 +319,50 @@ class _AdminDashboardTab extends StatelessWidget {
 
                 // Stat cards
                 Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(36, 0, 36, 24),
-                    child: Column(
-                      children: const [
-                        _StatCard(
-                          title: 'Pending Mechanics:',
-                          value: '12',
-                          subtitle: 'Waiting for approval',
-                          percentage: '+12.5%',
-                          isPositive: false,
+                  child: _isLoading
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                            color: Color(0xFF19456B),
+                          ),
+                        )
+                      : SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(36, 0, 36, 24),
+                          child: Column(
+                            children: [
+                              _StatCard(
+                                title: 'Pending Mechanics:',
+                                value: '$_pendingMechanics',
+                                subtitle: 'Waiting for approval',
+                                percentage: '',
+                                isPositive: true,
+                              ),
+                              const SizedBox(height: 16),
+                              _StatCard(
+                                title: 'Active Requests:',
+                                value: '$_activeRequests',
+                                subtitle: 'drivers requesting help',
+                                percentage: '',
+                                isPositive: true,
+                              ),
+                              const SizedBox(height: 16),
+                              _StatCard(
+                                title: 'Registered Drivers:',
+                                value: '$_registeredDrivers',
+                                subtitle: 'users',
+                                percentage: '',
+                                isPositive: true,
+                              ),
+                              const SizedBox(height: 16),
+                              _StatCard(
+                                title: 'Verified Mechanics:',
+                                value: '$_verifiedMechanics',
+                                subtitle: 'mechanics active',
+                                percentage: '',
+                                isPositive: true,
+                              ),
+                            ],
+                          ),
                         ),
-                        SizedBox(height: 16),
-                        _StatCard(
-                          title: 'Active Requests:',
-                          value: '4',
-                          subtitle: 'drivers requesting help',
-                          percentage: '+6%',
-                          isPositive: true,
-                        ),
-                        SizedBox(height: 16),
-                        _StatCard(
-                          title: 'Registered Drivers:',
-                          value: '69',
-                          subtitle: 'users',
-                          percentage: '+9%',
-                          isPositive: true,
-                        ),
-                        SizedBox(height: 16),
-                        _StatCard(
-                          title: 'Verified Mechanics:',
-                          value: '67',
-                          subtitle: 'mechanics active',
-                          percentage: '+3.5%',
-                          isPositive: false,
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
               ],
             ),
@@ -331,7 +412,6 @@ class _StatCard extends StatelessWidget {
       ),
       child: Stack(
         children: [
-          // Title
           SizedBox(
             width: 260,
             child: Text(
@@ -345,7 +425,6 @@ class _StatCard extends StatelessWidget {
               ),
             ),
           ),
-          // Percentage badge
           Positioned(
             right: 0,
             top: 4,
@@ -361,7 +440,6 @@ class _StatCard extends StatelessWidget {
               ),
             ),
           ),
-          // Value
           Padding(
             padding: const EdgeInsets.only(top: 36),
             child: SizedBox(
@@ -379,7 +457,6 @@ class _StatCard extends StatelessWidget {
               ),
             ),
           ),
-          // Subtitle
           Padding(
             padding: const EdgeInsets.only(top: 78),
             child: SizedBox(
