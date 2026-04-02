@@ -18,6 +18,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   bool _isSubmitting = false;
   String? _errorMessage;
 
+  static const _amber = Color(0xFFFFC107);
+  static const _blue = Color(0xFF5584AC);
+  static const _grey = Color(0xFF9E9E9E);
+  static const _borderColor = Color(0xFFD0D0D0);
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -28,17 +33,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Future<void> _sendOtp() async {
     final email = _emailController.text.trim();
     if (email.isEmpty) {
-      if (mounted) {
-        setState(() => _errorMessage = 'Please enter your email.');
-      }
+      setState(() => _errorMessage = 'Please enter your email.');
       return;
     }
-
     setState(() {
       _errorMessage = null;
       _isSending = true;
     });
-
     try {
       await ResetPasswordLogic.forgotPassword(email: email);
       if (mounted) {
@@ -48,9 +49,8 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(
-          () => _errorMessage = e.toString().replaceFirst('Exception: ', ''),
-        );
+        setState(() =>
+            _errorMessage = e.toString().replaceFirst('Exception: ', ''));
       }
     } finally {
       if (mounted) setState(() => _isSending = false);
@@ -60,19 +60,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   Future<void> _submit() async {
     final email = _emailController.text.trim();
     final otp = _otpController.text.trim();
-
     if (email.isEmpty || otp.isEmpty) {
-      if (mounted) {
-        setState(() => _errorMessage = 'Please enter email and OTP.');
-      }
+      setState(() => _errorMessage = 'Please enter email and OTP.');
       return;
     }
-
     setState(() {
       _errorMessage = null;
       _isSubmitting = true;
     });
-
     try {
       await ResetPasswordLogic.verifyOtp(email: email, token: otp);
       if (mounted) {
@@ -83,13 +78,37 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       }
     } catch (e) {
       if (mounted) {
-        setState(
-          () => _errorMessage = e.toString().replaceFirst('Exception: ', ''),
-        );
+        setState(() =>
+            _errorMessage = e.toString().replaceFirst('Exception: ', ''));
       }
     } finally {
       if (mounted) setState(() => _isSubmitting = false);
     }
+  }
+
+  // Shared input decoration — no floating label, clean border
+  InputDecoration _inputDecoration({Widget? suffix}) {
+    return InputDecoration(
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: _borderColor),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: _borderColor),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: _blue, width: 1.5),
+      ),
+      // Disable the floating label entirely
+      floatingLabelBehavior: FloatingLabelBehavior.never,
+      suffixIcon: suffix,
+    );
   }
 
   @override
@@ -100,73 +119,48 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // ── Gold circle — top left (large, partially off-screen) ──────────
+          // ── TOP-LEFT large gold circle ──────────────────────────────────
           Positioned(
-            top: -size.height * 0.10,
-            left: -size.width * 0.25,
-            child: Container(
-              width: size.width * 0.90,
-              height: size.width * 0.90,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFFFFC107),
-              ),
-            ),
+            top: -size.height * 0.08,
+            left: -size.width * 0.22,
+            child: _circle(size.width * 0.88, _amber),
           ),
 
-          // ── Gold circle — mid right (medium, partially off-screen) ────────
+          // ── MID-RIGHT medium gold circle ────────────────────────────────
           Positioned(
-            top: size.height * 0.38,
-            right: -size.width * 0.28,
-            child: Container(
-              width: size.width * 0.65,
-              height: size.width * 0.65,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFFFFC107),
-              ),
-            ),
+            top: size.height * 0.40,
+            right: -size.width * 0.30,
+            child: _circle(size.width * 0.62, _amber),
           ),
 
-          // ── Gold circle — bottom left (small, partially off-screen) ───────
+          // ── BOTTOM-LEFT small gold circle ───────────────────────────────
           Positioned(
-            bottom: -size.width * 0.18,
-            left: -size.width * 0.15,
-            child: Container(
-              width: size.width * 0.48,
-              height: size.width * 0.48,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFFFFC107),
-              ),
-            ),
+            bottom: -size.width * 0.16,
+            left: -size.width * 0.14,
+            child: _circle(size.width * 0.45, _amber),
           ),
 
-          // ── Main content ─────────────────────────────────────────────────
+          // ── MAIN CONTENT ────────────────────────────────────────────────
           SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Back arrow
-                Padding(
-                  padding: const EdgeInsets.only(left: 4.0, top: 4.0),
-                  child: IconButton(
-                    icon: const Icon(
-                      Icons.arrow_back,
-                      color: Colors.black87,
-                      size: 26,
-                    ),
-                    onPressed: () => Navigator.pop(context),
-                  ),
+                IconButton(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  icon: const Icon(Icons.arrow_back,
+                      color: Colors.black87, size: 26),
+                  onPressed: () => Navigator.pop(context),
                 ),
 
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(horizontal: 28.0),
                     child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // ── Logo ─────────────────────────────────────────
+                        // Logo
                         const SizedBox(height: 8),
                         Center(
                           child: Image.asset(
@@ -177,7 +171,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           ),
                         ),
 
-                        // ── Title ─────────────────────────────────────────
+                        // Title
                         const SizedBox(height: 36),
                         Center(
                           child: Text(
@@ -190,7 +184,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           ),
                         ),
 
-                        // ── Error message ─────────────────────────────────
+                        // Error banner
                         if (_errorMessage != null) ...[
                           const SizedBox(height: 14),
                           Container(
@@ -202,19 +196,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                             ),
                             child: Row(
                               children: [
-                                Icon(
-                                  Icons.error_outline,
-                                  color: Colors.red.shade700,
-                                  size: 18,
-                                ),
+                                Icon(Icons.error_outline,
+                                    color: Colors.red.shade700, size: 18),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     _errorMessage!,
                                     style: TextStyle(
-                                      color: Colors.red.shade700,
-                                      fontSize: 13,
-                                    ),
+                                        color: Colors.red.shade700,
+                                        fontSize: 13),
                                   ),
                                 ),
                               ],
@@ -227,149 +217,85 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         Text(
                           'Enter Email',
                           style: GoogleFonts.inriaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w400,
-                            color: Colors.black87,
-                          ),
+                              fontSize: 13, color: Colors.black87),
                         ),
                         const SizedBox(height: 6),
 
-                        // ── Email field + Send button ─────────────────────
-                        Container(
-                          height: 52,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFD0D0D0)),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.04),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
+                        // ── Email row: field + Send button ────────────────
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                style: GoogleFonts.inriaSans(
+                                    fontSize: 14, color: Colors.black87),
+                                decoration: _inputDecoration(),
                               ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              // Text input
-                              Expanded(
-                                child: TextField(
-                                  controller: _emailController,
-                                  keyboardType: TextInputType.emailAddress,
-                                  style: GoogleFonts.inriaSans(
-                                    fontSize: 14,
-                                    color: Colors.black87,
+                            ),
+                            const SizedBox(width: 8),
+                            SizedBox(
+                              height: 50,
+                              child: ElevatedButton(
+                                onPressed: _isSending ? null : _sendOtp,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _blue,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
                                   ),
-                                  decoration: const InputDecoration(
-                                    border: InputBorder.none,
-                                    contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 14,
-                                      vertical: 0,
-                                    ),
-                                    isDense: true,
-                                  ),
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20),
                                 ),
-                              ),
-
-                              // Send button — anchored to right inside the field
-                              Padding(
-                                padding: const EdgeInsets.only(right: 6.0),
-                                child: SizedBox(
-                                  height: 38,
-                                  child: ElevatedButton(
-                                    onPressed: _isSending ? null : _sendOtp,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF5584AC),
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
+                                child: _isSending
+                                    ? const SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white),
+                                      )
+                                    : Text(
+                                        'Send',
+                                        style: GoogleFonts.montserrat(
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 13),
                                       ),
-                                      elevation: 0,
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 18,
-                                      ),
-                                    ),
-                                    child: _isSending
-                                        ? const SizedBox(
-                                            width: 14,
-                                            height: 14,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.white,
-                                            ),
-                                          )
-                                        : Text(
-                                            'Send',
-                                            style: GoogleFonts.montserrat(
-                                              fontWeight: FontWeight.w500,
-                                              fontSize: 13,
-                                            ),
-                                          ),
-                                  ),
-                                ),
                               ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
 
                         // ── Enter OTP label ───────────────────────────────
-                        const SizedBox(height: 22),
+                        const SizedBox(height: 20),
                         Text(
                           'Enter OTP',
                           style: GoogleFonts.inriaSans(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w400,
-                            color: Colors.black87,
-                          ),
+                              fontSize: 13, color: Colors.black87),
                         ),
                         const SizedBox(height: 6),
 
                         // ── OTP field ─────────────────────────────────────
-                        Container(
-                          height: 52,
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(10),
-                            border: Border.all(color: const Color(0xFFD0D0D0)),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.04),
-                                blurRadius: 4,
-                                offset: const Offset(0, 2),
-                              ),
-                            ],
-                          ),
-                          child: TextField(
-                            controller: _otpController,
-                            keyboardType: TextInputType.number,
-                            style: GoogleFonts.inriaSans(
-                              fontSize: 14,
-                              color: Colors.black87,
-                            ),
-                            decoration: const InputDecoration(
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(
-                                horizontal: 14,
-                                vertical: 0,
-                              ),
-                              isDense: true,
-                            ),
-                          ),
+                        TextFormField(
+                          controller: _otpController,
+                          keyboardType: TextInputType.number,
+                          style: GoogleFonts.inriaSans(
+                              fontSize: 14, color: Colors.black87),
+                          decoration: _inputDecoration(),
                         ),
 
                         // ── Enter button ──────────────────────────────────
-                        const SizedBox(height: 32),
+                        const SizedBox(height: 30),
                         SizedBox(
                           width: double.infinity,
                           height: 54,
                           child: ElevatedButton(
                             onPressed: _isSubmitting ? null : _submit,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF9E9E9E),
+                              backgroundColor: _grey,
                               foregroundColor: Colors.white,
-                              disabledBackgroundColor: const Color(
-                                0xFF9E9E9E,
-                              ).withOpacity(0.6),
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(30),
                               ),
@@ -380,17 +306,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                                     width: 22,
                                     height: 22,
                                     child: CircularProgressIndicator(
-                                      strokeWidth: 2.5,
-                                      color: Colors.white,
-                                    ),
+                                        strokeWidth: 2.5, color: Colors.white),
                                   )
                                 : Text(
                                     'Enter',
                                     style: GoogleFonts.montserrat(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w500,
-                                      color: Colors.white,
-                                    ),
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.white),
                                   ),
                           ),
                         ),
@@ -407,4 +330,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ),
     );
   }
+
+  Widget _circle(double size, Color color) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+      );
 }
