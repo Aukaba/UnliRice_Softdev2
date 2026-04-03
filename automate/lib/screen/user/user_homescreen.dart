@@ -1,123 +1,137 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'user_dashboard.dart';
+import 'user_activity.dart';
 
 class UserHomeScreen extends StatefulWidget {
-  const UserHomeScreen({super.key});
+  final VoidCallback? onViewAllActivity;
+  const UserHomeScreen({
+    super.key,
+    this.onViewAllActivity,
+  });
 
   @override
   State<UserHomeScreen> createState() => _UserHomeScreenState();
 }
 
 class _UserHomeScreenState extends State<UserHomeScreen> {
-  int _currentIndex = 0; // Default active index is Map
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: Column(
-        children: [
-          // Header Section
-          _buildHeader(),
-          
-          // Main Body Scrollable Section
-          Expanded(
-            child: SingleChildScrollView(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Primary Action Button
-                    _buildAskForHelpButton(),
-                    
-                    const SizedBox(height: 32),
+      body: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Header Section
+            _buildHeader(),
+            
+            // Main Body Section
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Primary Action Button
+                  _buildAskForHelpButton(),
+                  
+                  const SizedBox(height: 32),
 
-                    // Recent Activity Header
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.access_time, size: 24, color: Colors.black),
-                            const SizedBox(width: 8),
-                            Text(
-                              'Recent Activity',
-                              style: GoogleFonts.montserrat(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.black,
-                              ),
+                  // Recent Activity Header
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.access_time, size: 24, color: Colors.black),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Recent Activity',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black,
                             ),
-                          ],
-                        ),
-                        Text(
+                          ),
+                        ],
+                      ),
+                      GestureDetector(
+                        onTap: () {
+                          if (widget.onViewAllActivity != null) {
+                            widget.onViewAllActivity!();
+                          } else {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(builder: (context) => const UserActivityScreen()),
+                            );
+                          }
+                        },
+                        child: Text(
                           'View All',
                           style: GoogleFonts.inriaSans(
                             fontSize: 14,
                             color: const Color(0xFF2B5A82),
                           ),
                         ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
 
-                    // Recent Activity Cards
-                    const ActivityCard(
-                      title: 'Engine Check',
-                      timeAgo: 'Completed 2 hours ago',
-                    ),
-                    const SizedBox(height: 12),
-                    const ActivityCard(
-                      title: 'Tire Replacement',
-                      timeAgo: 'Completed yesterday',
-                    ),
-                    const SizedBox(height: 12),
-                    const ActivityCard(
-                      title: 'Oil Change',
-                      timeAgo: 'Completed 3 days ago',
-                    ),
-                    
-                    const SizedBox(height: 32),
+                  // Recent Activity Cards
+                  const ActivityCard(
+                    title: 'Engine Check',
+                    timeAgo: 'Completed 2 hours ago',
+                  ),
+                  const SizedBox(height: 12),
+                  const ActivityCard(
+                    title: 'Tire Replacement',
+                    timeAgo: 'Completed yesterday',
+                  ),
+                  const SizedBox(height: 12),
+                  const ActivityCard(
+                    title: 'Oil Change',
+                    timeAgo: 'Completed 3 days ago',
+                  ),
+                  
+                  const SizedBox(height: 32),
 
-                    // Your Stats Header
-                    Text(
-                      'Your Stats',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
+                  // Your Stats Header
+                  Text(
+                    'Your Stats',
+                    style: GoogleFonts.montserrat(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // Stats Card Placeholder
+                  Container(
+                    width: double.infinity,
+                    height: 100, // Matching the proportion shown in design
+                    padding: const EdgeInsets.all(20),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFE0E0E0),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      'Total Requests',
+                      style: GoogleFonts.inriaSans(
+                        fontSize: 15,
+                        color: Colors.black54,
                       ),
                     ),
-                    const SizedBox(height: 16),
-
-                    // Stats Card Placeholder
-                    Container(
-                      width: double.infinity,
-                      height: 100, // Matching the proportion shown in design
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE0E0E0),
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      child: Text(
-                        'Total Requests',
-                        style: GoogleFonts.inriaSans(
-                          fontSize: 15,
-                          color: Colors.black54,
-                        ),
-                      ),
-                    ),
-                    
-                    const SizedBox(height: 24),
-                  ],
-                ),
+                  ),
+                  
+                  const SizedBox(height: 24),
+                ],
               ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 
@@ -200,7 +214,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
         child: InkWell(
           borderRadius: BorderRadius.circular(16),
           onTap: () {
-            // TODO: Navigate to ask for help flow
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const UserDashboardScreen()),
+            );
           },
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 24.0),
@@ -223,61 +240,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
       ),
     );
   }
-
-  Widget _buildBottomNavigationBar() {
-    return Container(
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border(top: BorderSide(color: Colors.grey.shade300, width: 1)),
-      ),
-      child: BottomNavigationBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-        },
-        backgroundColor: Colors.white,
-        type: BottomNavigationBarType.fixed,
-        elevation: 0,
-        selectedItemColor: const Color(0xFF2B5A82), // Deep Blue specified
-        unselectedItemColor: Colors.grey.shade400,
-        selectedLabelStyle: GoogleFonts.inriaSans(fontSize: 12, fontWeight: FontWeight.w600),
-        unselectedLabelStyle: GoogleFonts.inriaSans(fontSize: 12),
-        items: const [
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(bottom: 4.0),
-              child: Icon(Icons.location_on),
-            ),
-            label: 'Map',
-          ),
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(bottom: 4.0),
-              child: Icon(Icons.notifications_none),
-            ),
-            label: 'Activity',
-          ),
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(bottom: 4.0),
-              child: Icon(Icons.chat_bubble_outline),
-            ),
-            label: 'Messages',
-          ),
-          BottomNavigationBarItem(
-            icon: Padding(
-              padding: EdgeInsets.only(bottom: 4.0),
-              child: Icon(Icons.person_outline),
-            ),
-            label: 'Profile',
-          ),
-        ],
-      ),
-    );
-  }
 }
+
 
 /// Reusable stateless widget for Recent Activity cards
 class ActivityCard extends StatelessWidget {

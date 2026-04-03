@@ -1,0 +1,303 @@
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+
+class UserChatSessionScreen extends StatefulWidget {
+  final String mechanicName;
+
+  const UserChatSessionScreen({
+    super.key,
+    required this.mechanicName,
+  });
+
+  @override
+  State<UserChatSessionScreen> createState() => _UserChatSessionScreenState();
+}
+
+class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
+  final TextEditingController _msgController = TextEditingController();
+
+  bool get _isMechMate => widget.mechanicName == "MechMate";
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      body: Column(
+        children: [
+          _isMechMate ? _buildMechMateHeader() : _buildMechanicHeader(),
+
+          // Main Chat Body
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+              children: [
+                _buildMessageBubble(
+                  message: "Hi! I'm on my way to you",
+                  time: "10:30 AM",
+                  isMe: false,
+                ),
+                _buildMessageBubble(
+                  message: "Great! What's the estimated time?",
+                  time: "10:32 AM",
+                  isMe: true,
+                ),
+                _buildMessageBubble(
+                  message: "I'll be there in 5 minutes",
+                  time: "10:35 AM",
+                  isMe: false,
+                ),
+              ],
+            ),
+          ),
+
+          // Input Bar
+          _buildInputBar(),
+        ],
+      ),
+    );
+  }
+
+  /// MechMate-specific header: light blue background, robot avatar on the right
+  Widget _buildMechMateHeader() {
+    return Container(
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 12,
+        bottom: 16,
+        left: 12,
+        right: 16,
+      ),
+      decoration: const BoxDecoration(
+        color: Color(0xFFB3D9F2), // Light blue
+        borderRadius: BorderRadius.only(
+          bottomLeft: Radius.circular(20),
+          bottomRight: Radius.circular(20),
+        ),
+      ),
+      child: Row(
+        children: [
+          // Back arrow
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Icon(Icons.arrow_back, color: Colors.black87, size: 26),
+            ),
+          ),
+          const SizedBox(width: 4),
+          // Title
+          Expanded(
+            child: Row(
+              children: [
+                Text(
+                  "MechMate ",
+                  style: GoogleFonts.montserrat(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black87,
+                  ),
+                ),
+                const Text("✦", style: TextStyle(fontSize: 16, color: Colors.blueAccent)),
+              ],
+            ),
+          ),
+          // Robot avatar on the right
+          Container(
+            width: 50,
+            height: 50,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: Colors.white,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.1),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Image.asset(
+              'assets/images/robotttt.png',
+              fit: BoxFit.cover,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Regular mechanic header: gold background
+  Widget _buildMechanicHeader() {
+    return Container(
+      padding: EdgeInsets.only(
+        top: MediaQuery.of(context).padding.top + 16,
+        bottom: 16,
+        left: 16,
+        right: 16,
+      ),
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFBF00),
+        borderRadius: const BorderRadius.only(
+          bottomLeft: Radius.circular(16),
+          bottomRight: Radius.circular(16),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.15),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: () => Navigator.pop(context),
+            child: const Padding(
+              padding: EdgeInsets.all(8.0),
+              child: Icon(Icons.arrow_back, color: Colors.black, size: 28),
+            ),
+          ),
+          const SizedBox(width: 8),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                widget.mechanicName,
+                style: GoogleFonts.inriaSans(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black,
+                ),
+              ),
+              Text(
+                "ADV 160 ROADSYNC",
+                style: GoogleFonts.montserrat(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w400,
+                  color: Colors.black54,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildInputBar() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF1F1F1),
+        border: Border(top: BorderSide(color: Colors.grey.shade300, width: 1)),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+              child: TextField(
+                controller: _msgController,
+                decoration: InputDecoration(
+                  hintText: "Type a message....",
+                  hintStyle: GoogleFonts.montserrat(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.grey.shade500,
+                  ),
+                  border: InputBorder.none,
+                  isDense: true,
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: const BoxDecoration(
+              color: Color(0xFF19456B),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(Icons.send_rounded, color: Colors.white, size: 22),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessageBubble({
+    required String message,
+    required String time,
+    required bool isMe,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 20.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
+        children: [
+          // Show robot avatar on the left side for bot messages (MechMate only)
+          if (!isMe && _isMechMate) ...[
+            Container(
+              width: 34,
+              height: 34,
+              decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
+              clipBehavior: Clip.antiAlias,
+              child: Image.asset(
+                'assets/images/robotttt.png',
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+          // Message bubble
+          Flexible(
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              constraints: BoxConstraints(
+                maxWidth: MediaQuery.of(context).size.width * 0.72,
+              ),
+              decoration: BoxDecoration(
+                color: isMe ? const Color(0xFF19456B) : const Color(0xFFDDDDDD),
+                borderRadius: BorderRadius.only(
+                  topLeft: const Radius.circular(16),
+                  topRight: const Radius.circular(16),
+                  bottomLeft: isMe ? const Radius.circular(16) : const Radius.circular(4),
+                  bottomRight: isMe ? const Radius.circular(4) : const Radius.circular(16),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    message,
+                    style: GoogleFonts.montserrat(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w400,
+                      color: isMe ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    time,
+                    style: GoogleFonts.montserrat(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w400,
+                      color: isMe ? Colors.white60 : Colors.black45,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

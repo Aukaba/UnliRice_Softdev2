@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../Logic/auth_logic.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import '../../Logic/authentication/login.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
-import '../user/user_homescreen.dart';
+import '../user/navigation_shell.dart';
+import '../mechanic/homescreen.dart';
+import '../admin/admin_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -18,6 +21,35 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isLoading = false;
   String? _errorMessage;
   bool _passwordVisible = false;
+  bool _rememberMe = false;
+
+  static const _kRememberMeKey = 'remember_me_email';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSavedEmail();
+  }
+
+  Future<void> _loadSavedEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    final savedEmail = prefs.getString(_kRememberMeKey);
+    if (savedEmail != null && savedEmail.isNotEmpty) {
+      setState(() {
+        _emailController.text = savedEmail;
+        _rememberMe = true;
+      });
+    }
+  }
+
+  Future<void> _saveOrClearEmail() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (_rememberMe) {
+      await prefs.setString(_kRememberMeKey, _emailController.text.trim());
+    } else {
+      await prefs.remove(_kRememberMeKey);
+    }
+  }
 
   @override
   void dispose() {
@@ -33,27 +65,35 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      final accountType = await AuthLogic.login(
+      final accountType = await LoginLogic.login(
         email: _emailController.text.trim(),
         password: _passwordController.text,
       );
 
+      // Save or clear the remembered email
+      await _saveOrClearEmail();
+
       if (!mounted) return;
 
-      if (accountType == 'mechanic') {
+      if (accountType == 'admin') {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => const Scaffold(
-              body: Center(child: Text('Mechanic Home Screen')),
-            ),
+            builder: (context) => const AdminDashboardScreen(),
+          ),
+        );
+      } else if (accountType == 'mechanic') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => const MechanicHomeScreen(),
           ),
         );
       } else {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => const UserHomeScreen(),
+            builder: (context) => const UserNavigationShell(),
           ),
         );
       }
@@ -240,33 +280,81 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                         ),
 
-                        // Forgot Password button
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: TextButton(
-                            onPressed: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      const ForgotPasswordScreen(),
-                                ),
-                              );
-                            },
-                            style: TextButton.styleFrom(
-                              padding: const EdgeInsets.only(top: 8, bottom: 8),
-                              minimumSize: Size.zero,
-                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                            ),
-                            child: const Text(
-                              'Forgot Password?',
-                              style: TextStyle(
-                                color: Color(0xFF121212),
-                                fontSize: 13,
-                                fontWeight: FontWeight.w500,
+                        // Remember Me + Forgot Password row
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            // Remember Me checkbox
+                            GestureDetector(
+                              onTap: () {
+                                setState(() {
+                                  _rememberMe = !_rememberMe;
+                                });
+                              },
+                              child: Row(
+                                children: [
+                                  SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: Checkbox(
+                                      value: _rememberMe,
+                                      onChanged: (val) {
+                                        setState(() {
+                                          _rememberMe = val ?? false;
+                                        });
+                                      },
+                                      activeColor: const Color(0xFF16477A),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      side: const BorderSide(
+                                        color: Color(0xFF16477A),
+                                        width: 1.5,
+                                      ),
+                                      materialTapTargetSize:
+                                          MaterialTapTargetSize.shrinkWrap,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Text(
+                                    'Remember me',
+                                    style: TextStyle(
+                                      color: Color(0xFF121212),
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
+
+                            // Forgot Password button
+                            TextButton(
+                              onPressed: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const ForgotPasswordScreen(),
+                                  ),
+                                );
+                              },
+                              style: TextButton.styleFrom(
+                                padding:
+                                    const EdgeInsets.only(top: 8, bottom: 8),
+                                minimumSize: Size.zero,
+                                tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              ),
+                              child: const Text(
+                                'Forgot Password?',
+                                style: TextStyle(
+                                  color: Color(0xFF121212),
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
 
                         const SizedBox(height: 16),
