@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'admin_update_password_screen.dart';
+import '../authentication/login_screen.dart';
 
 class AdminProfileContent extends StatefulWidget {
   const AdminProfileContent({super.key});
@@ -52,7 +53,10 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
   Future<void> _signOut() async {
     await _supabase.auth.signOut();
     if (!mounted) return;
-    Navigator.of(context).popUntil((route) => route.isFirst);
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
   }
 
   // Navigates to the Update Password screen
