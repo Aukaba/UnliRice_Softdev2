@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'admin_update_password_screen.dart';
-import 'admin_update_email_screen.dart';
 
 class AdminProfileContent extends StatefulWidget {
   const AdminProfileContent({super.key});
@@ -63,14 +62,6 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
       MaterialPageRoute(
         builder: (context) => const AdminUpdatePasswordScreen(),
       ),
-    );
-  }
-
-  // Navigates to the Update Email screen
-  void _goToUpdateEmail() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const AdminUpdateEmailScreen()),
     );
   }
 
@@ -308,14 +299,6 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
                           icon: Icons.lock_outline_rounded,
                           label: 'Update Password',
                           onTap: _goToUpdatePassword,
-                        ),
-                        const SizedBox(height: 10),
-
-                        // Update Email — navigates to AdminUpdateEmailScreen
-                        _SettingsTile(
-                          icon: Icons.email_outlined,
-                          label: 'Update Email',
-                          onTap: _goToUpdateEmail,
                         ),
 
                         const SizedBox(height: 20),
