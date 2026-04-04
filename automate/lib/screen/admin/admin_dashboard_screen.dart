@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'admin_mechanic_verification_screen.dart';
+import 'admin_analytics_screen.dart';
+import 'admin_profile_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({super.key});
@@ -12,17 +14,15 @@ class AdminDashboardScreen extends StatefulWidget {
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   int _currentIndex = 0;
 
-  void _switchTab(int index) {
-    setState(() => _currentIndex = index);
-  }
+  void _switchTab(int index) => setState(() => _currentIndex = index);
 
   @override
   Widget build(BuildContext context) {
     final List<Widget> screens = [
-      _AdminDashboardTab(onSwitchTab: _switchTab),
+      _DashboardTab(onSwitchTab: _switchTab),
       AdminMechanicVerificationContent(onSwitchTab: _switchTab),
-      const _PlaceholderTab(label: 'Drivers'),
-      const _PlaceholderTab(label: 'Settings'),
+      const AdminAnalyticsContent(),
+      const AdminProfileContent(),
     ];
 
     return Scaffold(
@@ -58,14 +58,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                   onTap: () => _switchTab(1),
                 ),
                 _NavItem(
-                  icon: Icons.people,
-                  label: 'Drivers',
+                  icon: Icons.bar_chart,
+                  label: 'Analytics',
                   isActive: _currentIndex == 2,
                   onTap: () => _switchTab(2),
                 ),
                 _NavItem(
-                  icon: Icons.settings,
-                  label: 'Settings',
+                  icon: Icons.person,
+                  label: 'Profile',
                   isActive: _currentIndex == 3,
                   onTap: () => _switchTab(3),
                 ),
@@ -134,16 +134,15 @@ class _NavItem extends StatelessWidget {
 
 // ── Dashboard tab ────────────────────────────────────────────────────────────
 
-class _AdminDashboardTab extends StatefulWidget {
+class _DashboardTab extends StatefulWidget {
   final void Function(int) onSwitchTab;
-
-  const _AdminDashboardTab({required this.onSwitchTab});
+  const _DashboardTab({required this.onSwitchTab});
 
   @override
-  State<_AdminDashboardTab> createState() => _AdminDashboardTabState();
+  State<_DashboardTab> createState() => _DashboardTabState();
 }
 
-class _AdminDashboardTabState extends State<_AdminDashboardTab> {
+class _DashboardTabState extends State<_DashboardTab> {
   static final _supabase = Supabase.instance.client;
 
   bool _isLoading = true;
@@ -175,7 +174,7 @@ class _AdminDashboardTabState extends State<_AdminDashboardTab> {
         _adminName = adminData['first_name'] ?? 'Admin';
       }
 
-      // Load counts — update table/column names to match your Supabase
+      // Update table names to match your Supabase
       final pending = await _supabase
           .from('mechanics')
           .select('id')
@@ -187,7 +186,6 @@ class _AdminDashboardTabState extends State<_AdminDashboardTab> {
           .eq('status', 'active');
 
       final drivers = await _supabase.from('users').select('id');
-
       final verified = await _supabase
           .from('mechanics')
           .select('id')
@@ -202,7 +200,7 @@ class _AdminDashboardTabState extends State<_AdminDashboardTab> {
         });
       }
     } catch (_) {
-      // Silently fail — shows last known values or zeros
+      // Silently fail
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -425,21 +423,22 @@ class _StatCard extends StatelessWidget {
               ),
             ),
           ),
-          Positioned(
-            right: 0,
-            top: 4,
-            child: Text(
-              percentage,
-              style: TextStyle(
-                color: isPositive
-                    ? const Color(0xFF22C55E)
-                    : const Color(0xFFEF4444),
-                fontSize: 12,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w500,
+          if (percentage.isNotEmpty)
+            Positioned(
+              right: 0,
+              top: 4,
+              child: Text(
+                percentage,
+                style: TextStyle(
+                  color: isPositive
+                      ? const Color(0xFF22C55E)
+                      : const Color(0xFFEF4444),
+                  fontSize: 12,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
-          ),
           Padding(
             padding: const EdgeInsets.only(top: 36),
             child: SizedBox(
@@ -475,48 +474,6 @@ class _StatCard extends StatelessWidget {
             ),
           ),
         ],
-      ),
-    );
-  }
-}
-
-// ── Placeholder tab ──────────────────────────────────────────────────────────
-
-class _PlaceholderTab extends StatelessWidget {
-  final String label;
-
-  const _PlaceholderTab({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              Icons.construction_rounded,
-              size: 64,
-              color: Colors.grey.shade300,
-            ),
-            const SizedBox(height: 12),
-            Text(
-              '$label coming soon',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Colors.grey.shade400,
-                fontFamily: 'Poppins',
-              ),
-            ),
-            const SizedBox(height: 6),
-            Text(
-              'This screen is under construction.',
-              style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
-            ),
-          ],
-        ),
       ),
     );
   }

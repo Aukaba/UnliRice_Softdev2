@@ -1,10 +1,5 @@
 import 'package:flutter/material.dart';
 
-// ── Shared content widget (used inside the tab) ──────────────────────────────
-// Fix: Extracted core content into AdminMechanicVerificationContent so it
-// works correctly inside AdminDashboardScreen's IndexedStack without
-// causing Navigator.pop to exit the whole dashboard.
-
 class AdminMechanicVerificationContent extends StatefulWidget {
   final void Function(int)? onSwitchTab;
 
@@ -18,8 +13,7 @@ class AdminMechanicVerificationContent extends StatefulWidget {
 class _AdminMechanicVerificationContentState
     extends State<AdminMechanicVerificationContent> {
   // Dummy data — replace with Supabase later
-  // Fix: id is kept as int to match Supabase's default int type,
-  // preventing the type mismatch bug in removeWhere
+  // id kept as int to match Supabase default type
   final List<Map<String, dynamic>> _pendingMechanics = [
     {
       'id': 1,
