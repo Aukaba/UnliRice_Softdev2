@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../Logic/admin/admin_profile/admin_changpassword.dart';
 
 class AdminUpdatePasswordScreen extends StatefulWidget {
   const AdminUpdatePasswordScreen({super.key});
@@ -10,8 +11,6 @@ class AdminUpdatePasswordScreen extends StatefulWidget {
 }
 
 class _AdminUpdatePasswordScreenState extends State<AdminUpdatePasswordScreen> {
-  static final _supabase = Supabase.instance.client;
-
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _reEnterPasswordController = TextEditingController();
@@ -30,10 +29,11 @@ class _AdminUpdatePasswordScreenState extends State<AdminUpdatePasswordScreen> {
   }
 
   Future<void> _submit() async {
+    final currentPassword = _currentPasswordController.text;
     final newPassword = _newPasswordController.text.trim();
     final reEnter = _reEnterPasswordController.text.trim();
 
-    if (newPassword.isEmpty || reEnter.isEmpty) {
+    if (currentPassword.isEmpty || newPassword.isEmpty || reEnter.isEmpty) {
       _showError('Please fill in all fields.');
       return;
     }
@@ -51,12 +51,23 @@ class _AdminUpdatePasswordScreenState extends State<AdminUpdatePasswordScreen> {
     setState(() => _isLoading = true);
 
     try {
-      await _supabase.auth.updateUser(UserAttributes(password: newPassword));
+      await AdminChangePasswordLogic.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+
       if (!mounted) return;
       _showSuccessDialog();
+    } on AuthException catch (e) {
+      if (!mounted) return;
+      _showError(e.message);
     } catch (e) {
       if (!mounted) return;
-      _showError('Failed to update password. Please try again.');
+      if (e.toString().contains('User not found.')) {
+        _showError('User not found.');
+      } else {
+        _showError('Failed to update password. Please check your current password and try again.');
+      }
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -110,7 +121,7 @@ class _AdminUpdatePasswordScreenState extends State<AdminUpdatePasswordScreen> {
 
               // Title
               const Text(
-                'Reset Password Successfully',
+                'Password Changed Successfully',
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: Color(0xFF1A1A1A),
@@ -305,7 +316,7 @@ class _AdminUpdatePasswordScreenState extends State<AdminUpdatePasswordScreen> {
                         // Title
                         const Center(
                           child: Text(
-                            'Forget Password',
+                            'Change Password',
                             style: TextStyle(
                               color: Colors.black,
                               fontSize: 20,

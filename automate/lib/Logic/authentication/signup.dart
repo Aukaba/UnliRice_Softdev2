@@ -24,8 +24,12 @@ class SignupLogic {
         },
       );
 
-      if (authResponse.user == null) {
+      final user = authResponse.user;
+      if (user == null) {
         throw Exception('Sign-up failed. Please try again.');
+      }
+      if (user.identities != null && user.identities!.isEmpty) {
+        throw Exception('An account with this email already exists.');
       }
       // Profile row is inserted automatically by the on_auth_user_created trigger.
     } on AuthException catch (e) {
@@ -62,8 +66,12 @@ class SignupLogic {
         },
       );
 
-      if (authResponse.user == null) {
+      final user = authResponse.user;
+      if (user == null) {
         throw Exception('Admin sign-up failed. Please try again.');
+      }
+      if (user.identities != null && user.identities!.isEmpty) {
+        throw Exception('An account with this email already exists.');
       }
       // Admin row is inserted automatically by the on_auth_admin_created trigger.
     } on AuthException catch (e) {
