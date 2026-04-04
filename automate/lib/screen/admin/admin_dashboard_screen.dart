@@ -147,8 +147,6 @@ class _DashboardTabState extends State<_DashboardTab> {
 
   bool _isLoading = true;
   String _adminName = 'Admin';
-
-  // Counts loaded from Supabase — update table names to match yours
   int _pendingMechanics = 0;
   int _activeRequests = 0;
   int _registeredDrivers = 0;
@@ -163,8 +161,6 @@ class _DashboardTabState extends State<_DashboardTab> {
   Future<void> _loadData() async {
     try {
       final uid = _supabase.auth.currentUser?.id;
-
-      // Load admin name
       if (uid != null) {
         final adminData = await _supabase
             .from('admin')
@@ -179,12 +175,10 @@ class _DashboardTabState extends State<_DashboardTab> {
           .from('mechanics')
           .select('id')
           .eq('status', 'pending');
-
       final active = await _supabase
           .from('requests')
           .select('id')
           .eq('status', 'active');
-
       final drivers = await _supabase.from('users').select('id');
       final verified = await _supabase
           .from('mechanics')

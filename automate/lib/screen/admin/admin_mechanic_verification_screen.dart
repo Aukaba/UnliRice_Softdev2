@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 class AdminMechanicVerificationContent extends StatefulWidget {
   final void Function(int)? onSwitchTab;
-
   const AdminMechanicVerificationContent({super.key, this.onSwitchTab});
 
   @override
@@ -35,8 +34,6 @@ class _AdminMechanicVerificationContentState
     },
   ];
 
-  // Fix: mechanicId is now int (not String) to match the stored id type,
-  // so removeWhere correctly finds and removes the card
   void _removeCard(int mechanicId, String action) {
     setState(() {
       _pendingMechanics.removeWhere((m) => m['id'] == mechanicId);
@@ -114,10 +111,6 @@ class _AdminMechanicVerificationContentState
             Column(
               children: [
                 // Header
-                // Fix: Removed Navigator.pop back button — since this widget
-                // lives inside an IndexedStack, popping would exit the whole
-                // dashboard back to login. Navigation is handled by the
-                // bottom nav bar instead.
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                   child: Row(
@@ -271,7 +264,6 @@ class _MechanicCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Name
           const Text(
             'Name:',
             style: TextStyle(
@@ -291,8 +283,6 @@ class _MechanicCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-
-          // Email
           const Text(
             'Email:',
             style: TextStyle(
@@ -312,8 +302,6 @@ class _MechanicCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 8),
-
-          // Contact
           const Text(
             'Contact:',
             style: TextStyle(
@@ -333,8 +321,6 @@ class _MechanicCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-
-          // Certification
           const Text(
             'CERTIFICATION:',
             style: TextStyle(
@@ -346,8 +332,6 @@ class _MechanicCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 10),
-
-          // See certification button
           Center(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 31, vertical: 8),
@@ -373,8 +357,6 @@ class _MechanicCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-
-          // Waiting label
           const Center(
             child: Text(
               'Waiting for approval',
@@ -387,8 +369,6 @@ class _MechanicCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 12),
-
-          // Reject / Approve buttons
           Row(
             children: [
               Expanded(
