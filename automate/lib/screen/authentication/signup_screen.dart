@@ -231,7 +231,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         // Role Dropdown
                         _buildLabel('Tell us who you are'),
                         DropdownButtonFormField<String>(
-                          value: _accountType,
+                          initialValue: _accountType,
                           decoration: InputDecoration(
                             contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 14),
