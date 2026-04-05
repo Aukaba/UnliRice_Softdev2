@@ -78,9 +78,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (accountType == 'admin') {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => const AdminDashboardScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
         );
       } else if (accountType == 'mechanic') {
         Navigator.pushReplacement(
@@ -92,9 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
       } else {
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => const UserNavigationShell(),
-          ),
+          MaterialPageRoute(builder: (context) => const UserNavigationShell()),
         );
       }
     } catch (e) {
