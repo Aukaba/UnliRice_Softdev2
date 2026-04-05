@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../../Logic/auth_logic.dart';
+import '../../Logic/authentication/signup.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -57,7 +57,7 @@ class _SignupScreenState extends State<SignupScreen> {
     });
 
     try {
-      await AuthLogic.signUp(
+      await SignupLogic.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         firstName: _firstNameController.text.trim(),
@@ -231,7 +231,7 @@ class _SignupScreenState extends State<SignupScreen> {
                         // Role Dropdown
                         _buildLabel('Tell us who you are'),
                         DropdownButtonFormField<String>(
-                          value: _accountType,
+                          initialValue: _accountType,
                           decoration: InputDecoration(
                             contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 16, vertical: 14),

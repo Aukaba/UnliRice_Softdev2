@@ -1,19 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:math' as math;
-
-// Basic placeholder for the Next Screen as requested
-class ResetPasswordScreen extends StatelessWidget {
-  const ResetPasswordScreen({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Reset Password')),
-      body: const Center(child: Text('Reset Password Screen coming soon')),
-    );
-  }
-}
+import '../../Logic/authentication/reset_password.dart';
+import 'reset_password_screen.dart';
 
 class ForgotPasswordScreen extends StatefulWidget {
   const ForgotPasswordScreen({super.key});
@@ -26,6 +14,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   final _emailController = TextEditingController();
   final _otpController = TextEditingController();
 
+  bool _isSending = false;
+  bool _isSubmitting = false;
+  String? _errorMessage;
+
+  static const _amber = Color(0xFFFFC107);
+  static const _blue = Color(0xFF5584AC);
+  static const _grey = Color(0xFF9E9E9E);
+  static const _borderColor = Color(0xFFD0D0D0);
+
   @override
   void dispose() {
     _emailController.dispose();
@@ -33,260 +30,295 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     super.dispose();
   }
 
-  void _sendOtp() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('OTP command executed!')),
-    );
+  Future<void> _sendOtp() async {
+    final email = _emailController.text.trim();
+    if (email.isEmpty) {
+      setState(() => _errorMessage = 'Please enter your email.');
+      return;
+    }
+    setState(() {
+      _errorMessage = null;
+      _isSending = true;
+    });
+    try {
+      await ResetPasswordLogic.forgotPassword(email: email);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('OTP sent to your email!')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() =>
+            _errorMessage = e.toString().replaceFirst('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) setState(() => _isSending = false);
+    }
   }
 
-  void _submit() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
+  Future<void> _submit() async {
+    final email = _emailController.text.trim();
+    final otp = _otpController.text.trim();
+    if (email.isEmpty || otp.isEmpty) {
+      setState(() => _errorMessage = 'Please enter email and OTP.');
+      return;
+    }
+    setState(() {
+      _errorMessage = null;
+      _isSubmitting = true;
+    });
+    try {
+      await ResetPasswordLogic.verifyOtp(email: email, token: otp);
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() =>
+            _errorMessage = e.toString().replaceFirst('Exception: ', ''));
+      }
+    } finally {
+      if (mounted) setState(() => _isSubmitting = false);
+    }
+  }
+
+  // Shared input decoration — no floating label, clean border
+  InputDecoration _inputDecoration({Widget? suffix}) {
+    return InputDecoration(
+      filled: true,
+      fillColor: Colors.white,
+      contentPadding:
+          const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: _borderColor),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: _borderColor),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(10),
+        borderSide: const BorderSide(color: _blue, width: 1.5),
+      ),
+      // Disable the floating label entirely
+      floatingLabelBehavior: FloatingLabelBehavior.never,
+      suffixIcon: suffix,
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Background Gold Circles mimicking the custom overlapping graphics
+          // ── TOP-LEFT large gold circle ──────────────────────────────────
           Positioned(
-            top: -150,
-            left: -100,
-            child: Container(
-              width: 400,
-              height: 400,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFFFFBF00),
-              ),
-            ),
-          ),
-          Positioned(
-            top: MediaQuery.of(context).size.height * 0.4,
-            right: -150,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFFFFBF00),
-              ),
-            ),
-          ),
-          Positioned(
-            bottom: -150,
-            left: -100,
-            child: Container(
-              width: 300,
-              height: 300,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Color(0xFFFFBF00),
-              ),
-            ),
+            top: -size.height * 0.08,
+            left: -size.width * 0.22,
+            child: _circle(size.width * 0.88, _amber),
           ),
 
-          // Main Content
+          // ── MID-RIGHT medium gold circle ────────────────────────────────
+          Positioned(
+            top: size.height * 0.40,
+            right: -size.width * 0.30,
+            child: _circle(size.width * 0.62, _amber),
+          ),
+
+          // ── BOTTOM-LEFT small gold circle ───────────────────────────────
+          Positioned(
+            bottom: -size.width * 0.16,
+            left: -size.width * 0.14,
+            child: _circle(size.width * 0.45, _amber),
+          ),
+
+          // ── MAIN CONTENT ────────────────────────────────────────────────
           SafeArea(
             child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Back Arrow
-                Align(
-                  alignment: Alignment.topLeft,
-                  child: IconButton(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                    icon: const Icon(Icons.arrow_back, color: Colors.black87, size: 28),
-                    onPressed: () => Navigator.pop(context),
-                  ),
+                // Back arrow
+                IconButton(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  icon: const Icon(Icons.arrow_back,
+                      color: Colors.black87, size: 26),
+                  onPressed: () => Navigator.pop(context),
                 ),
 
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.symmetric(horizontal: 32.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 28.0),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const SizedBox(height: 20),
-
-                        // AutoMate Logo Mockup / Loading from assets if exists
-                        SizedBox(
-                          height: 120,
+                        // Logo
+                        const SizedBox(height: 8),
+                        Center(
                           child: Image.asset(
-                            'assets/logo.png',
-                            errorBuilder: (context, error, stackTrace) {
-                              // Fallback layout representing the logo in case asset is not placed yet
-                              return Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      Transform(
-                                        alignment: Alignment.center,
-                                        transform: Matrix4.identity()..rotateZ(-0.5),
-                                        child: const Icon(Icons.build, color: Color(0xFF16477A), size: 40),
-                                      ),
-                                      const Icon(Icons.location_on, color: Color(0xFF5584AC), size: 60),
-                                      Transform(
-                                        alignment: Alignment.center,
-                                        transform: Matrix4.identity()..rotateY(math.pi)..rotateZ(-0.5),
-                                        child: const Icon(Icons.build, color: Color(0xFF16477A), size: 40),
-                                      ),
-                                    ],
-                                  ),
-                                  RichText(
-                                    text: const TextSpan(
-                                      style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900, fontFamily: 'Montserrat'),
-                                      children: [
-                                        TextSpan(text: 'Auto', style: TextStyle(color: Color(0xFF16477A))),
-                                        TextSpan(text: 'Mate', style: TextStyle(color: Color(0xFFFFBF00))),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              );
-                            },
+                            'assets/images/AutoMate_logo.png',
+                            width: size.width * 0.75,
+                            height: size.width * 0.75,
+                            fit: BoxFit.contain,
                           ),
                         ),
 
-                        const SizedBox(height: 48),
-
-                        Text(
-                          'Forget Password',
-                          style: GoogleFonts.montserrat(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w700,
-                            color: Colors.black87,
-                          ),
-                        ),
-                        
-                        const SizedBox(height: 48),
-
-                        // Enter Email Field mapped correctly
-                        Align(
-                          alignment: Alignment.centerLeft,
+                        // Title
+                        const SizedBox(height: 36),
+                        Center(
                           child: Text(
-                            'Enter Email',
-                            style: GoogleFonts.inriaSans(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
+                            'Forget Password',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 22,
+                              fontWeight: FontWeight.w700,
                               color: Colors.black87,
                             ),
                           ),
                         ),
-                        const SizedBox(height: 8),
 
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: IntrinsicHeight(
+                        // Error banner
+                        if (_errorMessage != null) ...[
+                          const SizedBox(height: 14),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.red.shade50,
+                              borderRadius: BorderRadius.circular(10),
+                              border: Border.all(color: Colors.red.shade200),
+                            ),
                             child: Row(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
                               children: [
+                                Icon(Icons.error_outline,
+                                    color: Colors.red.shade700, size: 18),
+                                const SizedBox(width: 8),
                                 Expanded(
-                                  child: TextFormField(
-                                    controller: _emailController,
-                                    keyboardType: TextInputType.emailAddress,
-                                    decoration: const InputDecoration(
-                                      border: InputBorder.none,
-                                      contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                                      isDense: true,
-                                    ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(horizontal: 4.0, vertical: 4.0),
-                                  child: ElevatedButton(
-                                    onPressed: _sendOtp,
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: const Color(0xFF5584AC), // Exact requested Blue
-                                      foregroundColor: Colors.white,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(24),
-                                      ),
-                                      elevation: 0,
-                                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                                    ),
-                                    child: Text(
-                                      'Send',
-                                      style: GoogleFonts.montserrat(
-                                        fontWeight: FontWeight.w500,
-                                        fontSize: 14,
-                                      ),
-                                    ),
+                                  child: Text(
+                                    _errorMessage!,
+                                    style: TextStyle(
+                                        color: Colors.red.shade700,
+                                        fontSize: 13),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        ),
-                        
-                        const SizedBox(height: 24),
+                        ],
 
-                        // Enter OTP
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Enter OTP',
-                            style: GoogleFonts.inriaSans(
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                              color: Colors.black87,
+                        // ── Enter Email label ─────────────────────────────
+                        const SizedBox(height: 28),
+                        Text(
+                          'Enter Email',
+                          style: GoogleFonts.inriaSans(
+                              fontSize: 13, color: Colors.black87),
+                        ),
+                        const SizedBox(height: 6),
+
+                        // ── Email row: field + Send button ────────────────
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: TextFormField(
+                                controller: _emailController,
+                                keyboardType: TextInputType.emailAddress,
+                                style: GoogleFonts.inriaSans(
+                                    fontSize: 14, color: Colors.black87),
+                                decoration: _inputDecoration(),
+                              ),
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.grey.shade300),
-                          ),
-                          child: TextFormField(
-                            controller: _otpController,
-                            keyboardType: TextInputType.number,
-                            decoration: const InputDecoration(
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.symmetric(horizontal: 16, vertical: 16),
-                              isDense: true,
+                            const SizedBox(width: 8),
+                            SizedBox(
+                              height: 50,
+                              child: ElevatedButton(
+                                onPressed: _isSending ? null : _sendOtp,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: _blue,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  elevation: 0,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 20),
+                                ),
+                                child: _isSending
+                                    ? const SizedBox(
+                                        width: 14,
+                                        height: 14,
+                                        child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.white),
+                                      )
+                                    : Text(
+                                        'Send',
+                                        style: GoogleFonts.montserrat(
+                                            fontWeight: FontWeight.w500,
+                                            fontSize: 13),
+                                      ),
+                              ),
                             ),
-                          ),
+                          ],
                         ),
 
-                        const SizedBox(height: 40),
+                        // ── Enter OTP label ───────────────────────────────
+                        const SizedBox(height: 20),
+                        Text(
+                          'Enter OTP',
+                          style: GoogleFonts.inriaSans(
+                              fontSize: 13, color: Colors.black87),
+                        ),
+                        const SizedBox(height: 6),
 
-                        // Enter Bottom Button (Gray)
+                        // ── OTP field ─────────────────────────────────────
+                        TextFormField(
+                          controller: _otpController,
+                          keyboardType: TextInputType.number,
+                          style: GoogleFonts.inriaSans(
+                              fontSize: 14, color: Colors.black87),
+                          decoration: _inputDecoration(),
+                        ),
+
+                        // ── Enter button ──────────────────────────────────
+                        const SizedBox(height: 30),
                         SizedBox(
                           width: double.infinity,
-                          height: 56,
+                          height: 54,
                           child: ElevatedButton(
-                            onPressed: _submit,
+                            onPressed: _isSubmitting ? null : _submit,
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: const Color(0xFF9F9F9F), // Exact requested deep grey
+                              backgroundColor: _grey,
                               foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(28),
+                                borderRadius: BorderRadius.circular(30),
                               ),
                               elevation: 0,
                             ),
-                            child: Text(
-                              'Enter',
-                              style: GoogleFonts.montserrat(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
+                            child: _isSubmitting
+                                ? const SizedBox(
+                                    width: 22,
+                                    height: 22,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2.5, color: Colors.white),
+                                  )
+                                : Text(
+                                    'Enter',
+                                    style: GoogleFonts.montserrat(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w500,
+                                        color: Colors.white),
+                                  ),
                           ),
                         ),
 
-                        const SizedBox(height: 64),
+                        const SizedBox(height: 60),
                       ],
                     ),
                   ),
@@ -298,4 +330,10 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ),
     );
   }
+
+  Widget _circle(double size, Color color) => Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(shape: BoxShape.circle, color: color),
+      );
 }
