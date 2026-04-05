@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'admin_update_password_screen.dart';
-import '../authentication/login_screen.dart';
+import 'admin_update_email_screen.dart';
+import '../authentication/login_screen.dart'; // <-- added import
 
 class AdminProfileContent extends StatefulWidget {
   const AdminProfileContent({super.key});
@@ -53,19 +54,26 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
   Future<void> _signOut() async {
     await _supabase.auth.signOut();
     if (!mounted) return;
+    // Updated to match first version: push LoginScreen and remove all previous routes
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const LoginScreen()),
       (route) => false,
     );
   }
 
-  // Navigates to the Update Password screen
   void _goToUpdatePassword() {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (context) => const AdminUpdatePasswordScreen(),
       ),
+    );
+  }
+
+  void _goToUpdateEmail() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const AdminUpdateEmailScreen()),
     );
   }
 
@@ -303,6 +311,14 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
                           icon: Icons.lock_outline_rounded,
                           label: 'Update Password',
                           onTap: _goToUpdatePassword,
+                        ),
+                        const SizedBox(height: 10),
+
+                        // Update Email — navigates to AdminUpdateEmailScreen
+                        _SettingsTile(
+                          icon: Icons.email_outlined,
+                          label: 'Update Email',
+                          onTap: _goToUpdateEmail,
                         ),
 
                         const SizedBox(height: 20),
