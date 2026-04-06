@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'homescreen.dart'; // adjust import paths as needed
 import 'jobs.dart';
 import 'chat.dart';
-import 'profile.dart';
 
 // ─── Data model ───────────────────────────────────────────────────────────────
 
@@ -166,12 +165,8 @@ class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
     // Sunday = 0 offset
     final startOffset = firstDay.weekday % 7;
     final cells = <int?>[];
-    for (var i = 0; i < startOffset; i++) {
-      cells.add(null);
-    }
-    for (var d = 1; d <= daysInMonth; d++) {
-      cells.add(d);
-    }
+    for (var i = 0; i < startOffset; i++) cells.add(null);
+    for (var d = 1; d <= daysInMonth; d++) cells.add(d);
     return cells;
   }
 
@@ -200,8 +195,48 @@ class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF2F5F8),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
+            // ── Decorative amber blobs ──
+            Positioned(
+              right: -70,
+              top: 140,
+              child: Container(
+                width: 230,
+                height: 230,
+                decoration: const BoxDecoration(
+                  color: Color(0x26FFB703),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Positioned(
+              left: -80,
+              bottom: 260,
+              child: Container(
+                width: 270,
+                height: 270,
+                decoration: const BoxDecoration(
+                  color: Color(0x1FFFB703),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Positioned(
+              right: -40,
+              bottom: 80,
+              child: Container(
+                width: 170,
+                height: 170,
+                decoration: const BoxDecoration(
+                  color: Color(0x33FFB703),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            // ── Content ──
+            Column(
+              children: [
             // ── Header ──
             Container(
               margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -485,6 +520,8 @@ class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
               ),
             ),
           ],
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: _MechanicBottomNavigationBar(
@@ -503,12 +540,7 @@ class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
           } else if (index == 3) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => MechanicChatScreen()),
-            );
-          } else if (index == 4) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => MechanicProfileScreen()),
+              MaterialPageRoute(builder: (_) => const MechanicChatScreen()),
             );
           }
         },

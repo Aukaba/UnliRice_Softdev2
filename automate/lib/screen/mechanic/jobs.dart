@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'homescreen.dart';
 import 'schedule.dart';
 import 'chat.dart';
-import 'profile.dart';
 
 class MechanicJobsScreen extends StatefulWidget {
   const MechanicJobsScreen({super.key});
@@ -73,9 +72,49 @@ class _MechanicJobsScreenState extends State<MechanicJobsScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF2F5F8),
       body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
+        child: Stack(
           children: [
+            // ── Decorative amber blobs ──
+            Positioned(
+              left: -70,
+              top: 160,
+              child: Container(
+                width: 220,
+                height: 220,
+                decoration: const BoxDecoration(
+                  color: Color(0x26FFB703),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Positioned(
+              right: -60,
+              bottom: 200,
+              child: Container(
+                width: 260,
+                height: 260,
+                decoration: const BoxDecoration(
+                  color: Color(0x1FFFB703),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Positioned(
+              left: -30,
+              bottom: 60,
+              child: Container(
+                width: 150,
+                height: 150,
+                decoration: const BoxDecoration(
+                  color: Color(0x33FFB703),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            // ── Content ──
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
             // Header
             Container(
               margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
@@ -196,6 +235,8 @@ class _MechanicJobsScreenState extends State<MechanicJobsScreen> {
                     ),
             ),
           ],
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: _MechanicBottomNavigationBar(
@@ -204,30 +245,17 @@ class _MechanicJobsScreenState extends State<MechanicJobsScreen> {
           if (index == 0) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(
-                builder: (_) => const MechanicHomeScreen(),
-              ),
+              MaterialPageRoute(builder: (_) => const MechanicHomeScreen()),
             );
           } else if (index == 2) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(
-                builder: (_) => MechanicScheduleScreen(),
-              ),
+              MaterialPageRoute(builder: (_) => const MechanicScheduleScreen()),
             );
           } else if (index == 3) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(
-                builder: (_) => MechanicChatScreen(),
-              ),
-            );
-          } else if (index == 4) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (_) => MechanicProfileScreen(),
-              ),
+              MaterialPageRoute(builder: (_) => const MechanicChatScreen()),
             );
           }
         },
@@ -414,7 +442,8 @@ class _MechanicBottomNavigationBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onItemTapped;
 
-  const _MechanicBottomNavigationBar({required this.currentIndex, required this.onItemTapped});
+  const _MechanicBottomNavigationBar(
+      {required this.currentIndex, required this.onItemTapped});
 
   @override
   Widget build(BuildContext context) {
@@ -444,7 +473,8 @@ class _NavItem extends StatelessWidget {
   final bool active;
   final VoidCallback onTap;
 
-  const _NavItem({required this.icon, required this.label, this.active = false, required this.onTap});
+  const _NavItem(
+      {required this.icon, required this.label, this.active = false, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -452,28 +482,28 @@ class _NavItem extends StatelessWidget {
     return GestureDetector(
       onTap: onTap,
       child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: active ? const Color(0x33FFB703) : Colors.transparent,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, size: 22, color: color),
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            color: active ? const Color(0x33FFB703) : Colors.transparent,
+            borderRadius: BorderRadius.circular(14),
           ),
-          const SizedBox(height: 6),
-          Text(
-            label,
-            style: GoogleFonts.inriaSans(
-              fontSize: 11,
-              fontWeight: FontWeight.w600,
-              color: color,
-            ),
+          child: Icon(icon, size: 22, color: color),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          label,
+          style: GoogleFonts.inriaSans(
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: color,
           ),
-        ],
-      ),
+        ),
+      ],
+    ),
     );
   }
 }
