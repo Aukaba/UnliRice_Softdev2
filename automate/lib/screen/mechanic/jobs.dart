@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'homescreen.dart';
+import 'schedule.dart';
+import 'chat.dart';
+import 'profile.dart';
 
 class MechanicJobsScreen extends StatefulWidget {
   const MechanicJobsScreen({super.key});
@@ -203,6 +206,27 @@ class _MechanicJobsScreenState extends State<MechanicJobsScreen> {
               context,
               MaterialPageRoute(
                 builder: (_) => const MechanicHomeScreen(),
+              ),
+            );
+          } else if (index == 2) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MechanicScheduleScreen(),
+              ),
+            );
+          } else if (index == 3) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MechanicChatScreen(),
+              ),
+            );
+          } else if (index == 4) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MechanicProfileScreen(),
               ),
             );
           }

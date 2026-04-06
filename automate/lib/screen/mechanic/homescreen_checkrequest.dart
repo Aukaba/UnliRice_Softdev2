@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'homescreen.dart';
 import 'jobs.dart';
+import 'schedule.dart';
+import 'chat.dart';
+import 'profile.dart';
 
 class MechanicCheckRequestScreen extends StatefulWidget {
   const MechanicCheckRequestScreen({super.key});
@@ -205,12 +208,32 @@ class _MechanicCheckRequestScreenState
         onItemTapped: (index) {
           if (index == 0) {
             Navigator.pop(context);
-          }
-          if (index == 1) {
+          } else if (index == 1) {
             Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => const MechanicJobsScreen(),
+              ),
+            );
+          } else if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MechanicScheduleScreen(),
+              ),
+            );
+          } else if (index == 3) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MechanicChatScreen(),
+              ),
+            );
+          } else if (index == 4) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MechanicProfileScreen(),
               ),
             );
           }
