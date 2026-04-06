@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'homescreen_checkrequest.dart';
+import 'jobs.dart';
+import 'schedule.dart';
+import 'chat.dart';
 
 class MechanicHomeScreen extends StatelessWidget {
   const MechanicHomeScreen({super.key});
@@ -10,30 +13,92 @@ class MechanicHomeScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF2F5F8),
       body: SafeArea(
-        child: Column(
+        child: Stack(
           children: [
-            Expanded(
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    const SizedBox(height: 16),
-                    _HeaderSection(),
-                    const SizedBox(height: 16),
-                    const _StatsSection(),
-                    const SizedBox(height: 24),
-                    const _IncomingRequestsSection(),
-                    const SizedBox(height: 24),
-                    const _PerformanceSection(),
-                    const SizedBox(height: 90),
-                  ],
+            // ── Decorative amber blobs ──
+            Positioned(
+              right: -70,
+              top: 120,
+              child: Container(
+                width: 240,
+                height: 240,
+                decoration: const BoxDecoration(
+                  color: Color(0x26FFB703),
+                  shape: BoxShape.circle,
                 ),
               ),
+            ),
+            Positioned(
+              left: -80,
+              bottom: 160,
+              child: Container(
+                width: 280,
+                height: 280,
+                decoration: const BoxDecoration(
+                  color: Color(0x1FFFB703),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Positioned(
+              right: -40,
+              bottom: 60,
+              child: Container(
+                width: 160,
+                height: 160,
+                decoration: const BoxDecoration(
+                  color: Color(0x33FFB703),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            // ── Scrollable content ──
+            Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 16),
+                        const _HeaderSection(),
+                        const SizedBox(height: 16),
+                        const _StatsSection(),
+                        const SizedBox(height: 24),
+                        const _IncomingRequestsSection(),
+                        const SizedBox(height: 24),
+                        const _PerformanceSection(),
+                        const SizedBox(height: 90),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
       ),
-      bottomNavigationBar: const _MechanicBottomNavigationBar(),
+      bottomNavigationBar: _MechanicBottomNavigationBar(
+        currentIndex: 0,
+        onItemTapped: (index) {
+          if (index == 1) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MechanicJobsScreen()),
+            );
+          } else if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MechanicScheduleScreen()),
+            );
+          } else if (index == 3) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MechanicChatScreen()),
+            );
+          }
+        },
+      ),
     );
   }
 }
@@ -103,7 +168,7 @@ class _HeaderSection extends StatelessWidget {
                     const Icon(Icons.circle, size: 10, color: Color(0xFF3FDF21)),
                     const SizedBox(width: 8),
                     Text(
-                      'You’re online',
+                      'You\u2019re online',
                       style: GoogleFonts.inriaSans(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -148,11 +213,11 @@ class _StatsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+    return const Padding(
+      padding: EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        children: const [
+        children: [
           Expanded(child: _StatCard(value: '₱4,500', label: 'TODAY', highlighted: true)),
           SizedBox(width: 12),
           Expanded(child: _StatCard(value: '₱23.8K', label: 'THIS WEEK')),
@@ -176,10 +241,10 @@ class _StatCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: highlighted ? Colors.white : Colors.white,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(24),
-        boxShadow: [
-          const BoxShadow(
+        boxShadow: const [
+          BoxShadow(
             color: Color(0x14000000),
             blurRadius: 18,
             offset: Offset(0, 8),
@@ -244,48 +309,30 @@ class _IncomingRequestsSection extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           _RequestCard(
-            title: 'Engine won’t start',
-            subtitle: 'Ron Seldizo • Toyota Vios',
+            title: 'Engine won\u2019t start',
+            subtitle: 'Ron Seldizo \u2022 Toyota Vios',
             badge: 'Urgent',
             price: '₱1,500 - ₱2,000',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MechanicCheckRequestScreen(),
-                ),
-              );
-            },
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const MechanicCheckRequestScreen())),
           ),
           const SizedBox(height: 12),
           _RequestCard(
             title: 'Flat tire on CBL',
-            subtitle: 'Aaron Barnaija • Yamaha N-115',
+            subtitle: 'Aaron Barnaija \u2022 Yamaha N-115',
             badge: 'Normal',
             price: '₱1,000 - ₱1,300',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MechanicCheckRequestScreen(),
-                ),
-              );
-            },
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const MechanicCheckRequestScreen())),
           ),
           const SizedBox(height: 12),
           _RequestCard(
             title: 'AC not cooling',
-            subtitle: 'Mambaling motorcab • Toyota Vios',
+            subtitle: 'Mambaling motorcab \u2022 Toyota Vios',
             badge: 'Normal',
             price: '₱1,500 - ₱2,000',
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MechanicCheckRequestScreen(),
-                ),
-              );
-            },
+            onTap: () => Navigator.push(context,
+                MaterialPageRoute(builder: (_) => const MechanicCheckRequestScreen())),
           ),
         ],
       ),
@@ -318,8 +365,8 @@ class _RequestCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            const BoxShadow(
+          boxShadow: const [
+            BoxShadow(
               color: Color(0x0F000000),
               blurRadius: 18,
               offset: Offset(0, 10),
@@ -346,40 +393,35 @@ class _RequestCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        title,
-                        style: GoogleFonts.montserrat(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black,
-                        ),
-                      ),
+                      Text(title,
+                          style: GoogleFonts.montserrat(
+                              fontSize: 16,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black)),
                       const SizedBox(height: 4),
-                      Text(
-                        subtitle,
-                        style: GoogleFonts.inriaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black54,
-                        ),
-                      ),
+                      Text(subtitle,
+                          style: GoogleFonts.inriaSans(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.black54)),
                     ],
                   ),
                 ),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
-                    color: badge == 'Urgent' ? const Color(0xFFFFE5E5) : const Color(0xFFE8F7EA),
+                    color: badge == 'Urgent'
+                        ? const Color(0xFFFFE5E5)
+                        : const Color(0xFFE8F7EA),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Text(
-                    badge,
-                    style: GoogleFonts.inriaSans(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: badge == 'Urgent' ? const Color(0xFFD72B2B) : const Color(0xFF2F8A48),
-                    ),
-                  ),
+                  child: Text(badge,
+                      style: GoogleFonts.inriaSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: badge == 'Urgent'
+                              ? const Color(0xFFD72B2B)
+                              : const Color(0xFF2F8A48))),
                 ),
               ],
             ),
@@ -387,22 +429,16 @@ class _RequestCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  price,
-                  style: GoogleFonts.montserrat(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w700,
-                    color: const Color(0xFF121212),
-                  ),
-                ),
-                Text(
-                  'View details',
-                  style: GoogleFonts.inriaSans(
-                    fontSize: 12,
-                    fontWeight: FontWeight.w600,
-                    color: const Color(0xFF121212),
-                  ),
-                ),
+                Text(price,
+                    style: GoogleFonts.montserrat(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w700,
+                        color: const Color(0xFF121212))),
+                Text('View details',
+                    style: GoogleFonts.inriaSans(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                        color: const Color(0xFF121212))),
               ],
             ),
           ],
@@ -425,8 +461,8 @@ class _PerformanceSection extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(32),
-          boxShadow: [
-            const BoxShadow(
+          boxShadow: const [
+            BoxShadow(
               color: Color(0x14000000),
               blurRadius: 18,
               offset: Offset(0, 10),
@@ -436,26 +472,23 @@ class _PerformanceSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text(
-              'Your Performance',
-              style: GoogleFonts.montserrat(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-                color: Colors.black,
-              ),
-            ),
+            Text('Your Performance',
+                style: GoogleFonts.montserrat(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.black)),
             const SizedBox(height: 18),
-            Row(
+            const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
+              children: [
                 _PerformanceMetric(label: 'Rating', value: '4.9'),
                 _PerformanceMetric(label: 'Accuracy', value: '94%'),
               ],
             ),
             const SizedBox(height: 16),
-            Row(
+            const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: const [
+              children: [
                 _PerformanceMetric(label: 'Avg. Response', value: '2.5 MIN'),
                 _PerformanceMetric(label: 'Completion', value: '98%'),
               ],
@@ -478,30 +511,24 @@ class _PerformanceMetric extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          value,
-          style: GoogleFonts.montserrat(
-            fontSize: 18,
-            fontWeight: FontWeight.w700,
-            color: Colors.black,
-          ),
-        ),
+        Text(value,
+            style: GoogleFonts.montserrat(
+                fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black)),
         const SizedBox(height: 6),
-        Text(
-          label,
-          style: GoogleFonts.inriaSans(
-            fontSize: 12,
-            fontWeight: FontWeight.w600,
-            color: Colors.black54,
-          ),
-        ),
+        Text(label,
+            style: GoogleFonts.inriaSans(
+                fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)),
       ],
     );
   }
 }
 
 class _MechanicBottomNavigationBar extends StatelessWidget {
-  const _MechanicBottomNavigationBar();
+  final int currentIndex;
+  final ValueChanged<int> onItemTapped;
+
+  const _MechanicBottomNavigationBar(
+      {required this.currentIndex, required this.onItemTapped});
 
   @override
   Widget build(BuildContext context) {
@@ -512,12 +539,12 @@ class _MechanicBottomNavigationBar extends StatelessWidget {
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: const [
-            _NavItem(icon: Icons.home_outlined, label: 'Home', active: true),
-            _NavItem(icon: Icons.inventory_2_outlined, label: 'Jobs'),
-            _NavItem(icon: Icons.calendar_month_outlined, label: 'Schedule'),
-            _NavItem(icon: Icons.chat_bubble_outline, label: 'Chat'),
-            _NavItem(icon: Icons.person_outline, label: 'Profile'),
+          children: [
+            _NavItem(icon: Icons.home_outlined, label: 'Home', active: currentIndex == 0, onTap: () => onItemTapped(0)),
+            _NavItem(icon: Icons.inventory_2_outlined, label: 'Jobs', active: currentIndex == 1, onTap: () => onItemTapped(1)),
+            _NavItem(icon: Icons.calendar_month_outlined, label: 'Schedule', active: currentIndex == 2, onTap: () => onItemTapped(2)),
+            _NavItem(icon: Icons.chat_bubble_outline, label: 'Chat', active: currentIndex == 3, onTap: () => onItemTapped(3)),
+            _NavItem(icon: Icons.person_outline, label: 'Profile', active: currentIndex == 4, onTap: () => onItemTapped(4)),
           ],
         ),
       ),
@@ -529,34 +556,34 @@ class _NavItem extends StatelessWidget {
   final IconData icon;
   final String label;
   final bool active;
+  final VoidCallback onTap;
 
-  const _NavItem({required this.icon, required this.label, this.active = false});
+  const _NavItem(
+      {required this.icon, required this.label, this.active = false, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     final color = active ? const Color(0xFFFFB703) : Colors.black54;
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Container(
-          width: 44,
-          height: 44,
-          decoration: BoxDecoration(
-            color: active ? const Color(0x33FFB703) : Colors.transparent,
-            borderRadius: BorderRadius.circular(14),
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: active ? const Color(0x33FFB703) : Colors.transparent,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, size: 22, color: color),
           ),
-          child: Icon(icon, size: 22, color: color),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: GoogleFonts.inriaSans(
-            fontSize: 11,
-            fontWeight: FontWeight.w600,
-            color: color,
-          ),
-        ),
-      ],
+          const SizedBox(height: 6),
+          Text(label,
+              style: GoogleFonts.inriaSans(
+                  fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+        ],
+      ),
     );
   }
 }
