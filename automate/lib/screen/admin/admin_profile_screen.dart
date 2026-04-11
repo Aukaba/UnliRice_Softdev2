@@ -35,12 +35,14 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
 
       final data = await _supabase
           .from('admin')
-          .select('first_name, position')
+          .select('first_name, last_name, position')
           .eq('uid', uid)
           .single();
 
       setState(() {
-        _adminName = data['first_name'] ?? '';
+        final firstName = data['first_name'] ?? '';
+        final lastName = data['last_name'] ?? '';
+        _adminName = '$firstName $lastName'.trim();
         _adminRole = data['position'] ?? 'System Administrator';
         _adminEmail = _supabase.auth.currentUser?.email ?? '';
       });
@@ -281,23 +283,17 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
                               else ...[
                                 _InfoRow(
                                   label: 'Admin:',
-                                  value: _adminName.isNotEmpty
-                                      ? _adminName
-                                      : 'Angelic Alerta',
+                                  value: _adminName,
                                 ),
                                 const SizedBox(height: 6),
                                 _InfoRow(
                                   label: 'Email:',
-                                  value: _adminEmail.isNotEmpty
-                                      ? _adminEmail
-                                      : 'AdminAlerta@gmail.com',
+                                  value: _adminEmail,
                                 ),
                                 const SizedBox(height: 6),
                                 _InfoRow(
                                   label: 'Role:',
-                                  value: _adminRole.isNotEmpty
-                                      ? _adminRole
-                                      : 'System Administrator',
+                                  value: _adminRole,
                                 ),
                               ],
                             ],

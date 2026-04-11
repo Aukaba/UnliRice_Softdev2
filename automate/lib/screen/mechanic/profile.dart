@@ -4,6 +4,8 @@ import 'homescreen.dart';
 import 'jobs.dart';
 import 'schedule.dart';
 import 'chat.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../authentication/login_screen.dart'; // Just in case for logout
 
 class MechanicProfileScreen extends StatefulWidget {
   const MechanicProfileScreen({super.key});
@@ -13,7 +15,54 @@ class MechanicProfileScreen extends StatefulWidget {
 }
 
 class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
+  static final _supabase = Supabase.instance.client;
   bool _availableForEmergency = true;
+  bool _isLoading = true;
+  String _mechanicName = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMechanicInfo();
+  }
+
+  Future<void> _loadMechanicInfo() async {
+    try {
+      final uid = _supabase.auth.currentUser?.id;
+      if (uid == null) return;
+
+      final data = await _supabase
+          .from('mechanic')
+          .select('first_name, last_name')
+          .eq('uid', uid)
+          .single();
+
+      setState(() {
+        final firstName = data['first_name'] ?? '';
+        final lastName = data['last_name'] ?? '';
+        _mechanicName = '$firstName $lastName'.trim();
+      });
+    } catch (_) {
+      // Silently fail
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _signOut() async {
+    try {
+      await _supabase.auth.signOut();
+    } catch (e) {
+      print('Signout warning: $e');
+    } finally {
+      if (mounted) {
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -160,7 +209,7 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
                                         Row(
                                           children: [
                                             Text(
-                                              'Kim Minji',
+                                              _isLoading ? 'Loading...' : (_mechanicName.isEmpty ? 'Mechanic Profile' : _mechanicName),
                                               style: GoogleFonts.montserrat(
                                                 fontSize: 18,
                                                 fontWeight: FontWeight.w800,
@@ -445,7 +494,7 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
                         Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 16),
                           child: GestureDetector(
-                            onTap: () {},
+                            onTap: _signOut,
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 16),
                               decoration: BoxDecoration(
