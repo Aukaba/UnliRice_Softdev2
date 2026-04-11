@@ -4,6 +4,7 @@ import 'homescreen_checkrequest.dart';
 import 'jobs.dart';
 import 'schedule.dart';
 import 'chat.dart';
+import 'profile.dart';
 
 class MechanicHomeScreen extends StatelessWidget {
   const MechanicHomeScreen({super.key});
@@ -95,6 +96,11 @@ class MechanicHomeScreen extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (_) => const MechanicChatScreen()),
+            );
+          } else if (index == 4) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const MechanicProfileScreen()),
             );
           }
         },
