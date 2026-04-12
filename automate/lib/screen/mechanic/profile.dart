@@ -5,48 +5,503 @@ import 'jobs.dart';
 import 'schedule.dart';
 import 'chat.dart';
 
-class MechanicProfileScreen extends StatelessWidget {
+class MechanicProfileScreen extends StatefulWidget {
   const MechanicProfileScreen({super.key});
+
+  @override
+  State<MechanicProfileScreen> createState() => _MechanicProfileScreenState();
+}
+
+class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
+  bool _availableForEmergency = true;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: const Color(0xFFF2F5F8),
       body: SafeArea(
-        child: Center(
-          child: Text(
-            'Profile Screen - Coming Soon',
-            style: GoogleFonts.montserrat(
-              fontSize: 24,
-              fontWeight: FontWeight.w700,
-              color: Colors.black,
+        child: Stack(
+          children: [
+            // ── Decorative amber blobs ──
+            Positioned(
+              right: -60,
+              top: 180,
+              child: Container(
+                width: 220,
+                height: 220,
+                decoration: const BoxDecoration(
+                  color: Color(0x26FFB703),
+                  shape: BoxShape.circle,
+                ),
+              ),
             ),
-          ),
+            Positioned(
+              left: -70,
+              bottom: 300,
+              child: Container(
+                width: 260,
+                height: 260,
+                decoration: const BoxDecoration(
+                  color: Color(0x1FFFB703),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+            Positioned(
+              right: -50,
+              bottom: 100,
+              child: Container(
+                width: 180,
+                height: 180,
+                decoration: const BoxDecoration(
+                  color: Color(0x33FFB703),
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ),
+
+            // ── Main content ──
+            Column(
+              children: [
+                // Header
+                Container(
+                  margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFFFB703),
+                    borderRadius: BorderRadius.circular(32),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 46,
+                        height: 46,
+                        decoration: BoxDecoration(
+                          color: Colors.black,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Icon(Icons.person_outline_rounded,
+                            color: Color(0xFFFFB703), size: 22),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Text(
+                          'Profile',
+                          style: GoogleFonts.montserrat(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w800,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: const Icon(Icons.notifications_none, color: Colors.black87),
+                      ),
+                    ],
+                  ),
+                ),
+
+                // Scrollable body
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.only(bottom: 24),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        const SizedBox(height: 16),
+
+                        // ── Profile card ──
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(28),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x0F000000),
+                                blurRadius: 18,
+                                offset: Offset(0, 8),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              // Avatar + name
+                              Row(
+                                children: [
+                                  Container(
+                                    width: 64,
+                                    height: 64,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(20),
+                                      color: const Color(0xFFE0D6C8),
+                                    ),
+                                    child: ClipRRect(
+                                      borderRadius: BorderRadius.circular(20),
+                                      child: const Icon(
+                                        Icons.person,
+                                        size: 40,
+                                        color: Color(0xFF8B7355),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Row(
+                                          children: [
+                                            Text(
+                                              'Kim Minji',
+                                              style: GoogleFonts.montserrat(
+                                                fontSize: 18,
+                                                fontWeight: FontWeight.w800,
+                                                color: Colors.black,
+                                              ),
+                                            ),
+                                            const SizedBox(width: 6),
+                                            const Icon(Icons.verified_rounded,
+                                                size: 18, color: Color(0xFF1DA1F2)),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Mekaniko ng NewJeans bai',
+                                          style: GoogleFonts.inriaSans(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w500,
+                                            color: Colors.black54,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 20),
+                              const Divider(height: 1, color: Color(0xFFF0F0F0)),
+                              const SizedBox(height: 16),
+
+                              // Stats row
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: [
+                                  _ProfileStat(
+                                    value: '4.9',
+                                    label: 'REVIEWS',
+                                    sub: '128',
+                                    isRating: true,
+                                  ),
+                                  Container(width: 1, height: 40, color: const Color(0xFFEEEEEE)),
+                                  _ProfileStat(value: '342', label: 'JOBS DONE'),
+                                  Container(width: 1, height: 40, color: const Color(0xFFEEEEEE)),
+                                  _ProfileStat(value: 'Since', label: '2022', isSince: true),
+                                ],
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 14),
+
+                        // ── Available for Emergency toggle ──
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x0A000000),
+                                blurRadius: 14,
+                                offset: Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 10,
+                                height: 10,
+                                decoration: BoxDecoration(
+                                  color: _availableForEmergency
+                                      ? const Color(0xFF3FDF21)
+                                      : Colors.black26,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  'Available for Emergency',
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ),
+                              Switch(
+                                value: _availableForEmergency,
+                                onChanged: (v) =>
+                                    setState(() => _availableForEmergency = v),
+                                activeColor: Colors.white,
+                                activeTrackColor: const Color(0xFF3FDF21),
+                                inactiveThumbColor: Colors.white,
+                                inactiveTrackColor: Colors.black12,
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 14),
+
+                        // ── Specializations ──
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          padding: const EdgeInsets.all(18),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(28),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x0A000000),
+                                blurRadius: 14,
+                                offset: Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.shield_outlined,
+                                      size: 20, color: Colors.black87),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Specializations',
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+                              Wrap(
+                                spacing: 8,
+                                runSpacing: 8,
+                                children: ['Toyota', 'Honda', 'Mitsubibi', 'Engine', 'Transmission']
+                                    .map((s) => Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 14, vertical: 8),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF5F7FA),
+                                            borderRadius: BorderRadius.circular(20),
+                                            border: Border.all(
+                                                color: const Color(0xFFE8E8E8)),
+                                          ),
+                                          child: Text(
+                                            s,
+                                            style: GoogleFonts.inriaSans(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.black87,
+                                            ),
+                                          ),
+                                        ))
+                                    .toList(),
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // ── Business section ──
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                          child: Text(
+                            'BUSINESS',
+                            style: GoogleFonts.inriaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.black38,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(28),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x0A000000),
+                                blurRadius: 14,
+                                offset: Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              _MenuRow(
+                                icon: Icons.credit_card_outlined,
+                                title: 'Earnings & Payouts',
+                                subtitle: 'View payment history',
+                                isFirst: true,
+                              ),
+                              const _Divider(),
+                              _MenuRow(
+                                icon: Icons.description_outlined,
+                                title: 'Job History',
+                                subtitle: 'Past completed jobs',
+                              ),
+                              const _Divider(),
+                              _MenuRow(
+                                icon: Icons.schedule_outlined,
+                                title: 'Working Hours',
+                                subtitle: 'Set your weekly schedule',
+                                isLast: true,
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        // ── Settings section ──
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                          child: Text(
+                            'SETTINGS',
+                            style: GoogleFonts.inriaSans(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: Colors.black38,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                        ),
+                        Container(
+                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(28),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x0A000000),
+                                blurRadius: 14,
+                                offset: Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          child: Column(
+                            children: [
+                              _MenuRow(
+                                icon: Icons.notifications_outlined,
+                                title: 'Notifications',
+                                subtitle: 'Manage alerts & sounds',
+                                isFirst: true,
+                              ),
+                              const _Divider(),
+                              _MenuRow(
+                                icon: Icons.location_on_outlined,
+                                title: 'Service Area',
+                                subtitle: 'Set your coverage radius',
+                              ),
+                              const _Divider(),
+                              _MenuRow(
+                                icon: Icons.settings_outlined,
+                                title: 'Account Settings',
+                                subtitle: 'Edit profile & details',
+                              ),
+                              const _Divider(),
+                              _MenuRow(
+                                icon: Icons.help_outline_rounded,
+                                title: 'Help & Support',
+                                subtitle: 'FAQs and contact',
+                                isLast: true,
+                              ),
+                            ],
+                          ),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // ── Log Out ──
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: GestureDetector(
+                            onTap: () {},
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(vertical: 16),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(20),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x0A000000),
+                                    blurRadius: 10,
+                                    offset: Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.logout_rounded,
+                                      size: 20, color: Color(0xFFD72B2B)),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Log Out',
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 15,
+                                      fontWeight: FontWeight.w700,
+                                      color: const Color(0xFFD72B2B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
       bottomNavigationBar: _MechanicBottomNavigationBar(
         currentIndex: 4,
         onItemTapped: (index) {
           if (index == 0) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const MechanicHomeScreen()),
-            );
+            Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (_) => const MechanicHomeScreen()));
           } else if (index == 1) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const MechanicJobsScreen()),
-            );
+            Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (_) => const MechanicJobsScreen()));
           } else if (index == 2) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const MechanicScheduleScreen()),
-            );
+            Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (_) => const MechanicScheduleScreen()));
           } else if (index == 3) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => MechanicChatScreen()),
-            );
+            Navigator.pushReplacement(context,
+                MaterialPageRoute(builder: (_) => const MechanicChatScreen()));
           }
         },
       ),
@@ -54,11 +509,189 @@ class MechanicProfileScreen extends StatelessWidget {
   }
 }
 
+// ─── Profile stat widget ──────────────────────────────────────────────────────
+
+class _ProfileStat extends StatelessWidget {
+  final String value;
+  final String label;
+  final String? sub;
+  final bool isRating;
+  final bool isSince;
+
+  const _ProfileStat({
+    required this.value,
+    required this.label,
+    this.sub,
+    this.isRating = false,
+    this.isSince = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        if (isSince) ...[
+          Text(
+            value,
+            style: GoogleFonts.inriaSans(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              color: Colors.black54,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: GoogleFonts.montserrat(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: Colors.black,
+            ),
+          ),
+        ] else if (isRating) ...[
+          Row(
+            children: [
+              const Icon(Icons.star_rounded, size: 18, color: Color(0xFFFFB703)),
+              const SizedBox(width: 4),
+              Text(
+                value,
+                style: GoogleFonts.montserrat(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w800,
+                  color: Colors.black,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 2),
+          Text(
+            '${sub ?? ''} ${label}',
+            style: GoogleFonts.inriaSans(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.black38,
+            ),
+          ),
+        ] else ...[
+          Text(
+            value,
+            style: GoogleFonts.montserrat(
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+              color: Colors.black,
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: GoogleFonts.inriaSans(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.black38,
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
+// ─── Menu row ────────────────────────────────────────────────────────────────
+
+class _MenuRow extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool isFirst;
+  final bool isLast;
+
+  const _MenuRow({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.isFirst = false,
+    this.isLast = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: () {},
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.vertical(
+            top: isFirst ? const Radius.circular(28) : Radius.zero,
+            bottom: isLast ? const Radius.circular(28) : Radius.zero,
+          ),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 40,
+              height: 40,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F7FA),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Icon(icon, size: 20, color: Colors.black87),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: GoogleFonts.montserrat(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.inriaSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black38,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right_rounded, color: Colors.black26, size: 22),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Divider ─────────────────────────────────────────────────────────────────
+
+class _Divider extends StatelessWidget {
+  const _Divider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.only(left: 72),
+      height: 1,
+      color: const Color(0xFFF0F0F0),
+    );
+  }
+}
+
+// ─── Bottom nav ──────────────────────────────────────────────────────────────
+
 class _MechanicBottomNavigationBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onItemTapped;
 
-  const _MechanicBottomNavigationBar({required this.currentIndex, required this.onItemTapped});
+  const _MechanicBottomNavigationBar(
+      {required this.currentIndex, required this.onItemTapped});
 
   @override
   Widget build(BuildContext context) {
@@ -88,7 +721,8 @@ class _NavItem extends StatelessWidget {
   final bool active;
   final VoidCallback onTap;
 
-  const _NavItem({required this.icon, required this.label, this.active = false, required this.onTap});
+  const _NavItem(
+      {required this.icon, required this.label, this.active = false, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
