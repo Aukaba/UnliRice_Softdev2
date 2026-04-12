@@ -165,8 +165,12 @@ class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
     // Sunday = 0 offset
     final startOffset = firstDay.weekday % 7;
     final cells = <int?>[];
-    for (var i = 0; i < startOffset; i++) cells.add(null);
-    for (var d = 1; d <= daysInMonth; d++) cells.add(d);
+    for (var i = 0; i < startOffset; i++) {
+      cells.add(null);
+    }
+    for (var d = 1; d <= daysInMonth; d++) {
+      cells.add(d);
+    }
     return cells;
   }
 

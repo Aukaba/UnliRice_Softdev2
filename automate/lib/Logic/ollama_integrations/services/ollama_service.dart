@@ -1,34 +1,47 @@
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
-import '../model/chat_message.dart';
+import '../services/config_services.dart';
 
-class AiService {
-  // Replace this with your ngrok link or use --dart-define
-  final String ollamaUrl = "https://supposedly-abdicative-ben.ngrok-free.dev/api/chat";
-
-  Future<String> getDiagnosis(List<ChatMessage> history) async {
+class OllamaService {
+  static const int timeoutSeconds = 90;
+  
+  Future<String> sendMessage({
+    String? text,
+    String? imageBase64,
+  }) async {
     try {
       final response = await http.post(
-        Uri.parse(ollamaUrl),
+        Uri.parse(ConfigService.getOllamaUrl()),
         headers: {
           'Content-Type': 'application/json',
           'ngrok-skip-browser-warning': 'true',
         },
         body: jsonEncode({
           "model": "llama3.2-vision",
-          "messages": history.map((m) => m.toOllamaJson()).toList(),
+          "messages": [
+            {
+              "role": "user",
+              "content": text ?? "Look at this vehicle part. What visible failures or issues are present? List 3 possibilities.",
+              if (imageBase64 != null) "images": [imageBase64]
+            }
+          ],
           "stream": false
         }),
-      ).timeout(const Duration(seconds: 90));
+      ).timeout(const Duration(seconds: timeoutSeconds));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
         return data['message']['content'];
       } else {
-        return "Server error: ${response.statusCode}";
+        throw HttpException('Server error: ${response.statusCode}');
       }
+    } on SocketException {
+      throw Exception('No internet connection. Check your network.');
+    } on HttpException catch (e) {
+      throw Exception('Server error: ${e.message}');
     } catch (e) {
-      return "Connection failed: $e";
+      throw Exception('Connection failed: $e');
     }
   }
 }

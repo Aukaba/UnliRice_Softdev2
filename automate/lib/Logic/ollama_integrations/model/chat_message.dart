@@ -1,16 +1,22 @@
 class ChatMessage {
-  final String text;
+  final String content;
   final bool isUser;
-  final List<String>? images;
+  final DateTime timestamp;
+  final MessageType type;
 
-  ChatMessage({required this.text, required this.isUser, this.images});
+  ChatMessage({
+    required this.content,
+    required this.isUser,
+    DateTime? timestamp,
+    this.type = MessageType.text,
+  }) : timestamp = timestamp ?? DateTime.now();
 
-  // Helper to convert our UI message to the format Ollama expects
-  Map<String, dynamic> toOllamaJson() {
-    return {
-      "role": isUser ? "user" : "assistant",
-      "content": text,
-      if (images != null) "images": images,
-    };
-  }
+  Map<String, dynamic> toJson() => {
+    'content': content,
+    'isUser': isUser,
+    'timestamp': timestamp.toIso8601String(),
+    'type': type.toString(),
+  };
 }
+
+enum MessageType { text, image, error }
