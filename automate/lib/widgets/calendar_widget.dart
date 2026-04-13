@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class CalendarWidget extends StatefulWidget {
-  const CalendarWidget({super.key});
+  final ValueChanged<DateTime>? onDateSelected;
+
+  const CalendarWidget({super.key, this.onDateSelected});
 
   @override
   State<CalendarWidget> createState() => _CalendarWidgetState();
@@ -194,7 +196,12 @@ class _CalendarWidgetState extends State<CalendarWidget> {
                 return Expanded(
                   child: GestureDetector(
                     onTap: isCurrent
-                        ? () => setState(() => _selectedDate = date)
+                        ? () {
+                            setState(() => _selectedDate = date);
+                            if (widget.onDateSelected != null) {
+                              widget.onDateSelected!(date);
+                            }
+                          }
                         : null,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
