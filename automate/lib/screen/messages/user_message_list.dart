@@ -12,6 +12,14 @@ class UserMessageListScreen extends StatefulWidget {
 }
 
 class _UserMessageListScreenState extends State<UserMessageListScreen> {
+  late Stream<List<Map<String, dynamic>>> _partnersStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _partnersStream = ChatLogic().getActivePartners();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -194,7 +202,7 @@ class _UserMessageListScreenState extends State<UserMessageListScreen> {
                         ],
                       ),
                       child: StreamBuilder<List<Map<String, dynamic>>>(
-                        stream: ChatLogic().getActivePartners(),
+                        stream: _partnersStream,
                         builder: (context, snapshot) {
                           if (snapshot.connectionState == ConnectionState.waiting) {
                             return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));

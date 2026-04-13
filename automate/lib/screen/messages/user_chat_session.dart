@@ -20,8 +20,15 @@ class UserChatSessionScreen extends StatefulWidget {
 
 class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
   final TextEditingController _msgController = TextEditingController();
+  late Stream<List<Map<String, dynamic>>> _messagesStream;
 
   bool get _isMechMate => widget.mechanicName == "MechMate";
+
+  @override
+  void initState() {
+    super.initState();
+    _messagesStream = ChatLogic().getMessagesWith(widget.partnerId);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,7 +43,7 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
             child: _isMechMate
                 ? _buildDummyMessages()
                 : StreamBuilder<List<Map<String, dynamic>>>(
-                    stream: ChatLogic().getMessagesWith(widget.partnerId),
+                    stream: _messagesStream,
                     builder: (context, snapshot) {
                       if (snapshot.connectionState == ConnectionState.waiting) {
                         return const Center(child: CircularProgressIndicator());
