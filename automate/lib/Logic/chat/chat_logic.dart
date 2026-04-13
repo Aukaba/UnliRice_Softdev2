@@ -49,7 +49,7 @@ class ChatLogic {
       for (var m in messages) {
         if (m['sender_id'] == uid || m['receiver_id'] == uid) {
           final pId = m['sender_id'] == uid ? m['receiver_id'] : m['sender_id'];
-          if (pId != null && !partnerIds.contains(pId)) {
+          if (pId != null && pId.toString().trim().isNotEmpty && !partnerIds.contains(pId)) {
             partnerIds.add(pId);
             latestMsgMap[pId] = m;
           }
@@ -66,7 +66,7 @@ class ChatLogic {
         for (var job in jobsRes) {
           if (job['status'] != 'pending' && job['status'] != 'completed' && job['status'] != 'canceled') {
             final pId = job['user_id'] == uid ? job['mechanic_id'] : job['user_id'];
-            if (pId != null && !partnerIds.contains(pId)) {
+            if (pId != null && pId.toString().trim().isNotEmpty && !partnerIds.contains(pId)) {
               partnerIds.add(pId);
             }
           }
@@ -82,14 +82,18 @@ class ChatLogic {
         try {
           final res = await _supabase.from('mechanic').select('first_name, last_name').eq('uid', id).maybeSingle();
           if (res != null) partnerName = '${res['first_name']} ${res['last_name']}';
-        } catch (_) {}
+        } catch (e) {
+          print('Error fetching mechanic for $id: $e');
+        }
         
         // Try driver
         if (partnerName == null) {
           try {
             final res = await _supabase.from('driver').select('first_name, last_name').eq('uid', id).maybeSingle();
             if (res != null) partnerName = '${res['first_name']} ${res['last_name']}';
-          } catch (_) {}
+          } catch (e) {
+            print('Error fetching driver for $id: $e');
+          }
         }
         
         // Try users

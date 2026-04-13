@@ -189,7 +189,9 @@ class _UserMessageListScreenState extends State<UserMessageListScreen> {
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Container(
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
                         border: Border.all(color: Colors.grey.shade300, width: 1),
@@ -227,6 +229,7 @@ class _UserMessageListScreenState extends State<UserMessageListScreen> {
 
                           return ListView.builder(
                             padding: EdgeInsets.zero,
+                            shrinkWrap: true,
                             itemCount: partners.length,
                             itemBuilder: (context, index) {
                               final p = partners[index];
@@ -234,7 +237,7 @@ class _UserMessageListScreenState extends State<UserMessageListScreen> {
                               String timeStr = "";
                               if (rawTime != null) {
                                 final parsed = DateTime.parse(rawTime).toLocal();
-                                timeStr = DateFormat('MMM d, jm').format(parsed);
+                                timeStr = DateFormat('MMM d, h:mm a').format(parsed);
                               }
 
                               return _buildMechanicCard(
@@ -259,6 +262,7 @@ class _UserMessageListScreenState extends State<UserMessageListScreen> {
                           );
                         },
                       ),
+                    ),
                     ),
                   ),
                 ),

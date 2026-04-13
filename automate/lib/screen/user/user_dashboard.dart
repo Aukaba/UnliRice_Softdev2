@@ -49,12 +49,47 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
       );
       
       if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => const UserLookingMechanicScreen(),
-          ),
-        );
+        if (isEmergency) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const UserLookingMechanicScreen(),
+            ),
+          );
+        } else {
+          // Reset fields
+          _titleController.clear();
+          _locationController.clear();
+          _vehicleController.clear();
+          _descriptionController.clear();
+          setState(() {
+            _selectedDate = null;
+          });
+
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text(
+                'Job Scheduled',
+                style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, color: const Color(0xFF19456B)),
+              ),
+              content: Text(
+                'Your scheduled service request has been successfully posted! Mechanics will review it, and you can track updates in your Activity tab.',
+                style: GoogleFonts.inriaSans(fontSize: 16),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(
+                    'OK',
+                    style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, color: const Color(0xFF19456B)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
       }
     } catch (e) {
       if (mounted) {

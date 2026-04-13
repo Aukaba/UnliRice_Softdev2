@@ -192,10 +192,14 @@ class _CalendarWidgetState extends State<CalendarWidget> {
                 final bool isCurrent = cell['current'] as bool;
                 final bool selected = _isSelected(date);
                 final bool today = _isToday(date);
+                
+                final now = DateTime.now();
+                final todayDate = DateTime(now.year, now.month, now.day);
+                final bool isPast = date.isBefore(todayDate);
 
                 return Expanded(
                   child: GestureDetector(
-                    onTap: isCurrent
+                    onTap: (isCurrent && !isPast)
                         ? () {
                             setState(() => _selectedDate = date);
                             if (widget.onDateSelected != null) {
@@ -227,8 +231,8 @@ class _CalendarWidgetState extends State<CalendarWidget> {
                               : FontWeight.w600,
                           color: selected
                               ? Colors.white
-                              : !isCurrent
-                                  ? Colors.grey.shade400
+                              : (!isCurrent || isPast)
+                                  ? Colors.grey.shade300
                                   : Colors.black87,
                         ),
                       ),

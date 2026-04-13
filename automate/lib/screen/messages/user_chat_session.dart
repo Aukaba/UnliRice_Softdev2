@@ -264,7 +264,7 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
           GestureDetector(
             onTap: () async {
               final text = _msgController.text.trim();
-              if (text.isEmpty || _isMechMate) return;
+              if (text.isEmpty || _isMechMate || widget.partnerId.isEmpty) return;
               
               _msgController.clear();
               try {

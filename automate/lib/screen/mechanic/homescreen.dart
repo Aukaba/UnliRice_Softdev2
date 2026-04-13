@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'homescreen_checkrequest.dart';
 import 'jobs.dart';
 import 'schedule.dart';
@@ -109,8 +110,45 @@ class MechanicHomeScreen extends StatelessWidget {
   }
 }
 
-class _HeaderSection extends StatelessWidget {
+class _HeaderSection extends StatefulWidget {
   const _HeaderSection();
+
+  @override
+  State<_HeaderSection> createState() => _HeaderSectionState();
+}
+
+class _HeaderSectionState extends State<_HeaderSection> {
+  String _mechanicName = 'Loading...';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchName();
+  }
+
+  Future<void> _fetchName() async {
+    try {
+      final uid = Supabase.instance.client.auth.currentUser?.id;
+      if (uid != null) {
+        final res = await Supabase.instance.client
+            .from('mechanic')
+            .select('first_name, last_name')
+            .eq('uid', uid)
+            .maybeSingle();
+        if (res != null && mounted) {
+          setState(() {
+            _mechanicName = '${res['first_name']}';
+          });
+        } else if (mounted) {
+          setState(() {
+            _mechanicName = 'Mechanic';
+          });
+        }
+      }
+    } catch (_) {
+      if (mounted) setState(() => _mechanicName = 'Mechanic');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -140,7 +178,7 @@ class _HeaderSection extends StatelessWidget {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'iShowSpeed',
+                    _mechanicName,
                     style: GoogleFonts.montserrat(
                       fontSize: 28,
                       fontWeight: FontWeight.w700,

@@ -295,41 +295,42 @@ class UserActivityScreen extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: () {
-                    if (onMessageTap != null) {
-                      onMessageTap();
-                    } else {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => UserChatSessionScreen(
-                            mechanicName: name,
-                            partnerId: partnerId ?? '',
+                if (partnerId != null && partnerId.isNotEmpty)
+                  InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () {
+                      if (onMessageTap != null) {
+                        onMessageTap();
+                      } else {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => UserChatSessionScreen(
+                              mechanicName: name,
+                              partnerId: partnerId,
+                            ),
                           ),
-                        ),
-                      );
-                    }
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
-                    child: Row(
-                      children: [
-                        Icon(Icons.chat_bubble_outline, size: 16, color: const Color(0xFF6A8FB0)),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Message',
-                          style: GoogleFonts.montserrat(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF6A8FB0),
+                        );
+                      }
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+                      child: Row(
+                        children: [
+                          Icon(Icons.chat_bubble_outline, size: 16, color: const Color(0xFF6A8FB0)),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Message',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF6A8FB0),
+                            ),
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ],
