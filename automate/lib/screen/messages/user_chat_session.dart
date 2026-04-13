@@ -1,12 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../Logic/chat/chat_logic.dart';
+import 'package:intl/intl.dart';
 
 class UserChatSessionScreen extends StatefulWidget {
   final String mechanicName;
+  final String partnerId;
 
   const UserChatSessionScreen({
     super.key,
     required this.mechanicName,
+    this.partnerId = '',
   });
 
   @override
@@ -28,32 +33,63 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
 
           // Main Chat Body
           Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              children: [
-                _buildMessageBubble(
-                  message: "Hi! I'm on my way to you",
-                  time: "10:30 AM",
-                  isMe: false,
-                ),
-                _buildMessageBubble(
-                  message: "Great! What's the estimated time?",
-                  time: "10:32 AM",
-                  isMe: true,
-                ),
-                _buildMessageBubble(
-                  message: "I'll be there in 5 minutes",
-                  time: "10:35 AM",
-                  isMe: false,
-                ),
-              ],
-            ),
+            child: _isMechMate
+                ? _buildDummyMessages()
+                : StreamBuilder<List<Map<String, dynamic>>>(
+                    stream: ChatLogic().getMessagesWith(widget.partnerId),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (snapshot.hasError) {
+                        return const Center(child: Text("Error loading messages"));
+                      }
+                      
+                      final messages = snapshot.data ?? [];
+                      final myId = Supabase.instance.client.auth.currentUser?.id;
+                      
+                      return ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                        itemCount: messages.length,
+                        itemBuilder: (context, index) {
+                          final msg = messages[index];
+                          final isMe = msg['sender_id'] == myId;
+                          final rawTime = msg['created_at'];
+                          
+                          String timeStr = "";
+                          if (rawTime != null) {
+                            final parsed = DateTime.parse(rawTime).toLocal();
+                            timeStr = DateFormat('jm').format(parsed);
+                          }
+                          
+                          return _buildMessageBubble(
+                            message: msg['content'] ?? '',
+                            time: timeStr,
+                            isMe: isMe,
+                          );
+                        },
+                      );
+                    },
+                  ),
           ),
 
           // Input Bar
           _buildInputBar(),
         ],
       ),
+    );
+  }
+
+  Widget _buildDummyMessages() {
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      children: [
+        _buildMessageBubble(
+          message: "Hi! How can I assist you today?",
+          time: "Now",
+          isMe: false,
+        ),
+      ],
     );
   }
 
@@ -218,13 +254,30 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
             ),
           ),
           const SizedBox(width: 10),
-          Container(
-            padding: const EdgeInsets.all(12),
-            decoration: const BoxDecoration(
-              color: Color(0xFF19456B),
-              shape: BoxShape.circle,
+          GestureDetector(
+            onTap: () async {
+              final text = _msgController.text.trim();
+              if (text.isEmpty || _isMechMate) return;
+              
+              _msgController.clear();
+              try {
+                await ChatLogic().sendMessage(widget.partnerId, text);
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to send: $e')),
+                  );
+                }
+              }
+            },
+            child: Container(
+              padding: const EdgeInsets.all(12),
+              decoration: const BoxDecoration(
+                color: Color(0xFF19456B),
+                shape: BoxShape.circle,
+              ),
+              child: const Icon(Icons.send_rounded, color: Colors.white, size: 22),
             ),
-            child: const Icon(Icons.send_rounded, color: Colors.white, size: 22),
           ),
         ],
       ),

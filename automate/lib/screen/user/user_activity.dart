@@ -131,6 +131,7 @@ class UserActivityScreen extends StatelessWidget {
                           return _buildActivityCard(
                             context: context,
                             name: job['mechanic_name'] ?? (job['mechanic_id'] != null ? 'Mechanic Assigned' : 'Waiting for Mechanic'),
+                            partnerId: job['mechanic_id'],
                             service: job['title'] ?? 'Service',
                             status: displayStatus,
                             time: timeDisplay,
@@ -161,6 +162,7 @@ class UserActivityScreen extends StatelessWidget {
     required String price,
     required String rating,
     required Color avatarColor,
+    String? partnerId,
     VoidCallback? onMessageTap,
   }) {
     bool isCompleted = status == 'Done' || status == 'Completed';
@@ -302,7 +304,10 @@ class UserActivityScreen extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => UserChatSessionScreen(mechanicName: name),
+                          builder: (context) => UserChatSessionScreen(
+                            mechanicName: name,
+                            partnerId: partnerId ?? '',
+                          ),
                         ),
                       );
                     }

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'user_chat_session.dart';
+import '../../Logic/chat/chat_logic.dart';
+import 'package:intl/intl.dart';
 
 class UserMessageListScreen extends StatefulWidget {
   const UserMessageListScreen({super.key});
@@ -191,69 +193,63 @@ class _UserMessageListScreenState extends State<UserMessageListScreen> {
                           ),
                         ],
                       ),
-                      child: ListView(
-                        padding: EdgeInsets.zero,
-                        children: [
-                          _buildMechanicCard(
-                            name: "Romel Escape",
-                            vehicle: "ADV 160 ROADSYNC",
-                            lastMessage: "I'll be there in 5 minutes",
-                            time: "2 min ago",
-                            hasNewMessage: true,
-                            badgeCount: 3,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const UserChatSessionScreen(mechanicName: "Romel Escape"),
+                      child: StreamBuilder<List<Map<String, dynamic>>>(
+                        stream: ChatLogic().getActivePartners(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
+                          }
+                          if (snapshot.hasError) {
+                            return const Center(child: Text("Error fetching conversations"));
+                          }
+
+                          final partners = snapshot.data ?? [];
+                          
+                          if (partners.isEmpty) {
+                            return Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24.0),
+                                child: Text(
+                                  "No messages yet.",
+                                  style: GoogleFonts.montserrat(color: Colors.black54),
                                 ),
+                              ),
+                            );
+                          }
+
+                          return ListView.builder(
+                            padding: EdgeInsets.zero,
+                            itemCount: partners.length,
+                            itemBuilder: (context, index) {
+                              final p = partners[index];
+                              final rawTime = p['time'];
+                              String timeStr = "";
+                              if (rawTime != null) {
+                                final parsed = DateTime.parse(rawTime).toLocal();
+                                timeStr = DateFormat('MMM d, jm').format(parsed);
+                              }
+
+                              return _buildMechanicCard(
+                                name: p['name'],
+                                lastMessage: p['last_message'],
+                                time: timeStr,
+                                hasNewMessage: p['is_unread'] == true,
+                                isLast: index == partners.length - 1,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => UserChatSessionScreen(
+                                        mechanicName: p['name'],
+                                        partnerId: p['partner_id'],
+                                      ),
+                                    ),
+                                  );
+                                },
                               );
                             },
-                          ),
-                          _buildMechanicCard(
-                            name: "Sarah Johnson",
-                            lastMessage: "Your tire replacement is complete!",
-                            time: "Yesterday",
-                            hasNewMessage: false,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const UserChatSessionScreen(mechanicName: "Sarah Johnson"),
-                                ),
-                              );
-                            },
-                          ),
-                          _buildMechanicCard(
-                            name: "Regin Mercado",
-                            lastMessage: "Oil change done, all good!",
-                            time: "3 days ago",
-                            hasNewMessage: false,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const UserChatSessionScreen(mechanicName: "Regin Mercado"),
-                                ),
-                              );
-                            },
-                          ),
-                          _buildMechanicCard(
-                            name: "Mike Wilson",
-                            lastMessage: "Booking was unfortunately canceled.",
-                            time: "1 week ago",
-                            hasNewMessage: false,
-                            isLast: true,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const UserChatSessionScreen(mechanicName: "Mike Wilson"),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
+                          );
+                        },
                       ),
                     ),
                   ),

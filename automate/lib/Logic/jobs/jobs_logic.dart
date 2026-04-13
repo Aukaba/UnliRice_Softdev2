@@ -51,12 +51,40 @@ class JobsLogic {
       final profilesMap = <String, String>{};
       
       for (var id in userIds) {
+        String? targetName;
+        // Try mechanic
         try {
-          final res = await _supabase.from('profiles').select('first_name, last_name').eq('id', id).maybeSingle();
-          if (res != null) {
-            profilesMap[id.toString()] = '${res['first_name']} ${res['last_name']}';
-          }
+          final res = await _supabase.from('mechanic').select('first_name, last_name').eq('uid', id).maybeSingle();
+          if (res != null) targetName = '${res['first_name']} ${res['last_name']}';
         } catch (_) {}
+        
+        // Try driver
+        if (targetName == null) {
+          try {
+            final res = await _supabase.from('driver').select('first_name, last_name').eq('uid', id).maybeSingle();
+            if (res != null) targetName = '${res['first_name']} ${res['last_name']}';
+          } catch (_) {}
+        }
+        
+        // Try users
+        if (targetName == null) {
+          try {
+            final res = await _supabase.from('users').select('first_name, last_name').eq('uid', id).maybeSingle();
+            if (res != null) targetName = '${res['first_name']} ${res['last_name']}';
+          } catch (_) {}
+        }
+        
+        // Try user
+        if (targetName == null) {
+          try {
+            final res = await _supabase.from('user').select('first_name, last_name').eq('uid', id).maybeSingle();
+            if (res != null) targetName = '${res['first_name']} ${res['last_name']}';
+          } catch (_) {}
+        }
+
+        if (targetName != null && targetName.trim().isNotEmpty) {
+          profilesMap[id.toString()] = targetName.trim();
+        }
       }
 
       return jobs.map((job) {
@@ -83,12 +111,40 @@ class JobsLogic {
       final profilesMap = <String, String>{};
       
       for (var id in mechanicIds) {
+        String? targetName;
+        // Try mechanic
         try {
-          final res = await _supabase.from('profiles').select('first_name, last_name').eq('id', id).maybeSingle();
-          if (res != null) {
-            profilesMap[id.toString()] = '${res['first_name']} ${res['last_name']}';
-          }
+          final res = await _supabase.from('mechanic').select('first_name, last_name').eq('uid', id).maybeSingle();
+          if (res != null) targetName = '${res['first_name']} ${res['last_name']}';
         } catch (_) {}
+        
+        // Try driver
+        if (targetName == null) {
+          try {
+            final res = await _supabase.from('driver').select('first_name, last_name').eq('uid', id).maybeSingle();
+            if (res != null) targetName = '${res['first_name']} ${res['last_name']}';
+          } catch (_) {}
+        }
+        
+        // Try users
+        if (targetName == null) {
+          try {
+            final res = await _supabase.from('users').select('first_name, last_name').eq('uid', id).maybeSingle();
+            if (res != null) targetName = '${res['first_name']} ${res['last_name']}';
+          } catch (_) {}
+        }
+        
+        // Try user
+        if (targetName == null) {
+          try {
+            final res = await _supabase.from('user').select('first_name, last_name').eq('uid', id).maybeSingle();
+            if (res != null) targetName = '${res['first_name']} ${res['last_name']}';
+          } catch (_) {}
+        }
+
+        if (targetName != null && targetName.trim().isNotEmpty) {
+          profilesMap[id.toString()] = targetName.trim();
+        }
       }
 
       return jobs.map((job) {
