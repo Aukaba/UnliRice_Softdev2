@@ -38,6 +38,24 @@ class JobsLogic {
         // If sorting is needed over stream: You can sort in dart, or add .order() (wait, .order on stream is supported in recent versions of supabase_flutter)
   }
 
+  Stream<List<Map<String, dynamic>>> getMechanicScheduledJobs() {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return const Stream.empty();
+    return _supabase
+        .from('jobs')
+        .stream(primaryKey: ['id'])
+        .eq('mechanic_id', user.id);
+  }
+
+  Stream<List<Map<String, dynamic>>> getUserActivityJobs() {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return const Stream.empty();
+    return _supabase
+        .from('jobs')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', user.id);
+  }
+
   Future<void> acceptJob(String jobId) async {
     final user = _supabase.auth.currentUser;
     if (user == null) {
