@@ -5,6 +5,7 @@ import 'jobs.dart';
 import 'schedule.dart';
 import 'chat.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../messages/user_message_list.dart';
 import '../authentication/login_screen.dart'; // Just in case for logout
 
 class MechanicProfileScreen extends StatefulWidget {
@@ -550,7 +551,7 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
                 MaterialPageRoute(builder: (_) => const MechanicScheduleScreen()));
           } else if (index == 3) {
             Navigator.pushReplacement(context,
-                MaterialPageRoute(builder: (_) => const MechanicChatScreen()));
+                MaterialPageRoute(builder: (_) => const UserMessageListScreen()));
           }
         },
       ),

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../messages/user_message_list.dart';
+import '../messages/user_chat_session.dart';
 import '../../Logic/jobs/jobs_logic.dart';
 
 class UserActivityScreen extends StatelessWidget {
@@ -130,7 +130,7 @@ class UserActivityScreen extends StatelessWidget {
 
                           return _buildActivityCard(
                             context: context,
-                            name: job['mechanic_id'] != null ? 'Mechanic Assigned' : 'Waiting for Mechanic',
+                            name: job['mechanic_name'] ?? (job['mechanic_id'] != null ? 'Mechanic Assigned' : 'Waiting for Mechanic'),
                             service: job['title'] ?? 'Service',
                             status: displayStatus,
                             time: timeDisplay,
@@ -302,7 +302,7 @@ class UserActivityScreen extends StatelessWidget {
                       Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => const UserMessageListScreen(),
+                          builder: (context) => UserChatSessionScreen(mechanicName: name),
                         ),
                       );
                     }

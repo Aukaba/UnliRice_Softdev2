@@ -44,7 +44,30 @@ class JobsLogic {
     return _supabase
         .from('jobs')
         .stream(primaryKey: ['id'])
-        .eq('mechanic_id', user.id);
+        .eq('mechanic_id', user.id)
+        .asyncMap((jobs) async {
+      
+      final userIds = jobs.map((j) => j['user_id']).where((id) => id != null).toSet();
+      final profilesMap = <String, String>{};
+      
+      for (var id in userIds) {
+        try {
+          final res = await _supabase.from('profiles').select('first_name, last_name').eq('id', id).maybeSingle();
+          if (res != null) {
+            profilesMap[id.toString()] = '${res['first_name']} ${res['last_name']}';
+          }
+        } catch (_) {}
+      }
+
+      return jobs.map((job) {
+        final newJob = Map<String, dynamic>.from(job);
+        final uId = job['user_id'];
+        if (uId != null && profilesMap.containsKey(uId.toString())) {
+          newJob['user_name'] = profilesMap[uId.toString()];
+        }
+        return newJob;
+      }).toList();
+    });
   }
 
   Stream<List<Map<String, dynamic>>> getUserActivityJobs() {
@@ -53,7 +76,30 @@ class JobsLogic {
     return _supabase
         .from('jobs')
         .stream(primaryKey: ['id'])
-        .eq('user_id', user.id);
+        .eq('user_id', user.id)
+        .asyncMap((jobs) async {
+          
+      final mechanicIds = jobs.map((j) => j['mechanic_id']).where((id) => id != null).toSet();
+      final profilesMap = <String, String>{};
+      
+      for (var id in mechanicIds) {
+        try {
+          final res = await _supabase.from('profiles').select('first_name, last_name').eq('id', id).maybeSingle();
+          if (res != null) {
+            profilesMap[id.toString()] = '${res['first_name']} ${res['last_name']}';
+          }
+        } catch (_) {}
+      }
+
+      return jobs.map((job) {
+        final newJob = Map<String, dynamic>.from(job);
+        final mId = job['mechanic_id'];
+        if (mId != null && profilesMap.containsKey(mId.toString())) {
+          newJob['mechanic_name'] = profilesMap[mId.toString()];
+        }
+        return newJob;
+      }).toList();
+    });
   }
 
   Future<void> acceptJob(String jobId) async {

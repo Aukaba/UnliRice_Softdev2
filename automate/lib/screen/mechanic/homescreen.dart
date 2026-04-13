@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'homescreen_checkrequest.dart';
 import 'jobs.dart';
 import 'schedule.dart';
-import 'chat.dart';
+import '../messages/user_message_list.dart';
 import 'profile.dart';
 
 class MechanicHomeScreen extends StatelessWidget {
@@ -95,7 +95,7 @@ class MechanicHomeScreen extends StatelessWidget {
           } else if (index == 3) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const MechanicChatScreen()),
+              MaterialPageRoute(builder: (_) => const UserMessageListScreen()),
             );
           } else if (index == 4) {
             Navigator.push(

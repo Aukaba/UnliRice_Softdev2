@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'homescreen.dart';
 import 'jobs.dart';
 import 'schedule.dart';
-import 'chat.dart';
+import '../messages/user_message_list.dart';
 import 'profile.dart';
 
 class MechanicCheckRequestScreen extends StatefulWidget {
@@ -226,7 +226,7 @@ class _MechanicCheckRequestScreenState
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => MechanicChatScreen(),
+                builder: (_) => const UserMessageListScreen(),
               ),
             );
           } else if (index == 4) {

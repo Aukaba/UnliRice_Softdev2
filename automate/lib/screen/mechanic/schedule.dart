@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'homescreen.dart'; // adjust import paths as needed
 import 'jobs.dart';
-import 'chat.dart';
+import '../messages/user_message_list.dart';
 import '../../Logic/jobs/jobs_logic.dart';
 
 // ─── Data model ───────────────────────────────────────────────────────────────
@@ -503,7 +503,7 @@ class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
           } else if (index == 3) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => const MechanicChatScreen()),
+              MaterialPageRoute(builder: (_) => const UserMessageListScreen()),
             );
           }
         },
