@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'homescreen.dart';
 import 'schedule.dart';
-import 'chat.dart';
+import '../messages/user_message_list.dart';
+import '../../Logic/jobs/jobs_logic.dart';
 
 class MechanicJobsScreen extends StatefulWidget {
   const MechanicJobsScreen({super.key});
@@ -15,56 +16,22 @@ class _MechanicJobsScreenState extends State<MechanicJobsScreen> {
   String _selectedFilter = 'All';
   final List<String> _filters = ['All', 'Urgent', 'Medium', 'Low'];
 
-  final List<_JobData> _jobs = const [
-    _JobData(
-      title: 'Engine won\'t start',
-      name: 'Rex Seadiño Jr.',
-      vehicle: 'Toyota Vios',
-      description:
-          '"Car gonna but won\'t turn over. Battery seems fine, lights work. Helpdesk."',
-      km: '0.47 km',
-      minutesAgo: '2 min ago',
-      price: '₱1,000 - ₱3,000',
-      priority: 'High',
-    ),
-    _JobData(
-      title: 'Engine won\'t start',
-      name: 'Rex Seadiño Jr.',
-      vehicle: 'Toyota Vios',
-      description:
-          '"Car gonna but won\'t turn over. Battery seems fine, lights work. Helpdesk."',
-      km: '0.47 km',
-      minutesAgo: '2 min ago',
-      price: '₱1,000 - ₱3,000',
-      priority: 'High',
-    ),
-    _JobData(
-      title: 'Engine won\'t start',
-      name: 'Rex Seadiño Jr.',
-      vehicle: 'Toyota Vios',
-      description:
-          '"Car gonna but won\'t turn over. Battery seems fine, lights work. Helpdesk."',
-      km: '0.47 km',
-      minutesAgo: '2 min ago',
-      price: '₱1,000 - ₱3,000',
-      priority: 'High',
-    ),
-    _JobData(
-      title: 'Engine won\'t start',
-      name: 'Rex Seadiño Jr.',
-      vehicle: 'Toyota Vios',
-      description:
-          '"Car gonna but won\'t turn over. Battery seems fine, lights work. Helpdesk."',
-      km: '0.47 km',
-      minutesAgo: '2 min ago',
-      price: '₱1,000 - ₱3,000',
-      priority: 'Medium',
-    ),
-  ];
+  List<Map<String, dynamic>> _filterJobs(List<Map<String, dynamic>> jobs) {
+    if (_selectedFilter == 'All') return jobs;
+    return jobs.where((j) => j['priority'] == _selectedFilter).toList();
+  }
 
-  List<_JobData> get _filteredJobs {
-    if (_selectedFilter == 'All') return _jobs;
-    return _jobs.where((j) => j.priority == _selectedFilter).toList();
+  void _acceptJob(String jobId) async {
+    try {
+      await JobsLogic().acceptJob(jobId);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job accepted!')));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
+    }
   }
 
   @override
@@ -153,7 +120,7 @@ class _MechanicJobsScreenState extends State<MechanicJobsScreen> {
                               ),
                             ),
                             Text(
-                              '${_filteredJobs.length} pending requests',
+                              'Pending requests',
                               style: GoogleFonts.inriaSans(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w500,
@@ -215,8 +182,21 @@ class _MechanicJobsScreenState extends State<MechanicJobsScreen> {
 
             // Job cards list
             Expanded(
-              child: _filteredJobs.isEmpty
-                  ? Center(
+              child: StreamBuilder<List<Map<String, dynamic>>>(
+                stream: JobsLogic().getPendingJobs(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+                  
+                  final allJobs = snapshot.data ?? [];
+                  final filteredJobs = _filterJobs(allJobs);
+                  
+                  if (filteredJobs.isEmpty) {
+                    return Center(
                       child: Text(
                         'No $_selectedFilter requests',
                         style: GoogleFonts.inriaSans(
@@ -225,14 +205,23 @@ class _MechanicJobsScreenState extends State<MechanicJobsScreen> {
                           fontWeight: FontWeight.w600,
                         ),
                       ),
-                    )
-                  : ListView.separated(
-                      padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
-                      itemCount: _filteredJobs.length,
-                      separatorBuilder: (_, __) => const SizedBox(height: 14),
-                      itemBuilder: (context, index) =>
-                          _JobCard(job: _filteredJobs[index]),
-                    ),
+                    );
+                  }
+                  
+                  return ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                    itemCount: filteredJobs.length,
+                    separatorBuilder: (_, __) => const SizedBox(height: 14),
+                    itemBuilder: (context, index) {
+                      final job = filteredJobs[index];
+                      return _JobCard(
+                        job: job,
+                        onAccept: () => _acceptJob(job['id'].toString()),
+                      );
+                    },
+                  );
+                },
+              ),
             ),
           ],
             ),
@@ -255,7 +244,7 @@ class _MechanicJobsScreenState extends State<MechanicJobsScreen> {
           } else if (index == 3) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => const MechanicChatScreen()),
+              MaterialPageRoute(builder: (_) => const UserMessageListScreen()),
             );
           }
         },
@@ -264,46 +253,46 @@ class _MechanicJobsScreenState extends State<MechanicJobsScreen> {
   }
 }
 
-class _JobData {
-  final String title;
-  final String name;
-  final String vehicle;
-  final String description;
-  final String km;
-  final String minutesAgo;
-  final String price;
-  final String priority;
-
-  const _JobData({
-    required this.title,
-    required this.name,
-    required this.vehicle,
-    required this.description,
-    required this.km,
-    required this.minutesAgo,
-    required this.price,
-    required this.priority,
-  });
-}
-
 class _JobCard extends StatelessWidget {
-  final _JobData job;
-  const _JobCard({required this.job});
+  final Map<String, dynamic> job;
+  final VoidCallback onAccept;
+  
+  const _JobCard({required this.job, required this.onAccept});
 
-  Color get _badgeBg => job.priority == 'High'
+  Color get _badgeBg => job['priority'] == 'High'
       ? const Color(0xFFFFE5E5)
-      : job.priority == 'Medium'
+      : job['priority'] == 'Medium'
           ? const Color(0xFFFFF3CD)
           : const Color(0xFFE8F7EA);
 
-  Color get _badgeText => job.priority == 'High'
+  Color get _badgeText => job['priority'] == 'High'
       ? const Color(0xFFD72B2B)
-      : job.priority == 'Medium'
+      : job['priority'] == 'Medium'
           ? const Color(0xFFB07D00)
           : const Color(0xFF2F8A48);
 
+  String _timeAgo(String? createdAtStr) {
+    if (createdAtStr == null) return 'Just now';
+    final createdAt = DateTime.tryParse(createdAtStr);
+    if (createdAt == null) return 'Recently';
+    final diff = DateTime.now().difference(createdAt);
+    if (diff.inMinutes < 60) {
+      return '${diff.inMinutes} min ago';
+    } else if (diff.inHours < 24) {
+      return '${diff.inHours} hr ago';
+    } else {
+      return '${diff.inDays} days ago';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
+    final title = job['title'] ?? 'Service Request';
+    final vehicle = job['vehicle'] ?? 'Unknown Vehicle';
+    final name = 'User'; // Assume we'd need a join to get user's real name based on user_id, hardcoded for now
+    final description = job['issue_description'] ?? 'No description provided.';
+    final priority = job['priority'] ?? 'Medium';
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -342,7 +331,7 @@ class _JobCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      job.title,
+                      title,
                       style: GoogleFonts.montserrat(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
@@ -351,7 +340,7 @@ class _JobCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 3),
                     Text(
-                      '${job.name} • ${job.vehicle}',
+                      '$name • $vehicle',
                       style: GoogleFonts.inriaSans(
                         fontSize: 12,
                         fontWeight: FontWeight.w500,
@@ -371,7 +360,7 @@ class _JobCard extends StatelessWidget {
                   borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  job.priority,
+                  priority,
                   style: GoogleFonts.inriaSans(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
@@ -384,7 +373,7 @@ class _JobCard extends StatelessWidget {
           const SizedBox(height: 10),
           // Description
           Text(
-            job.description,
+            description,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: GoogleFonts.inriaSans(
@@ -401,12 +390,15 @@ class _JobCard extends StatelessWidget {
               const Icon(Icons.location_on_outlined,
                   size: 14, color: Colors.black38),
               const SizedBox(width: 4),
-              Text(
-                job.km,
-                style: GoogleFonts.inriaSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black38,
+              Expanded(
+                child: Text(
+                  job['pickup_location'] ?? 'Unknown location',
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inriaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black38,
+                  ),
                 ),
               ),
               const SizedBox(width: 14),
@@ -414,7 +406,7 @@ class _JobCard extends StatelessWidget {
                   size: 14, color: Colors.black38),
               const SizedBox(width: 4),
               Text(
-                job.minutesAgo,
+                _timeAgo(job['created_at']),
                 style: GoogleFonts.inriaSans(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
@@ -422,12 +414,22 @@ class _JobCard extends StatelessWidget {
                 ),
               ),
               const Spacer(),
-              Text(
-                job.price,
-                style: GoogleFonts.montserrat(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF121212),
+              GestureDetector(
+                onTap: onAccept,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF19456B),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    'Accept',
+                    style: GoogleFonts.montserrat(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.white,
+                    ),
+                  ),
                 ),
               ),
             ],
