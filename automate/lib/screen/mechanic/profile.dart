@@ -43,8 +43,9 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
         final lastName = data['last_name'] ?? '';
         _mechanicName = '$firstName $lastName'.trim();
       });
-    } catch (_) {
-      // Silently fail
+    } catch (e, stackTrace) {
+      debugPrint('Failed to load mechanic info: $e');
+      debugPrint('Stack trace: $stackTrace');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
