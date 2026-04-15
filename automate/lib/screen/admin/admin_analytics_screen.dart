@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'package:flutter/material.dart';
 import 'admin_transaction_history_screen.dart';
 
@@ -11,7 +12,7 @@ class AdminAnalyticsContent extends StatelessWidget {
     {'month': 'Apr', 'value': 65},
     {'month': 'May', 'value': 70},
     {'month': 'Jun', 'value': 80},
-    {'month': 'Det', 'value': 55},
+    {'month': 'Dec', 'value': 55},
   ];
 
   @override
@@ -54,9 +55,8 @@ class AdminAnalyticsContent extends StatelessWidget {
                           shape: BoxShape.circle,
                           color: Colors.white.withOpacity(0.2),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.4),
-                            width: 2,
-                          ),
+                              color: Colors.white.withOpacity(0.4),
+                              width: 2),
                         ),
                         child: ClipOval(
                           child: Image.asset(
@@ -115,7 +115,7 @@ class AdminAnalyticsContent extends StatelessWidget {
                               child: _MiniStatCard(
                                 title: 'Total\nRevenue',
                                 value: '\$139.6K',
-                                subtitle: 'Total Revenu',
+                                subtitle: 'Total Revenue',
                               ),
                             ),
                           ],
@@ -152,81 +152,100 @@ class AdminAnalyticsContent extends StatelessWidget {
                               ),
                               const SizedBox(height: 16),
 
-                              // Y axis labels + bars
-                              Row(
-                                crossAxisAlignment: CrossAxisAlignment.end,
-                                children: [
-                                  // Y axis
-                                  Column(
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children:
-                                        ['100', '80', '60', '40', '20', '0']
-                                            .map(
-                                              (v) => SizedBox(
+                              // Y axis labels + bars — dynamic max scaling
+                              Builder(builder: (context) {
+                                final maxValue = _chartData
+                                    .map((d) => d['value'] as num)
+                                    .reduce(max)
+                                    .toDouble();
+                                final ticks = [
+                                  maxValue,
+                                  (maxValue * 0.8).roundToDouble(),
+                                  (maxValue * 0.6).roundToDouble(),
+                                  (maxValue * 0.4).roundToDouble(),
+                                  (maxValue * 0.2).roundToDouble(),
+                                  0.0,
+                                ];
+                                return Row(
+                                  crossAxisAlignment:
+                                      CrossAxisAlignment.end,
+                                  children: [
+                                    // Y axis
+                                    Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.end,
+                                      children: ticks
+                                          .map((v) => SizedBox(
                                                 height: 20,
                                                 child: Text(
-                                                  v,
+                                                  v.toInt().toString(),
                                                   style: TextStyle(
                                                     fontSize: 10,
-                                                    color: Colors.grey.shade400,
+                                                    color: Colors
+                                                        .grey.shade400,
                                                   ),
                                                 ),
-                                              ),
-                                            )
-                                            .toList(),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  // Bars
-                                  Expanded(
-                                    child: SizedBox(
-                                      height: 120,
-                                      child: Row(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.end,
-                                        children: _chartData.map((data) {
-                                          final barH =
-                                              (data['value'] / 100.0) * 110;
-                                          return Expanded(
-                                            child: Padding(
-                                              padding:
-                                                  const EdgeInsets.symmetric(
-                                                    horizontal: 3,
-                                                  ),
-                                              child: Column(
-                                                mainAxisAlignment:
-                                                    MainAxisAlignment.end,
-                                                children: [
-                                                  Container(
-                                                    height: barH,
-                                                    decoration: BoxDecoration(
-                                                      color: const Color(
-                                                        0xFF164D83,
+                                              ))
+                                          .toList(),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    // Bars
+                                    Expanded(
+                                      child: SizedBox(
+                                        height: 120,
+                                        child: Row(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.end,
+                                          children:
+                                              _chartData.map((data) {
+                                            final barH =
+                                                ((data['value'] as num) /
+                                                        maxValue) *
+                                                    110;
+                                            return Expanded(
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 3),
+                                                child: Column(
+                                                  mainAxisAlignment:
+                                                      MainAxisAlignment
+                                                          .end,
+                                                  children: [
+                                                    Container(
+                                                      height: barH,
+                                                      decoration:
+                                                          BoxDecoration(
+                                                        color: const Color(
+                                                            0xFF164D83),
+                                                        borderRadius:
+                                                            const BorderRadius
+                                                                .vertical(
+                                                          top: Radius
+                                                              .circular(
+                                                                  4),
+                                                        ),
                                                       ),
-                                                      borderRadius:
-                                                          const BorderRadius.vertical(
-                                                            top:
-                                                                Radius.circular(
-                                                                  4,
-                                                                ),
-                                                          ),
                                                     ),
-                                                  ),
-                                                ],
+                                                  ],
+                                                ),
                                               ),
-                                            ),
-                                          );
-                                        }).toList(),
+                                            );
+                                          }).toList(),
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                ],
-                              ),
+                                  ],
+                                );
+                              }),
 
                               const SizedBox(height: 8),
 
                               // X axis labels
                               Padding(
-                                padding: const EdgeInsets.only(left: 28),
+                                padding:
+                                    const EdgeInsets.only(left: 28),
                                 child: Row(
                                   children: _chartData.map((data) {
                                     return Expanded(
@@ -265,7 +284,8 @@ class AdminAnalyticsContent extends StatelessWidget {
                             ],
                           ),
                           child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                            crossAxisAlignment:
+                                CrossAxisAlignment.start,
                             children: [
                               Row(
                                 mainAxisAlignment:
@@ -285,8 +305,7 @@ class AdminAnalyticsContent extends StatelessWidget {
                                       Navigator.push(
                                         context,
                                         MaterialPageRoute(
-                                          builder: (_) =>
-                                              const AdminTransactionHistoryScreen(),
+                                          builder: (_) => const AdminTransactionHistoryScreen(),
                                         ),
                                       );
                                     },
@@ -304,21 +323,11 @@ class AdminAnalyticsContent extends StatelessWidget {
                               ),
                               const SizedBox(height: 4),
                               Text(
-                                'Summary',
+                                'View all completed transactions',
                                 style: TextStyle(
                                   color: Colors.grey.shade500,
                                   fontSize: 12,
                                   fontFamily: 'Inter',
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              const Text(
-                                '0xFF164D83',
-                                style: TextStyle(
-                                  color: Color(0xFF164D83),
-                                  fontSize: 12,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w600,
                                 ),
                               ),
                               const SizedBox(height: 12),
@@ -327,19 +336,18 @@ class AdminAnalyticsContent extends StatelessWidget {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (_) =>
-                                          const AdminTransactionHistoryScreen(),
+                                      builder: (_) => const AdminTransactionHistoryScreen(),
                                     ),
                                   );
                                 },
                                 child: Container(
                                   width: double.infinity,
                                   padding: const EdgeInsets.symmetric(
-                                    vertical: 14,
-                                  ),
+                                      vertical: 14),
                                   decoration: BoxDecoration(
                                     color: const Color(0xFF164D83),
-                                    borderRadius: BorderRadius.circular(12),
+                                    borderRadius:
+                                        BorderRadius.circular(12),
                                   ),
                                   alignment: Alignment.center,
                                   child: const Text(
@@ -373,11 +381,10 @@ class _MiniStatCard extends StatelessWidget {
   final String title;
   final String value;
   final String subtitle;
-  const _MiniStatCard({
-    required this.title,
-    required this.value,
-    required this.subtitle,
-  });
+  const _MiniStatCard(
+      {required this.title,
+      required this.value,
+      required this.subtitle});
 
   @override
   Widget build(BuildContext context) {
@@ -397,33 +404,27 @@ class _MiniStatCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            title,
-            style: TextStyle(
-              color: Colors.grey.shade600,
-              fontSize: 12,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          Text(title,
+              style: TextStyle(
+                color: Colors.grey.shade600,
+                fontSize: 12,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w500,
+              )),
           const SizedBox(height: 6),
-          Text(
-            value,
-            style: const TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 22,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w800,
-            ),
-          ),
-          Text(
-            subtitle,
-            style: TextStyle(
-              color: Colors.grey.shade500,
-              fontSize: 11,
-              fontFamily: 'Inter',
-            ),
-          ),
+          Text(value,
+              style: const TextStyle(
+                color: Color(0xFF1A1A1A),
+                fontSize: 22,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w800,
+              )),
+          Text(subtitle,
+              style: TextStyle(
+                color: Colors.grey.shade500,
+                fontSize: 11,
+                fontFamily: 'Inter',
+              )),
         ],
       ),
     );

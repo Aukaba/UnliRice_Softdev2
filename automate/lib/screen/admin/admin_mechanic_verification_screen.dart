@@ -17,21 +17,18 @@ class _AdminMechanicVerificationContentState
       'name': 'Bernante, Vince',
       'email': 'VinceBernante@gmail.com',
       'contact': '09987654321',
-      'pendingCount': 125,
     },
     {
       'id': 2,
       'name': 'Aaron, Barnaija',
       'email': 'AaronBarnaija@gmail.com',
       'contact': '09123456789',
-      'pendingCount': 125,
     },
     {
       'id': 3,
       'name': 'Maria Santos',
       'email': 'MariaSantos@gmail.com',
       'contact': '09112345678',
-      'pendingCount': 125,
     },
   ];
 
@@ -50,7 +47,8 @@ class _AdminMechanicVerificationContentState
             ? const Color(0xFF009227)
             : const Color(0xFFBF2D2D),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -95,9 +93,8 @@ class _AdminMechanicVerificationContentState
                           shape: BoxShape.circle,
                           color: Colors.white.withOpacity(0.2),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.4),
-                            width: 2,
-                          ),
+                              color: Colors.white.withOpacity(0.4),
+                              width: 2),
                         ),
                         child: ClipOval(
                           child: Image.asset(
@@ -152,7 +149,8 @@ class _AdminMechanicVerificationContentState
                   child: _pendingMechanics.isEmpty
                       ? _buildEmptyState()
                       : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                          padding:
+                              const EdgeInsets.fromLTRB(20, 0, 20, 24),
                           itemCount: _pendingMechanics.length,
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: 16),
@@ -161,13 +159,9 @@ class _AdminMechanicVerificationContentState
                             return _MechanicCard(
                               mechanic: mechanic,
                               onApprove: () => _removeCard(
-                                mechanic['id'] as int,
-                                'approved',
-                              ),
+                                  mechanic['id'] as int, 'approved'),
                               onReject: () => _removeCard(
-                                mechanic['id'] as int,
-                                'rejected',
-                              ),
+                                  mechanic['id'] as int, 'rejected'),
                             );
                           },
                         ),
@@ -185,11 +179,8 @@ class _AdminMechanicVerificationContentState
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.check_circle_outline_rounded,
-            size: 64,
-            color: Colors.white.withOpacity(0.5),
-          ),
+          Icon(Icons.check_circle_outline_rounded,
+              size: 64, color: Colors.white.withOpacity(0.5)),
           const SizedBox(height: 12),
           const Text(
             'No pending mechanics',
@@ -204,9 +195,8 @@ class _AdminMechanicVerificationContentState
           Text(
             'All mechanics have been reviewed.',
             style: TextStyle(
-              fontSize: 13,
-              color: Colors.white.withOpacity(0.7),
-            ),
+                fontSize: 13,
+                color: Colors.white.withOpacity(0.7)),
           ),
         ],
       ),
@@ -255,36 +245,23 @@ class _MechanicCard extends StatelessWidget {
               fontWeight: FontWeight.w700,
             ),
           ),
-          const SizedBox(height: 8),
-
-          // Pending count
-          Text(
-            '${mechanic['pendingCount'] ?? 0}',
-            style: const TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 48,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w800,
-            ),
-          ),
+          const SizedBox(height: 4),
 
           // Pending label
-          const Text(
-            'Pending Mechanics:',
-            style: TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 14,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w600,
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: const Color(0xFFFFF3CD),
+              borderRadius: BorderRadius.circular(20),
             ),
-          ),
-          const Text(
-            'Waiting for approval',
-            style: TextStyle(
-              color: Color(0xFF666666),
-              fontSize: 13,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w400,
+            child: const Text(
+              'Pending Approval',
+              style: TextStyle(
+                color: Color(0xFF856404),
+                fontSize: 13,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+              ),
             ),
           ),
 
@@ -360,9 +337,7 @@ class _MechanicCard extends StatelessWidget {
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 14),
                     side: const BorderSide(
-                      color: Color(0xFFEF4444),
-                      width: 1.5,
-                    ),
+                        color: Color(0xFFEF4444), width: 1.5),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(30),
                     ),
@@ -398,26 +373,22 @@ class _InfoRow extends StatelessWidget {
       children: [
         SizedBox(
           width: 80,
-          child: Text(
-            label,
-            style: const TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 13,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          child: Text(label,
+              style: const TextStyle(
+                color: Color(0xFF1A1A1A),
+                fontSize: 13,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w600,
+              )),
         ),
         Expanded(
-          child: Text(
-            value,
-            style: const TextStyle(
-              color: Color(0xFF444444),
-              fontSize: 13,
-              fontFamily: 'Inter',
-              fontWeight: FontWeight.w400,
-            ),
-          ),
+          child: Text(value,
+              style: const TextStyle(
+                color: Color(0xFF444444),
+                fontSize: 13,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w400,
+              )),
         ),
       ],
     );

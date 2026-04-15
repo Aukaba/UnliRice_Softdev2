@@ -53,10 +53,8 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
   }
 
   void _goToUpdatePassword() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => const AdminUpdatePasswordScreen()),
-    );
+    Navigator.push(context,
+        MaterialPageRoute(builder: (_) => const AdminUpdatePasswordScreen()));
   }
 
   @override
@@ -99,9 +97,8 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
                           shape: BoxShape.circle,
                           color: Colors.white.withOpacity(0.2),
                           border: Border.all(
-                            color: Colors.white.withOpacity(0.4),
-                            width: 2,
-                          ),
+                              color: Colors.white.withOpacity(0.4),
+                              width: 2),
                         ),
                         child: ClipOval(
                           child: Image.asset(
@@ -172,11 +169,9 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
                                       color: Colors.grey.shade200,
                                       shape: BoxShape.circle,
                                     ),
-                                    child: Icon(
-                                      Icons.person,
-                                      size: 56,
-                                      color: Colors.grey.shade400,
-                                    ),
+                                    child: Icon(Icons.person,
+                                        size: 56,
+                                        color: Colors.grey.shade400),
                                   ),
                                   Positioned(
                                     bottom: 0,
@@ -190,15 +185,12 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
                                           color: const Color(0xFF164D83),
                                           shape: BoxShape.circle,
                                           border: Border.all(
-                                            color: Colors.white,
-                                            width: 2,
-                                          ),
+                                              color: Colors.white,
+                                              width: 2),
                                         ),
-                                        child: const Icon(
-                                          Icons.edit,
-                                          size: 15,
-                                          color: Colors.white,
-                                        ),
+                                        child: const Icon(Icons.edit,
+                                            size: 15,
+                                            color: Colors.white),
                                       ),
                                     ),
                                   ),
@@ -208,8 +200,7 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
 
                               if (_isLoading)
                                 const CircularProgressIndicator(
-                                  color: Color(0xFF164D83),
-                                )
+                                    color: Color(0xFF164D83))
                               else ...[
                                 Text(
                                   _adminName.isNotEmpty
@@ -240,12 +231,11 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
                                   onTap: () {},
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(
-                                      horizontal: 24,
-                                      vertical: 10,
-                                    ),
+                                        horizontal: 24, vertical: 10),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFF164D83),
-                                      borderRadius: BorderRadius.circular(20),
+                                      borderRadius:
+                                          BorderRadius.circular(20),
                                     ),
                                     child: const Text(
                                       'Profile edit',
@@ -287,9 +277,8 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
                                 Container(
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
-                                    color: const Color(
-                                      0xFF164D83,
-                                    ).withOpacity(0.1),
+                                    color: const Color(0xFF164D83)
+                                        .withOpacity(0.1),
                                     shape: BoxShape.circle,
                                   ),
                                   child: const Icon(
@@ -309,11 +298,8 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
                                   ),
                                 ),
                                 const Spacer(),
-                                const Icon(
-                                  Icons.chevron_right_rounded,
-                                  color: Color(0xFFAAAAAA),
-                                  size: 22,
-                                ),
+                                const Icon(Icons.chevron_right_rounded,
+                                    color: Color(0xFFAAAAAA), size: 22),
                               ],
                             ),
                           ),
@@ -341,11 +327,8 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
                               // Verification Alerts
                               Row(
                                 children: [
-                                  const Icon(
-                                    Icons.notifications_rounded,
-                                    color: Color(0xFF164D83),
-                                    size: 22,
-                                  ),
+                                  const Icon(Icons.notifications_rounded,
+                                      color: Color(0xFF164D83), size: 22),
                                   const SizedBox(width: 12),
                                   const Expanded(
                                     child: Text(
@@ -361,8 +344,7 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
                                   _CustomSwitch(
                                     value: _verificationAlerts,
                                     onChanged: (val) => setState(
-                                      () => _verificationAlerts = val,
-                                    ),
+                                        () => _verificationAlerts = val),
                                   ),
                                 ],
                               ),
@@ -370,15 +352,12 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
                               // Transaction Updates
                               Row(
                                 children: [
-                                  const Icon(
-                                    Icons.email_outlined,
-                                    color: Color(0xFF164D83),
-                                    size: 22,
-                                  ),
+                                  const Icon(Icons.email_outlined,
+                                      color: Color(0xFF164D83), size: 22),
                                   const SizedBox(width: 12),
                                   const Expanded(
                                     child: Text(
-                                      'Notifications',
+                                      'Transaction Updates',
                                       style: TextStyle(
                                         color: Color(0xFF1A1A1A),
                                         fontSize: 15,
@@ -390,8 +369,7 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
                                   _CustomSwitch(
                                     value: _transactionUpdates,
                                     onChanged: (val) => setState(
-                                      () => _transactionUpdates = val,
-                                    ),
+                                        () => _transactionUpdates = val),
                                   ),
                                 ],
                               ),
@@ -406,7 +384,8 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
                           onTap: _signOut,
                           child: Container(
                             width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
+                            padding: const EdgeInsets.symmetric(
+                                vertical: 16),
                             decoration: BoxDecoration(
                               color: Colors.white,
                               borderRadius: BorderRadius.circular(16),
