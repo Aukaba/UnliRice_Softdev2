@@ -5,309 +5,343 @@ class AdminAnalyticsContent extends StatelessWidget {
   const AdminAnalyticsContent({super.key});
 
   static const List<Map<String, dynamic>> _chartData = [
-    {'month': 'Jan', 'value': 95},
-    {'month': 'Feb', 'value': 110},
-    {'month': 'Mar', 'value': 128},
-    {'month': 'Apr', 'value': 102},
+    {'month': 'Jan', 'value': 60},
+    {'month': 'Feb', 'value': 75},
+    {'month': 'Mar', 'value': 85},
+    {'month': 'Apr', 'value': 65},
+    {'month': 'May', 'value': 70},
+    {'month': 'Jun', 'value': 80},
+    {'month': 'Det', 'value': 55},
   ];
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        bottom: false,
-        child: Stack(
-          children: [
-            // Blue layered backgrounds rising from bottom — original Figma design
-            Positioned(
-              left: 1,
-              top: size.height * 0.44,
-              child: Container(
-                width: size.width,
-                height: size.height * 0.62,
-                decoration: ShapeDecoration(
-                  color: const Color(0x38164D83),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(19),
-                  ),
-                  shadows: const [
-                    BoxShadow(
-                      color: Color(0x3F000000),
-                      blurRadius: 4,
-                      offset: Offset(0, 4),
-                    ),
+      body: Stack(
+        children: [
+          // Full screen background gradient
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    Color(0xFF164D83),
+                    Color(0xFF1A5A96),
+                    Color(0xFFD6E4F0),
+                    Color(0xFFF0F5FA),
                   ],
+                  stops: [0.0, 0.25, 0.65, 1.0],
                 ),
               ),
             ),
-            Positioned(
-              left: 1,
-              top: size.height * 0.52,
-              child: Container(
-                width: size.width,
-                height: size.height * 0.54,
-                decoration: ShapeDecoration(
-                  color: const Color(0x7F164D83),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(19),
-                  ),
-                  shadows: const [
-                    BoxShadow(
-                      color: Color(0x3F000000),
-                      blurRadius: 4,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              left: 1,
-              top: size.height * 0.59,
-              child: Container(
-                width: size.width,
-                height: size.height * 0.47,
-                decoration: ShapeDecoration(
-                  color: const Color(0xAA164D83),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(19),
-                  ),
-                  shadows: const [
-                    BoxShadow(
-                      color: Color(0x3F000000),
-                      blurRadius: 4,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          ),
 
-            // Main content
-            Column(
+          SafeArea(
+            bottom: false,
+            child: Column(
               children: [
-                // Header
+                // ── Header ─────────────────────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
                   child: Row(
                     children: [
                       Container(
-                        width: 70,
-                        height: 70,
-                        decoration: ShapeDecoration(
-                          image: const DecorationImage(
-                            image: NetworkImage("https://placehold.co/98x98"),
-                            fit: BoxFit.cover,
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.2),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.4),
+                            width: 2,
                           ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(9999),
+                        ),
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/logo.png',
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 28,
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 14),
                       const Text(
                         'Analytics',
                         style: TextStyle(
-                          color: Color(0xFF1A1A1A),
-                          fontSize: 18,
+                          color: Colors.white,
+                          fontSize: 20,
                           fontFamily: 'Poppins',
                           fontWeight: FontWeight.w700,
                         ),
                       ),
                       const Spacer(),
-                      const Icon(
-                        Icons.notifications_outlined,
-                        color: Color(0xFF19456B),
-                        size: 28,
+                      GestureDetector(
+                        onTap: () {},
+                        child: const Icon(
+                          Icons.notifications_outlined,
+                          color: Colors.white,
+                          size: 28,
+                        ),
                       ),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 12),
-
+                // ── Content ─────────────────────────────────────────────
                 Expanded(
                   child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Transaction this Month
-                        _StatCard(
-                          title: 'Transaction this Month:',
-                          value: '67',
-                          percentage: '+12.5%',
-                          isPositive: false,
+                        // Stat cards row
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _MiniStatCard(
+                                title: 'Transaction\nthis Month',
+                                value: '1,388',
+                                subtitle: 'Transaction',
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: _MiniStatCard(
+                                title: 'Total\nRevenue',
+                                value: '\$139.6K',
+                                subtitle: 'Total Revenu',
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(height: 12),
 
-                        // Total Revenue
-                        _StatCard(
-                          title: 'Total Revenue:',
-                          value: '₱ 84,300.00',
-                          percentage: '+9%',
-                          isPositive: true,
-                        ),
+                        const SizedBox(height: 16),
 
-                        const SizedBox(height: 20),
-
-                        // Month Breakdown label
-                        const Text(
-                          'Month Breakdown',
-                          style: TextStyle(
-                            color: Color(0xFF1A1A1A),
-                            fontSize: 14,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w600,
-                          ),
-                        ),
-                        const SizedBox(height: 10),
-
-                        // Bar chart
+                        // Month Breakdown chart card
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.fromLTRB(12, 20, 12, 12),
-                          decoration: ShapeDecoration(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
                             color: Colors.white,
-                            shape: RoundedRectangleBorder(
-                              side: const BorderSide(
-                                width: 1,
-                                color: Color(0x7F203C63),
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
                               ),
-                              borderRadius: BorderRadius.circular(8),
-                            ),
+                            ],
                           ),
                           child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SizedBox(
-                                height: 140,
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.end,
-                                  children: _chartData.map((data) {
-                                    final barHeight =
-                                        (data['value'] / 160.0) * 110;
-                                    return Expanded(
-                                      child: Padding(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 6,
-                                        ),
-                                        child: Column(
-                                          mainAxisAlignment:
-                                              MainAxisAlignment.end,
-                                          children: [
-                                            Text(
-                                              '${data['value']}',
-                                              style: const TextStyle(
-                                                fontSize: 10,
-                                                color: Color(0xFF555555),
-                                                fontFamily: 'Inter',
+                              const Text(
+                                'Month Breakdown',
+                                style: TextStyle(
+                                  color: Color(0xFF1A1A1A),
+                                  fontSize: 15,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+
+                              // Y axis labels + bars
+                              Row(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: [
+                                  // Y axis
+                                  Column(
+                                    crossAxisAlignment: CrossAxisAlignment.end,
+                                    children:
+                                        ['100', '80', '60', '40', '20', '0']
+                                            .map(
+                                              (v) => SizedBox(
+                                                height: 20,
+                                                child: Text(
+                                                  v,
+                                                  style: TextStyle(
+                                                    fontSize: 10,
+                                                    color: Colors.grey.shade400,
+                                                  ),
+                                                ),
                                               ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Container(
-                                              height: barHeight,
-                                              decoration: const BoxDecoration(
-                                                color: Color(0xCCFB8500),
-                                                borderRadius:
-                                                    BorderRadius.vertical(
-                                                      top: Radius.circular(4),
+                                            )
+                                            .toList(),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  // Bars
+                                  Expanded(
+                                    child: SizedBox(
+                                      height: 120,
+                                      child: Row(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: _chartData.map((data) {
+                                          final barH =
+                                              (data['value'] / 100.0) * 110;
+                                          return Expanded(
+                                            child: Padding(
+                                              padding:
+                                                  const EdgeInsets.symmetric(
+                                                    horizontal: 3,
+                                                  ),
+                                              child: Column(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.end,
+                                                children: [
+                                                  Container(
+                                                    height: barH,
+                                                    decoration: BoxDecoration(
+                                                      color: const Color(
+                                                        0xFF164D83,
+                                                      ),
+                                                      borderRadius:
+                                                          const BorderRadius.vertical(
+                                                            top:
+                                                                Radius.circular(
+                                                                  4,
+                                                                ),
+                                                          ),
                                                     ),
+                                                  ),
+                                                ],
                                               ),
                                             ),
-                                            const SizedBox(height: 6),
-                                            Text(
-                                              data['month'],
-                                              style: const TextStyle(
-                                                fontSize: 11,
-                                                color: Color(0xFF555555),
-                                                fontFamily: 'Inter',
-                                              ),
-                                            ),
-                                          ],
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 8),
+
+                              // X axis labels
+                              Padding(
+                                padding: const EdgeInsets.only(left: 28),
+                                child: Row(
+                                  children: _chartData.map((data) {
+                                    return Expanded(
+                                      child: Text(
+                                        data['month'],
+                                        textAlign: TextAlign.center,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          color: Colors.grey.shade500,
+                                          fontFamily: 'Inter',
                                         ),
                                       ),
                                     );
                                   }).toList(),
                                 ),
                               ),
-                              const SizedBox(height: 10),
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 12,
-                                    height: 12,
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFFB8500),
-                                      borderRadius: BorderRadius.circular(2),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  const Text(
-                                    'Transaction',
-                                    style: TextStyle(
-                                      fontSize: 11,
-                                      color: Color(0xFF555555),
-                                      fontFamily: 'Inter',
-                                    ),
-                                  ),
-                                ],
-                              ),
                             ],
                           ),
                         ),
 
-                        const SizedBox(height: 20),
+                        const SizedBox(height: 16),
 
-                        // Transaction History row — tapping See Here navigates to full list later
+                        // Transaction History row
                         Container(
                           width: double.infinity,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 14,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black.withOpacity(0.08),
+                                blurRadius: 12,
+                                offset: const Offset(0, 4),
+                              ),
+                            ],
                           ),
-                          decoration: ShapeDecoration(
-                            color: const Color(0xAA164D83),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              const Text(
-                                'Transaction History:',
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  const Text(
+                                    'Transaction History',
+                                    style: TextStyle(
+                                      color: Color(0xFF1A1A1A),
+                                      fontSize: 15,
+                                      fontFamily: 'Inter',
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                  GestureDetector(
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              const AdminTransactionHistoryScreen(),
+                                        ),
+                                      );
+                                    },
+                                    child: const Text(
+                                      'See Here',
+                                      style: TextStyle(
+                                        color: Color(0xFF164D83),
+                                        fontSize: 13,
+                                        fontFamily: 'Inter',
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 4),
+                              Text(
+                                'Summary',
                                 style: TextStyle(
-                                  color: Color(0xFF1A1A1A),
-                                  fontSize: 16,
+                                  color: Colors.grey.shade500,
+                                  fontSize: 12,
                                   fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w700,
                                 ),
                               ),
+                              const SizedBox(height: 4),
+                              const Text(
+                                '0xFF164D83',
+                                style: TextStyle(
+                                  color: Color(0xFF164D83),
+                                  fontSize: 12,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              const SizedBox(height: 12),
                               GestureDetector(
                                 onTap: () {
                                   Navigator.push(
                                     context,
                                     MaterialPageRoute(
-                                      builder: (context) =>
+                                      builder: (_) =>
                                           const AdminTransactionHistoryScreen(),
                                     ),
                                   );
                                 },
                                 child: Container(
+                                  width: double.infinity,
                                   padding: const EdgeInsets.symmetric(
-                                    horizontal: 20,
-                                    vertical: 8,
+                                    vertical: 14,
                                   ),
                                   decoration: BoxDecoration(
-                                    border: Border.all(
-                                      color: Colors.white,
-                                      width: 1,
-                                    ),
-                                    borderRadius: BorderRadius.circular(60),
+                                    color: const Color(0xFF164D83),
+                                    borderRadius: BorderRadius.circular(12),
                                   ),
+                                  alignment: Alignment.center,
                                   child: const Text(
                                     'See Here',
                                     style: TextStyle(
@@ -328,93 +362,66 @@ class AdminAnalyticsContent extends StatelessWidget {
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
 }
 
-// ── Stat card ────────────────────────────────────────────────────────────────
-
-class _StatCard extends StatelessWidget {
+class _MiniStatCard extends StatelessWidget {
   final String title;
   final String value;
-  final String percentage;
-  final bool isPositive;
-
-  const _StatCard({
+  final String subtitle;
+  const _MiniStatCard({
     required this.title,
     required this.value,
-    required this.percentage,
-    required this.isPositive,
+    required this.subtitle,
   });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: ShapeDecoration(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
         color: Colors.white,
-        shape: RoundedRectangleBorder(
-          side: const BorderSide(width: 1, color: Color(0xFFE5E5E5)),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        shadows: const [
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x3F000000),
-            blurRadius: 4,
-            offset: Offset(0, 4),
-            spreadRadius: 0,
+            color: Colors.black.withOpacity(0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
-      child: Stack(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          SizedBox(
-            width: 260,
-            child: Text(
-              title,
-              style: const TextStyle(
-                color: Color(0xFF1A1A1A),
-                fontSize: 18,
-                fontFamily: 'Poppins',
-                fontWeight: FontWeight.w600,
-                height: 1.50,
-              ),
+          Text(
+            title,
+            style: TextStyle(
+              color: Colors.grey.shade600,
+              fontSize: 12,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w500,
             ),
           ),
-          Positioned(
-            right: 0,
-            top: 4,
-            child: Text(
-              percentage,
-              style: TextStyle(
-                color: isPositive
-                    ? const Color(0xFF22C55E)
-                    : const Color(0xFFEF4444),
-                fontSize: 12,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w500,
-              ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Color(0xFF1A1A1A),
+              fontSize: 22,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w800,
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.only(top: 36),
-            child: SizedBox(
-              width: double.infinity,
-              child: Text(
-                value,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFF1A1A1A),
-                  fontSize: 28,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
-                  height: 1.50,
-                ),
-              ),
+          Text(
+            subtitle,
+            style: TextStyle(
+              color: Colors.grey.shade500,
+              fontSize: 11,
+              fontFamily: 'Inter',
             ),
           ),
         ],

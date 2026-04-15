@@ -11,26 +11,27 @@ class AdminMechanicVerificationContent extends StatefulWidget {
 
 class _AdminMechanicVerificationContentState
     extends State<AdminMechanicVerificationContent> {
-  // Dummy data — replace with Supabase later
-  // id kept as int to match Supabase default type
   final List<Map<String, dynamic>> _pendingMechanics = [
     {
       'id': 1,
-      'name': 'Aaron Barnaija',
-      'email': 'AaronBarnaija@gmail.com',
-      'contact': '09123456789',
+      'name': 'Bernante, Vince',
+      'email': 'VinceBernante@gmail.com',
+      'contact': '09987654321',
+      'pendingCount': 125,
     },
     {
       'id': 2,
-      'name': 'Vince Bernante',
-      'email': 'VinceBernante@gmail.com',
-      'contact': '09987654321',
+      'name': 'Aaron, Barnaija',
+      'email': 'AaronBarnaija@gmail.com',
+      'contact': '09123456789',
+      'pendingCount': 125,
     },
     {
       'id': 3,
       'name': 'Maria Santos',
       'email': 'MariaSantos@gmail.com',
       'contact': '09112345678',
+      'pendingCount': 125,
     },
   ];
 
@@ -38,7 +39,6 @@ class _AdminMechanicVerificationContentState
     setState(() {
       _pendingMechanics.removeWhere((m) => m['id'] == mechanicId);
     });
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -58,85 +58,68 @@ class _AdminMechanicVerificationContentState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        bottom: false,
-        child: Stack(
-          children: [
-            // Sidebar layers
-            Positioned(
-              left: -28,
-              top: 87,
-              child: Container(
-                width: 258,
-                height: MediaQuery.of(context).size.height,
-                decoration: ShapeDecoration(
-                  color: const Color(0x4C164D83),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(19),
-                  ),
+      body: Stack(
+        children: [
+          // Full screen background gradient
+          Positioned.fill(
+            child: Container(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    Color(0xFF164D83),
+                    Color(0xFF1A5A96),
+                    Color(0xFFD6E4F0),
+                    Color(0xFFF0F5FA),
+                  ],
+                  stops: [0.0, 0.25, 0.65, 1.0],
                 ),
               ),
             ),
-            Positioned(
-              left: -18,
-              top: 87,
-              child: Container(
-                width: 176,
-                height: MediaQuery.of(context).size.height,
-                decoration: ShapeDecoration(
-                  color: const Color(0x7F164D83),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(19),
-                  ),
-                ),
-              ),
-            ),
-            Positioned(
-              left: -18,
-              top: 87,
-              child: Container(
-                width: 103,
-                height: MediaQuery.of(context).size.height,
-                decoration: ShapeDecoration(
-                  color: const Color(0xFF164D83),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(19),
-                  ),
-                ),
-              ),
-            ),
+          ),
 
-            // Main content
-            Column(
+          SafeArea(
+            bottom: false,
+            child: Column(
               children: [
-                // Header
+                // ── Header ───────────────────────────────────────────
                 Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
+                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
                   child: Row(
                     children: [
                       Container(
-                        width: 70,
-                        height: 70,
-                        decoration: ShapeDecoration(
-                          image: const DecorationImage(
-                            image: NetworkImage("https://placehold.co/98x98"),
-                            fit: BoxFit.cover,
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.2),
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.4),
+                            width: 2,
                           ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(9999),
+                        ),
+                        child: ClipOval(
+                          child: Image.asset(
+                            'assets/logo.png',
+                            fit: BoxFit.cover,
+                            errorBuilder: (_, __, ___) => const Icon(
+                              Icons.person,
+                              color: Colors.white,
+                              size: 28,
+                            ),
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(width: 14),
                       const Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Mechanic Verification',
+                            'Admin',
                             style: TextStyle(
-                              color: Color(0xFF1A1A1A),
-                              fontSize: 16,
+                              color: Colors.white,
+                              fontSize: 20,
                               fontFamily: 'Poppins',
                               fontWeight: FontWeight.w700,
                             ),
@@ -144,32 +127,32 @@ class _AdminMechanicVerificationContentState
                           Text(
                             'Management System',
                             style: TextStyle(
-                              color: Color(0xFF666666),
-                              fontSize: 12,
+                              color: Color(0xCCFFFFFF),
+                              fontSize: 13,
                               fontFamily: 'Inter',
-                              fontWeight: FontWeight.w400,
                             ),
                           ),
                         ],
                       ),
                       const Spacer(),
-                      const Icon(
-                        Icons.notifications_outlined,
-                        color: Color(0xFF19456B),
-                        size: 28,
+                      GestureDetector(
+                        onTap: () {},
+                        child: const Icon(
+                          Icons.notifications_outlined,
+                          color: Colors.white,
+                          size: 28,
+                        ),
                       ),
                     ],
                   ),
                 ),
 
-                const SizedBox(height: 16),
-
-                // Cards list
+                // ── Cards list ────────────────────────────────────────
                 Expanded(
                   child: _pendingMechanics.isEmpty
                       ? _buildEmptyState()
                       : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(36, 0, 36, 24),
+                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
                           itemCount: _pendingMechanics.length,
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: 16),
@@ -191,8 +174,8 @@ class _AdminMechanicVerificationContentState
                 ),
               ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -205,22 +188,25 @@ class _AdminMechanicVerificationContentState
           Icon(
             Icons.check_circle_outline_rounded,
             size: 64,
-            color: Colors.grey.shade300,
+            color: Colors.white.withOpacity(0.5),
           ),
           const SizedBox(height: 12),
-          Text(
+          const Text(
             'No pending mechanics',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: Colors.grey.shade400,
+              color: Colors.white,
               fontFamily: 'Poppins',
             ),
           ),
           const SizedBox(height: 6),
           Text(
             'All mechanics have been reviewed.',
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
+            style: TextStyle(
+              fontSize: 13,
+              color: Colors.white.withOpacity(0.7),
+            ),
           ),
         ],
       ),
@@ -228,7 +214,7 @@ class _AdminMechanicVerificationContentState
   }
 }
 
-// ── Mechanic card ────────────────────────────────────────────────────────────
+// ── Mechanic card — matching image 3 ─────────────────────────────────────────
 
 class _MechanicCard extends StatelessWidget {
   final Map<String, dynamic> mechanic;
@@ -245,151 +231,123 @@ class _MechanicCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: ShapeDecoration(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
         color: Colors.white,
-        shape: RoundedRectangleBorder(
-          side: const BorderSide(width: 1, color: Color(0xFFE5E5E5)),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        shadows: const [
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
           BoxShadow(
-            color: Color(0x3F000000),
-            blurRadius: 4,
-            offset: Offset(0, 4),
-            spreadRadius: 0,
+            color: Colors.black.withOpacity(0.10),
+            blurRadius: 16,
+            offset: const Offset(0, 6),
           ),
         ],
       ),
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Name:',
-            style: TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 18,
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          // Name
           Text(
             mechanic['name'] ?? '—',
             style: const TextStyle(
               color: Color(0xFF1A1A1A),
-              fontSize: 16,
+              fontSize: 20,
               fontFamily: 'Poppins',
-              fontWeight: FontWeight.w500,
+              fontWeight: FontWeight.w700,
             ),
           ),
           const SizedBox(height: 8),
+
+          // Pending count
+          Text(
+            '${mechanic['pendingCount'] ?? 0}',
+            style: const TextStyle(
+              color: Color(0xFF1A1A1A),
+              fontSize: 48,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+
+          // Pending label
           const Text(
-            'Email:',
+            'Pending Mechanics:',
             style: TextStyle(
               color: Color(0xFF1A1A1A),
-              fontSize: 16,
-              fontFamily: 'Poppins',
+              fontSize: 14,
+              fontFamily: 'Inter',
               fontWeight: FontWeight.w600,
             ),
           ),
-          Text(
-            mechanic['email'] ?? '—',
-            style: const TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 16,
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-          const SizedBox(height: 8),
           const Text(
-            'Contact:',
+            'Waiting for approval',
             style: TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 16,
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w600,
+              color: Color(0xFF666666),
+              fontSize: 13,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w400,
             ),
           ),
-          Text(
-            mechanic['contact'] ?? '—',
-            style: const TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 16,
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+
+          const SizedBox(height: 16),
+          const Divider(color: Color(0xFFEEEEEE)),
           const SizedBox(height: 12),
-          const Text(
-            'CERTIFICATION:',
-            style: TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 16,
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w600,
-              decoration: TextDecoration.underline,
-            ),
-          ),
-          const SizedBox(height: 10),
-          Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 31, vertical: 8),
-              decoration: ShapeDecoration(
-                color: const Color(0xFF203C63),
-                shape: RoundedRectangleBorder(
-                  side: BorderSide(
-                    width: 1,
-                    color: Colors.black.withOpacity(0.50),
-                  ),
-                  borderRadius: BorderRadius.circular(19),
-                ),
-              ),
-              child: const Text(
-                'See Certification Here',
+
+          // Email row
+          _InfoRow(label: 'Email:', value: mechanic['email'] ?? '—'),
+          const SizedBox(height: 6),
+          _InfoRow(label: 'Contact:', value: mechanic['contact'] ?? '—'),
+          const SizedBox(height: 12),
+
+          // Certification link
+          Row(
+            children: [
+              const Text(
+                'CERTIFICATION:  ',
                 style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
+                  color: Color(0xFF1A1A1A),
+                  fontSize: 13,
                   fontFamily: 'Inter',
-                  fontWeight: FontWeight.w500,
+                  fontWeight: FontWeight.w700,
                 ),
               ),
-            ),
-          ),
-          const SizedBox(height: 12),
-          const Center(
-            child: Text(
-              'Waiting for approval',
-              style: TextStyle(
-                color: Color(0xFF666666),
-                fontSize: 12,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w400,
+              GestureDetector(
+                onTap: () {},
+                child: const Text(
+                  'See Certification Here',
+                  style: TextStyle(
+                    color: Color(0xFF164D83),
+                    fontSize: 13,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w600,
+                    decoration: TextDecoration.underline,
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
-          const SizedBox(height: 12),
+
+          const SizedBox(height: 16),
+
+          // Approve / Reject buttons
           Row(
             children: [
               Expanded(
-                child: OutlinedButton(
-                  onPressed: onReject,
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: const BorderSide(
-                      color: Color(0xFFBF2D2D),
-                      width: 1.5,
-                    ),
+                child: ElevatedButton(
+                  onPressed: onApprove,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF4CAF50),
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    elevation: 0,
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(49),
+                      borderRadius: BorderRadius.circular(30),
                     ),
                   ),
                   child: const Text(
-                    'Reject',
+                    'Approve',
                     style: TextStyle(
-                      color: Color(0xFFBF2D2D),
-                      fontSize: 16,
-                      fontFamily: 'Poppins',
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontFamily: 'Inter',
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -397,24 +355,25 @@ class _MechanicCard extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: ElevatedButton(
-                  onPressed: onApprove,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF009227),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    elevation: 0,
+                child: OutlinedButton(
+                  onPressed: onReject,
+                  style: OutlinedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    side: const BorderSide(
+                      color: Color(0xFFEF4444),
+                      width: 1.5,
+                    ),
                     shape: RoundedRectangleBorder(
-                      side: const BorderSide(color: Color(0xFF22C55E)),
-                      borderRadius: BorderRadius.circular(49),
+                      borderRadius: BorderRadius.circular(30),
                     ),
                   ),
                   child: const Text(
-                    'Approve',
+                    'Reject',
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.w500,
+                      color: Color(0xFFEF4444),
+                      fontSize: 15,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ),
@@ -423,6 +382,44 @@ class _MechanicCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _InfoRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 80,
+          child: Text(
+            label,
+            style: const TextStyle(
+              color: Color(0xFF1A1A1A),
+              fontSize: 13,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+        Expanded(
+          child: Text(
+            value,
+            style: const TextStyle(
+              color: Color(0xFF444444),
+              fontSize: 13,
+              fontFamily: 'Inter',
+              fontWeight: FontWeight.w400,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
