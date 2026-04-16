@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'admin_update_password_screen.dart';
+import '../authentication/login_screen.dart';
 
 class AdminProfileContent extends StatefulWidget {
   const AdminProfileContent({super.key});
@@ -27,7 +28,6 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
   }
 
   Future<void> _loadAdminInfo() async {
-    // Supabase logic remains unchanged
     try {
       final uid = _supabase.auth.currentUser?.id;
       if (uid == null) return;
@@ -50,7 +50,10 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
   Future<void> _signOut() async {
     await _supabase.auth.signOut();
     if (!mounted) return;
-    Navigator.of(context).popUntil((route) => route.isFirst);
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const LoginScreen()),
+      (route) => false,
+    );
   }
 
   void _goToUpdatePassword() {
@@ -64,7 +67,6 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Unified Gradient Background for full mobile coverage
       body: Container(
         width: double.infinity,
         height: double.infinity,
@@ -73,12 +75,11 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Color(0xFF164D83), // Top solid navy
-              Color(0xFF1A6BAF), // Secondary modern blue
-              Colors.white, // Smooth transition to white base
+              Color(0xFF164D83),
+              Color(0xFF1A6BAF),
+              Colors.white,
             ],
-            // Defined stops create a controlled, cohesive flow
-            stops: [0.0, 0.35, 0.85], 
+            stops: [0.0, 0.35, 0.85],
           ),
         ),
         child: SafeArea(
@@ -125,7 +126,7 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
                 ),
               ),
 
-              // Cohesive divider line
+              // Divider
               Container(
                 margin: const EdgeInsets.only(top: 12),
                 height: 1,
@@ -150,7 +151,7 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Profile info card (preserved layout)
+                      // Profile info card
                       Container(
                         width: double.infinity,
                         padding: const EdgeInsets.all(14),
@@ -163,7 +164,7 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
                           ),
                           shadows: const [
                             BoxShadow(
-                              color: Color(0x11000000), // Subtler shadow
+                              color: Color(0x11000000),
                               blurRadius: 10,
                               offset: Offset(0, 5),
                             ),
@@ -251,7 +252,7 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
                       const Text(
                         'Notifications',
                         style: TextStyle(
-                          color: Colors.white, // Pop against gradient
+                          color: Colors.white,
                           fontSize: 20,
                           fontFamily: 'Poppins',
                           fontWeight: FontWeight.w700,
@@ -277,47 +278,42 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
 
                       const SizedBox(height: 20),
 
-                      // Refactored Log out (removed blue border container)
-                      Container(
-                        width: double.infinity,
-                        // padding and blue gradient BoxDecoration removed
-                        child: GestureDetector(
-                          onTap: _signOut,
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 16, vertical: 16),
-                            decoration: ShapeDecoration(
-                              color: Colors.white, // Clean white card base
-                              shape: RoundedRectangleBorder(
-                                side: const BorderSide(
-                                    width: 1, color: Color(0xFFE5E5E5)),
-                                borderRadius: BorderRadius.circular(12),
+                      GestureDetector(
+                        onTap: _signOut,
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16, vertical: 16),
+                          decoration: ShapeDecoration(
+                            color: Colors.white,
+                            shape: RoundedRectangleBorder(
+                              side: const BorderSide(
+                                  width: 1, color: Color(0xFFE5E5E5)),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            shadows: const [
+                              BoxShadow(
+                                color: Color(0x3F000000),
+                                blurRadius: 4,
+                                offset: Offset(0, 4),
                               ),
-                              shadows: const [
-                                BoxShadow(
-                                  color: Color(0x3F000000),
-                                  blurRadius: 4,
-                                  offset: Offset(0, 4),
+                            ],
+                          ),
+                          child: Row(
+                            children: const [
+                              Icon(Icons.logout_rounded,
+                                  color: Color(0xFFDB2020), size: 26),
+                              SizedBox(width: 14),
+                              Text(
+                                'Log out',
+                                style: TextStyle(
+                                  color: Color(0xFFDB2020),
+                                  fontSize: 16,
+                                  fontFamily: 'Inter',
+                                  fontWeight: FontWeight.w600,
                                 ),
-                              ],
-                            ),
-                            child: Row(
-                              children: const [
-                                Icon(Icons.logout_rounded,
-                                    color: Color(0xFFDB2020), size: 26),
-                                SizedBox(width: 14),
-                                Text(
-                                  'Log out',
-                                  style: TextStyle(
-                                    color: Color(0xFFDB2020),
-                                    fontSize: 16,
-                                    fontFamily: 'Inter',
-                                    fontWeight: FontWeight.w600,
-                                  ),
-                                ),
-                              ],
-                            ),
+                              ),
+                            ],
                           ),
                         ),
                       ),
@@ -333,7 +329,6 @@ class _AdminProfileContentState extends State<AdminProfileContent> {
   }
 }
 
-// ── Supporting Widgets (InfoRow, SettingsTile, ToggleTile) remain unchanged ──
 class _InfoRow extends StatelessWidget {
   final String label;
   final String value;
@@ -462,42 +457,59 @@ class _ToggleTile extends StatelessWidget {
                 fontWeight: FontWeight.w600,
               )),
           const Spacer(),
-          GestureDetector(
+          // ENHANCED ACCESSIBILITY TOGGLE
+          Semantics(
+            container: true,
+            toggled: true,
+            checked: value,
+            label: label,
             onTap: () => onChanged(!value),
-            child: AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: 50,
-              height: 28,
-              decoration: BoxDecoration(
-                color: value
-                    ? const Color(0xFF164D83)
-                    : const Color(0xFFD0D0D0),
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(
-                  color: value
-                      ? const Color(0xFF164D83)
-                      : const Color(0xFFAAAAAA),
-                  width: 1.5,
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: () => onChanged(!value),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(
+                  minWidth: 48.0,
+                  minHeight: 48.0,
                 ),
-              ),
-              child: AnimatedAlign(
-                duration: const Duration(milliseconds: 200),
-                alignment:
-                    value ? Alignment.centerRight : Alignment.centerLeft,
-                child: Container(
-                  margin: const EdgeInsets.all(3),
-                  width: 20,
-                  height: 20,
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                    boxShadow: [
-                      BoxShadow(
-                        color: Color(0x33000000),
-                        blurRadius: 4,
-                        offset: Offset(0, 1),
+                child: Center(
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: 50,
+                    height: 28,
+                    decoration: BoxDecoration(
+                      color: value
+                          ? const Color(0xFF164D83)
+                          : const Color(0xFFD0D0D0),
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(
+                        color: value
+                            ? const Color(0xFF164D83)
+                            : const Color(0xFFAAAAAA),
+                        width: 1.5,
                       ),
-                    ],
+                    ),
+                    child: AnimatedAlign(
+                      duration: const Duration(milliseconds: 200),
+                      alignment:
+                          value ? Alignment.centerRight : Alignment.centerLeft,
+                      child: Container(
+                        margin: const EdgeInsets.all(3),
+                        width: 20,
+                        height: 20,
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Color(0x33000000),
+                              blurRadius: 4,
+                              offset: Offset(0, 1),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   ),
                 ),
               ),
