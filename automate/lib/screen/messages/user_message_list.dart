@@ -206,11 +206,41 @@ class _UserMessageListScreenState extends State<UserMessageListScreen> {
                       child: StreamBuilder<List<Map<String, dynamic>>>(
                         stream: _partnersStream,
                         builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
+                          if (snapshot.connectionState == ConnectionState.waiting && snapshot.data == null) {
                             return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
                           }
-                          if (snapshot.hasError) {
-                            return const Center(child: Text("Error fetching conversations"));
+                          if (snapshot.hasError && snapshot.data == null) {
+                            return Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(20.0),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.wifi_off, size: 40, color: Colors.grey.shade400),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      "Could not load conversations.",
+                                      style: GoogleFonts.montserrat(
+                                        color: Colors.black54,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    TextButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _partnersStream = ChatLogic().getActivePartners();
+                                        });
+                                      },
+                                      child: Text(
+                                        'Retry',
+                                        style: GoogleFonts.montserrat(color: const Color(0xFF2B5A82)),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
                           }
 
                           final partners = snapshot.data ?? [];

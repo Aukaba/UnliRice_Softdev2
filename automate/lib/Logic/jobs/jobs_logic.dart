@@ -52,32 +52,24 @@ class JobsLogic {
       
       for (var id in userIds) {
         String? targetName;
-        // Try mechanic
+        // Try mechanic table
         try {
           final res = await _supabase.from('mechanic').select('first_name, last_name').eq('uid', id).maybeSingle();
           if (res != null) targetName = '${res['first_name']} ${res['last_name']}';
         } catch (_) {}
         
-        // Try driver
-        if (targetName == null) {
-          try {
-            final res = await _supabase.from('driver').select('first_name, last_name').eq('uid', id).maybeSingle();
-            if (res != null) targetName = '${res['first_name']} ${res['last_name']}';
-          } catch (_) {}
-        }
-        
-        // Try users
-        if (targetName == null) {
-          try {
-            final res = await _supabase.from('users').select('first_name, last_name').eq('uid', id).maybeSingle();
-            if (res != null) targetName = '${res['first_name']} ${res['last_name']}';
-          } catch (_) {}
-        }
-        
-        // Try user
+        // Try user table (singular)
         if (targetName == null) {
           try {
             final res = await _supabase.from('user').select('first_name, last_name').eq('uid', id).maybeSingle();
+            if (res != null) targetName = '${res['first_name']} ${res['last_name']}';
+          } catch (_) {}
+        }
+        
+        // Try users table (plural)
+        if (targetName == null) {
+          try {
+            final res = await _supabase.from('users').select('first_name, last_name').eq('uid', id).maybeSingle();
             if (res != null) targetName = '${res['first_name']} ${res['last_name']}';
           } catch (_) {}
         }
@@ -112,32 +104,24 @@ class JobsLogic {
       
       for (var id in mechanicIds) {
         String? targetName;
-        // Try mechanic
+        // Try mechanic table
         try {
           final res = await _supabase.from('mechanic').select('first_name, last_name').eq('uid', id).maybeSingle();
           if (res != null) targetName = '${res['first_name']} ${res['last_name']}';
         } catch (_) {}
         
-        // Try driver
-        if (targetName == null) {
-          try {
-            final res = await _supabase.from('driver').select('first_name, last_name').eq('uid', id).maybeSingle();
-            if (res != null) targetName = '${res['first_name']} ${res['last_name']}';
-          } catch (_) {}
-        }
-        
-        // Try users
-        if (targetName == null) {
-          try {
-            final res = await _supabase.from('users').select('first_name, last_name').eq('uid', id).maybeSingle();
-            if (res != null) targetName = '${res['first_name']} ${res['last_name']}';
-          } catch (_) {}
-        }
-        
-        // Try user
+        // Try user table (singular)
         if (targetName == null) {
           try {
             final res = await _supabase.from('user').select('first_name, last_name').eq('uid', id).maybeSingle();
+            if (res != null) targetName = '${res['first_name']} ${res['last_name']}';
+          } catch (_) {}
+        }
+        
+        // Try users table (plural)
+        if (targetName == null) {
+          try {
+            final res = await _supabase.from('users').select('first_name, last_name').eq('uid', id).maybeSingle();
             if (res != null) targetName = '${res['first_name']} ${res['last_name']}';
           } catch (_) {}
         }
@@ -156,6 +140,20 @@ class JobsLogic {
         return newJob;
       }).toList();
     });
+  }
+
+  /// Returns the total number of job/service requests submitted by the current user.
+  /// SQL equivalent: SELECT COUNT(*) FROM jobs WHERE user_id = auth.uid()
+  Future<int> getTotalRequestsCount() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return 0;
+
+    final res = await _supabase
+        .from('jobs')
+        .select('id')
+        .eq('user_id', user.id);
+
+    return (res as List).length;
   }
 
   Future<void> acceptJob(String jobId) async {

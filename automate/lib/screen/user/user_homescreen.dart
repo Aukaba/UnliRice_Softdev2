@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'user_dashboard.dart';
 import 'user_activity.dart';
+import '../../Logic/jobs/jobs_logic.dart';
 
 class UserHomeScreen extends StatefulWidget {
   final VoidCallback? onViewAllActivity;
@@ -15,6 +17,55 @@ class UserHomeScreen extends StatefulWidget {
 }
 
 class _UserHomeScreenState extends State<UserHomeScreen> {
+  String _firstName = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserName();
+  }
+
+  Future<void> _loadUserName() async {
+    final supabase = Supabase.instance.client;
+    final uid = supabase.auth.currentUser?.id;
+    if (uid == null) return;
+
+    // Try 'driver' table first, then 'mechanic', then 'user'
+    try {
+      final res = await supabase
+          .from('driver')
+          .select('first_name')
+          .eq('uid', uid)
+          .maybeSingle();
+      if (res != null && mounted) {
+        setState(() => _firstName = res['first_name'] ?? '');
+        return;
+      }
+    } catch (_) {}
+
+    try {
+      final res = await supabase
+          .from('mechanic')
+          .select('first_name')
+          .eq('uid', uid)
+          .maybeSingle();
+      if (res != null && mounted) {
+        setState(() => _firstName = res['first_name'] ?? '');
+        return;
+      }
+    } catch (_) {}
+
+    try {
+      final res = await supabase
+          .from('user')
+          .select('first_name')
+          .eq('uid', uid)
+          .maybeSingle();
+      if (res != null && mounted) {
+        setState(() => _firstName = res['first_name'] ?? '');
+      }
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,108 +80,199 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
             // Main Body Section
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Primary Action Button
-                  _buildAskForHelpButton(),
-                  
-                  const SizedBox(height: 32),
+              child: StreamBuilder<List<Map<String, dynamic>>>(
+                stream: JobsLogic().getUserActivityJobs(),
+                builder: (context, snapshot) {
+                  final jobs = snapshot.data ?? [];
 
-                  // Recent Activity Header
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  // Sort by most recent
+                  final sortedJobs = List<Map<String, dynamic>>.from(jobs)
+                    ..sort((a, b) {
+                      final aDate = DateTime.tryParse(a['created_at'] ?? '') ??
+                          DateTime.fromMillisecondsSinceEpoch(0);
+                      final bDate = DateTime.tryParse(b['created_at'] ?? '') ??
+                          DateTime.fromMillisecondsSinceEpoch(0);
+                      return bDate.compareTo(aDate);
+                    });
+
+                  final recentJobs = sortedJobs.take(3).toList();
+                  final totalRequests = jobs.length;
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      // Primary Action Button
+                      _buildAskForHelpButton(),
+                      
+                      const SizedBox(height: 32),
+
+                      // Recent Activity Header
                       Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Icon(Icons.access_time, size: 24, color: Colors.black),
-                          const SizedBox(width: 8),
-                          Text(
-                            'Recent Activity',
-                            style: GoogleFonts.montserrat(
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black,
+                          Row(
+                            children: [
+                              const Icon(Icons.access_time, size: 24, color: Colors.black),
+                              const SizedBox(width: 8),
+                              Text(
+                                'Recent Activity',
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ],
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              if (widget.onViewAllActivity != null) {
+                                widget.onViewAllActivity!();
+                              } else {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(builder: (context) => const UserActivityScreen()),
+                                );
+                              }
+                            },
+                            child: Text(
+                              'View All',
+                              style: GoogleFonts.inriaSans(
+                                fontSize: 14,
+                                color: const Color(0xFF2B5A82),
+                              ),
                             ),
                           ),
                         ],
                       ),
-                      GestureDetector(
-                        onTap: () {
-                          if (widget.onViewAllActivity != null) {
-                            widget.onViewAllActivity!();
-                          } else {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(builder: (context) => const UserActivityScreen()),
-                            );
+                      const SizedBox(height: 16),
+
+                      // Recent Activity Cards
+                      if (snapshot.connectionState == ConnectionState.waiting)
+                        const Center(child: Padding(
+                          padding: EdgeInsets.symmetric(vertical: 24),
+                          child: CircularProgressIndicator(),
+                        ))
+                      else if (recentJobs.isEmpty)
+                        _buildEmptyActivityCard()
+                      else
+                        ...recentJobs.map((job) {
+                          final rawStatus = job['status'] as String? ?? 'pending';
+                          String displayStatus = 'Pending';
+                          if (rawStatus == 'completed') displayStatus = 'Completed';
+                          else if (rawStatus == 'canceled') displayStatus = 'Canceled';
+                          else if (rawStatus == 'accepted') displayStatus = 'On Going';
+
+                          // Time display
+                          final dateStr = job['created_at'];
+                          String timeDisplay = 'Recently';
+                          if (dateStr != null) {
+                            final date = DateTime.tryParse(dateStr)?.toLocal();
+                            if (date != null) {
+                              final diff = DateTime.now().difference(date);
+                              if (diff.inHours < 1) {
+                                timeDisplay = '${diff.inMinutes} min ago';
+                              } else if (diff.inDays == 0) {
+                                timeDisplay = '${diff.inHours} hour${diff.inHours == 1 ? '' : 's'} ago';
+                              } else if (diff.inDays == 1) {
+                                timeDisplay = 'Yesterday';
+                              } else {
+                                timeDisplay = '${diff.inDays} days ago';
+                              }
+                            }
                           }
-                        },
-                        child: Text(
-                          'View All',
-                          style: GoogleFonts.inriaSans(
-                            fontSize: 14,
-                            color: const Color(0xFF2B5A82),
-                          ),
+
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: ActivityCard(
+                              title: job['title'] ?? 'Service Request',
+                              timeAgo: timeDisplay,
+                              status: displayStatus,
+                            ),
+                          );
+                        }),
+                      
+                      const SizedBox(height: 32),
+
+                      // Your Stats Header
+                      Text(
+                        'Your Stats',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 20,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black,
                         ),
                       ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
+                      const SizedBox(height: 16),
 
-                  // Recent Activity Cards
-                  const ActivityCard(
-                    title: 'Engine Check',
-                    timeAgo: 'Completed 2 hours ago',
-                  ),
-                  const SizedBox(height: 12),
-                  const ActivityCard(
-                    title: 'Tire Replacement',
-                    timeAgo: 'Completed yesterday',
-                  ),
-                  const SizedBox(height: 12),
-                  const ActivityCard(
-                    title: 'Oil Change',
-                    timeAgo: 'Completed 3 days ago',
-                  ),
-                  
-                  const SizedBox(height: 32),
-
-                  // Your Stats Header
-                  Text(
-                    'Your Stats',
-                    style: GoogleFonts.montserrat(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.black,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Stats Card Placeholder
-                  Container(
-                    width: double.infinity,
-                    height: 100, // Matching the proportion shown in design
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFE0E0E0),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      'Total Requests',
-                      style: GoogleFonts.inriaSans(
-                        fontSize: 15,
-                        color: Colors.black54,
+                      // Total Requests Card
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 20),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE0E0E0),
+                          borderRadius: BorderRadius.circular(16),
+                        ),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Total Requests',
+                                    style: GoogleFonts.inriaSans(
+                                      fontSize: 15,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    snapshot.connectionState == ConnectionState.waiting
+                                        ? '—'
+                                        : '$totalRequests',
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 32,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.black87,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.assignment_outlined, size: 40, color: Colors.black38),
+                          ],
+                        ),
                       ),
-                    ),
-                  ),
-                  
-                  const SizedBox(height: 24),
-                ],
+                      
+                      const SizedBox(height: 24),
+                    ],
+                  );
+                },
               ),
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyActivityCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      decoration: BoxDecoration(
+        color: const Color(0xFFE0E0E0),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Text(
+        'No recent activity yet.',
+        style: GoogleFonts.inriaSans(
+          fontSize: 15,
+          color: Colors.black54,
+        ),
+        textAlign: TextAlign.center,
       ),
     );
   }
@@ -141,7 +283,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
       decoration: BoxDecoration(
         color: const Color(0xFFFFBF00),
         borderRadius: const BorderRadius.only(
-          bottomRight: Radius.circular(55), // Explicitly large bottom-right curve
+          bottomRight: Radius.circular(55),
           bottomLeft: Radius.circular(55),
         ),
         boxShadow: [
@@ -157,7 +299,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Welcome, Angelic!',
+            _firstName.isNotEmpty ? 'Welcome, $_firstName!' : 'Welcome!',
             style: GoogleFonts.inriaSans(
               fontSize: 18,
               fontWeight: FontWeight.w400,
@@ -247,15 +389,32 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
 class ActivityCard extends StatelessWidget {
   final String title;
   final String timeAgo;
+  final String status;
 
   const ActivityCard({
     super.key,
     required this.title,
     required this.timeAgo,
+    this.status = 'Completed',
   });
 
   @override
   Widget build(BuildContext context) {
+    Color statusColor;
+    switch (status) {
+      case 'Completed':
+        statusColor = const Color(0xFF24A159);
+        break;
+      case 'On Going':
+        statusColor = Colors.deepOrange.shade700;
+        break;
+      case 'Canceled':
+        statusColor = Colors.red.shade700;
+        break;
+      default:
+        statusColor = Colors.black54;
+    }
+
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
       decoration: BoxDecoration(
@@ -265,34 +424,38 @@ class ActivityCard extends StatelessWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: GoogleFonts.inriaSans(
-                  fontSize: 17,
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black,
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: GoogleFonts.inriaSans(
+                    fontSize: 17,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black,
+                  ),
+                  overflow: TextOverflow.ellipsis,
                 ),
-              ),
-              const SizedBox(height: 6),
-              Text(
-                timeAgo,
-                style: GoogleFonts.inriaSans(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.black54,
+                const SizedBox(height: 6),
+                Text(
+                  timeAgo,
+                  style: GoogleFonts.inriaSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.black54,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
+          const SizedBox(width: 8),
           Text(
-            'Completed',
+            status,
             style: GoogleFonts.inriaSans(
               fontSize: 14,
               fontWeight: FontWeight.w400,
-              color: const Color(0xFF24A159), // Proper Green status color
+              color: statusColor,
             ),
           ),
         ],
