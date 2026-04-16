@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'homescreen.dart';
 import 'jobs.dart';
 import 'schedule.dart';
-import 'chat.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../messages/user_message_list.dart';
 import '../authentication/login_screen.dart'; // Just in case for logout
@@ -112,428 +111,420 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
             ),
 
             // ── Main content ──
-            Column(
-              children: [
-                // Header
-                Container(
-                  margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFFB703),
-                    borderRadius: BorderRadius.circular(32),
-                  ),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 46,
-                        height: 46,
-                        decoration: BoxDecoration(
-                          color: Colors.black,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Icon(Icons.person_outline_rounded,
-                            color: Color(0xFFFFB703), size: 22),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Text(
-                          'Profile',
-                          style: GoogleFonts.montserrat(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.black,
-                          ),
-                        ),
-                      ),
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Icon(Icons.notifications_none, color: Colors.black87),
-                      ),
-                    ],
-                  ),
-                ),
-
-                // Scrollable body
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.only(bottom: 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
+            SingleChildScrollView(
+              padding: const EdgeInsets.only(bottom: 24),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Header — scrolls with content
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFFB703),
+                      borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+                    ),
+                    child: Row(
                       children: [
-                        const SizedBox(height: 16),
-
-                        // ── Profile card ──
                         Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 16),
-                          padding: const EdgeInsets.all(18),
+                          width: 46,
+                          height: 46,
                           decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(28),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x0F000000),
-                                blurRadius: 18,
-                                offset: Offset(0, 8),
-                              ),
-                            ],
+                            color: Colors.black,
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          child: Column(
-                            children: [
-                              // Avatar + name
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 64,
-                                    height: 64,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(20),
-                                      color: const Color(0xFFE0D6C8),
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(20),
-                                      child: const Icon(
-                                        Icons.person,
-                                        size: 40,
-                                        color: Color(0xFF8B7355),
-                                      ),
-                                    ),
-                                  ),
-                                  const SizedBox(width: 14),
-                                  Expanded(
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      children: [
-                                        Row(
-                                          children: [
-                                            Text(
-                                              _isLoading ? 'Loading...' : (_mechanicName.isEmpty ? 'Mechanic Profile' : _mechanicName),
-                                              style: GoogleFonts.montserrat(
-                                                fontSize: 18,
-                                                fontWeight: FontWeight.w800,
-                                                color: Colors.black,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 6),
-                                            const Icon(Icons.verified_rounded,
-                                                size: 18, color: Color(0xFF1DA1F2)),
-                                          ],
-                                        ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Mekaniko ng NewJeans bai',
-                                          style: GoogleFonts.inriaSans(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w500,
-                                            color: Colors.black54,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 20),
-                              const Divider(height: 1, color: Color(0xFFF0F0F0)),
-                              const SizedBox(height: 16),
-
-                              // Stats row
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                children: [
-                                  _ProfileStat(
-                                    value: '4.9',
-                                    label: 'REVIEWS',
-                                    sub: '128',
-                                    isRating: true,
-                                  ),
-                                  Container(width: 1, height: 40, color: const Color(0xFFEEEEEE)),
-                                  _ProfileStat(value: '342', label: 'JOBS DONE'),
-                                  Container(width: 1, height: 40, color: const Color(0xFFEEEEEE)),
-                                  _ProfileStat(value: 'Since', label: '2022', isSince: true),
-                                ],
-                              ),
-                            ],
-                          ),
+                          child: const Icon(Icons.person_outline_rounded,
+                              color: Color(0xFFFFB703), size: 22),
                         ),
-
-                        const SizedBox(height: 14),
-
-                        // ── Available for Emergency toggle ──
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 16),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x0A000000),
-                                blurRadius: 14,
-                                offset: Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 10,
-                                height: 10,
-                                decoration: BoxDecoration(
-                                  color: _availableForEmergency
-                                      ? const Color(0xFF3FDF21)
-                                      : Colors.black26,
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 10),
-                              Expanded(
-                                child: Text(
-                                  'Available for Emergency',
-                                  style: GoogleFonts.montserrat(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.black87,
-                                  ),
-                                ),
-                              ),
-                              Switch(
-                                value: _availableForEmergency,
-                                onChanged: (v) =>
-                                    setState(() => _availableForEmergency = v),
-                                activeColor: Colors.white,
-                                activeTrackColor: const Color(0xFF3FDF21),
-                                inactiveThumbColor: Colors.white,
-                                inactiveTrackColor: Colors.black12,
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 14),
-
-                        // ── Specializations ──
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 16),
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(28),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x0A000000),
-                                blurRadius: 14,
-                                offset: Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                children: [
-                                  const Icon(Icons.shield_outlined,
-                                      size: 20, color: Colors.black87),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Specializations',
-                                    style: GoogleFonts.montserrat(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.black,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 14),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: ['Toyota', 'Honda', 'Mitsubibi', 'Engine', 'Transmission']
-                                    .map((s) => Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 14, vertical: 8),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFF5F7FA),
-                                            borderRadius: BorderRadius.circular(20),
-                                            border: Border.all(
-                                                color: const Color(0xFFE8E8E8)),
-                                          ),
-                                          child: Text(
-                                            s,
-                                            style: GoogleFonts.inriaSans(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.black87,
-                                            ),
-                                          ),
-                                        ))
-                                    .toList(),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // ── Business section ──
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                        const SizedBox(width: 14),
+                        Expanded(
                           child: Text(
-                            'BUSINESS',
-                            style: GoogleFonts.inriaSans(
-                              fontSize: 11,
+                            'Profile',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 22,
                               fontWeight: FontWeight.w800,
-                              color: Colors.black38,
-                              letterSpacing: 1.2,
+                              color: Colors.black,
                             ),
                           ),
                         ),
                         Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 16),
+                          width: 44,
+                          height: 44,
                           decoration: BoxDecoration(
                             color: Colors.white,
-                            borderRadius: BorderRadius.circular(28),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x0A000000),
-                                blurRadius: 14,
-                                offset: Offset(0, 6),
-                              ),
-                            ],
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                          child: Column(
-                            children: [
-                              _MenuRow(
-                                icon: Icons.credit_card_outlined,
-                                title: 'Earnings & Payouts',
-                                subtitle: 'View payment history',
-                                isFirst: true,
-                              ),
-                              const _Divider(),
-                              _MenuRow(
-                                icon: Icons.description_outlined,
-                                title: 'Job History',
-                                subtitle: 'Past completed jobs',
-                              ),
-                              const _Divider(),
-                              _MenuRow(
-                                icon: Icons.schedule_outlined,
-                                title: 'Working Hours',
-                                subtitle: 'Set your weekly schedule',
-                                isLast: true,
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        // ── Settings section ──
-                        Padding(
-                          padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
-                          child: Text(
-                            'SETTINGS',
-                            style: GoogleFonts.inriaSans(
-                              fontSize: 11,
-                              fontWeight: FontWeight.w800,
-                              color: Colors.black38,
-                              letterSpacing: 1.2,
-                            ),
-                          ),
-                        ),
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(28),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x0A000000),
-                                blurRadius: 14,
-                                offset: Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              _MenuRow(
-                                icon: Icons.notifications_outlined,
-                                title: 'Notifications',
-                                subtitle: 'Manage alerts & sounds',
-                                isFirst: true,
-                              ),
-                              const _Divider(),
-                              _MenuRow(
-                                icon: Icons.location_on_outlined,
-                                title: 'Service Area',
-                                subtitle: 'Set your coverage radius',
-                              ),
-                              const _Divider(),
-                              _MenuRow(
-                                icon: Icons.settings_outlined,
-                                title: 'Account Settings',
-                                subtitle: 'Edit profile & details',
-                              ),
-                              const _Divider(),
-                              _MenuRow(
-                                icon: Icons.help_outline_rounded,
-                                title: 'Help & Support',
-                                subtitle: 'FAQs and contact',
-                                isLast: true,
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // ── Log Out ──
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: GestureDetector(
-                            onTap: _signOut,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(vertical: 16),
-                              decoration: BoxDecoration(
-                                color: Colors.white,
-                                borderRadius: BorderRadius.circular(20),
-                                boxShadow: const [
-                                  BoxShadow(
-                                    color: Color(0x0A000000),
-                                    blurRadius: 10,
-                                    offset: Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  const Icon(Icons.logout_rounded,
-                                      size: 20, color: Color(0xFFD72B2B)),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Log Out',
-                                    style: GoogleFonts.montserrat(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                      color: const Color(0xFFD72B2B),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
+                          child: const Icon(Icons.notifications_none, color: Colors.black87),
                         ),
                       ],
                     ),
                   ),
-                ),
-              ],
+
+                  const SizedBox(height: 16),
+
+                  // ── Profile card ──
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x0F000000),
+                          blurRadius: 18,
+                          offset: Offset(0, 8),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        // Avatar + name
+                        Row(
+                          children: [
+                            Container(
+                              width: 64,
+                              height: 64,
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                color: const Color(0xFFE0D6C8),
+                              ),
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(20),
+                                child: const Icon(
+                                  Icons.person,
+                                  size: 40,
+                                  color: Color(0xFF8B7355),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Text(
+                                        _isLoading ? 'Loading...' : (_mechanicName.isEmpty ? 'Mechanic Profile' : _mechanicName),
+                                        style: GoogleFonts.montserrat(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.w800,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                      const SizedBox(width: 6),
+                                      const Icon(Icons.verified_rounded,
+                                          size: 18, color: Color(0xFF1DA1F2)),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    'Mekaniko ng NewJeans bai',
+                                    style: GoogleFonts.inriaSans(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w500,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        const Divider(height: 1, color: Color(0xFFF0F0F0)),
+                        const SizedBox(height: 16),
+
+                        // Stats row
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceAround,
+                          children: [
+                            _ProfileStat(
+                              value: '4.9',
+                              label: 'REVIEWS',
+                              sub: '128',
+                              isRating: true,
+                            ),
+                            Container(width: 1, height: 40, color: const Color(0xFFEEEEEE)),
+                            _ProfileStat(value: '342', label: 'JOBS DONE'),
+                            Container(width: 1, height: 40, color: const Color(0xFFEEEEEE)),
+                            _ProfileStat(value: 'Since', label: '2022', isSince: true),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // ── Available for Emergency toggle ──
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(24),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x0A000000),
+                          blurRadius: 14,
+                          offset: Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 10,
+                          height: 10,
+                          decoration: BoxDecoration(
+                            color: _availableForEmergency
+                                ? const Color(0xFF3FDF21)
+                                : Colors.black26,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Available for Emergency',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.black87,
+                            ),
+                          ),
+                        ),
+                        Switch(
+                          value: _availableForEmergency,
+                          onChanged: (v) =>
+                              setState(() => _availableForEmergency = v),
+                          activeThumbColor: Colors.white,
+                          activeTrackColor: const Color(0xFF3FDF21),
+                          inactiveThumbColor: Colors.white,
+                          inactiveTrackColor: Colors.black12,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 14),
+
+                  // ── Specializations ──
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x0A000000),
+                          blurRadius: 14,
+                          offset: Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const Icon(Icons.shield_outlined,
+                                size: 20, color: Colors.black87),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Specializations',
+                              style: GoogleFonts.montserrat(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 14),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: ['Toyota', 'Honda', 'Mitsubibi', 'Engine', 'Transmission']
+                              .map((s) => Container(
+                                    padding: const EdgeInsets.symmetric(
+                                        horizontal: 14, vertical: 8),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF5F7FA),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: Border.all(
+                                          color: const Color(0xFFE8E8E8)),
+                                    ),
+                                    child: Text(
+                                      s,
+                                      style: GoogleFonts.inriaSans(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87,
+                                      ),
+                                    ),
+                                  ))
+                              .toList(),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // ── Business section ──
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                    child: Text(
+                      'BUSINESS',
+                      style: GoogleFonts.inriaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black38,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x0A000000),
+                          blurRadius: 14,
+                          offset: Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        _MenuRow(
+                          icon: Icons.credit_card_outlined,
+                          title: 'Earnings & Payouts',
+                          subtitle: 'View payment history',
+                          isFirst: true,
+                        ),
+                        const _Divider(),
+                        _MenuRow(
+                          icon: Icons.description_outlined,
+                          title: 'Job History',
+                          subtitle: 'Past completed jobs',
+                        ),
+                        const _Divider(),
+                        _MenuRow(
+                          icon: Icons.schedule_outlined,
+                          title: 'Working Hours',
+                          subtitle: 'Set your weekly schedule',
+                          isLast: true,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 20),
+
+                  // ── Settings section ──
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
+                    child: Text(
+                      'SETTINGS',
+                      style: GoogleFonts.inriaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                        color: Colors.black38,
+                        letterSpacing: 1.2,
+                      ),
+                    ),
+                  ),
+                  Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(28),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Color(0x0A000000),
+                          blurRadius: 14,
+                          offset: Offset(0, 6),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      children: [
+                        _MenuRow(
+                          icon: Icons.notifications_outlined,
+                          title: 'Notifications',
+                          subtitle: 'Manage alerts & sounds',
+                          isFirst: true,
+                        ),
+                        const _Divider(),
+                        _MenuRow(
+                          icon: Icons.location_on_outlined,
+                          title: 'Service Area',
+                          subtitle: 'Set your coverage radius',
+                        ),
+                        const _Divider(),
+                        _MenuRow(
+                          icon: Icons.settings_outlined,
+                          title: 'Account Settings',
+                          subtitle: 'Edit profile & details',
+                        ),
+                        const _Divider(),
+                        _MenuRow(
+                          icon: Icons.help_outline_rounded,
+                          title: 'Help & Support',
+                          subtitle: 'FAQs and contact',
+                          isLast: true,
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 24),
+
+                  // ── Log Out ──
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: GestureDetector(
+                      onTap: _signOut,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(20),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x0A000000),
+                              blurRadius: 10,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.logout_rounded,
+                                size: 20, color: Color(0xFFD72B2B)),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Log Out',
+                              style: GoogleFonts.montserrat(
+                                fontSize: 15,
+                                fontWeight: FontWeight.w700,
+                                color: const Color(0xFFD72B2B),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ],
         ),
@@ -616,7 +607,7 @@ class _ProfileStat extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            '${sub ?? ''} ${label}',
+            '${sub ?? ''} $label',
             style: GoogleFonts.inriaSans(
               fontSize: 11,
               fontWeight: FontWeight.w600,

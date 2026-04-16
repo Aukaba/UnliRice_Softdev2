@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'homescreen_checkrequest.dart';
 import 'jobs.dart';
 import 'schedule.dart';
@@ -62,7 +61,6 @@ class MechanicHomeScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        const SizedBox(height: 16),
                         const _HeaderSection(),
                         const SizedBox(height: 16),
                         const _StatsSection(),
@@ -99,7 +97,7 @@ class MechanicHomeScreen extends StatelessWidget {
               MaterialPageRoute(builder: (_) => const UserMessageListScreen()),
             );
           } else if (index == 4) {
-            Navigator.push(
+            Navigator.pushReplacement(
               context,
               MaterialPageRoute(builder: (_) => const MechanicProfileScreen()),
             );
@@ -110,54 +108,16 @@ class MechanicHomeScreen extends StatelessWidget {
   }
 }
 
-class _HeaderSection extends StatefulWidget {
+class _HeaderSection extends StatelessWidget {
   const _HeaderSection();
-
-  @override
-  State<_HeaderSection> createState() => _HeaderSectionState();
-}
-
-class _HeaderSectionState extends State<_HeaderSection> {
-  String _mechanicName = 'Loading...';
-
-  @override
-  void initState() {
-    super.initState();
-    _fetchName();
-  }
-
-  Future<void> _fetchName() async {
-    try {
-      final uid = Supabase.instance.client.auth.currentUser?.id;
-      if (uid != null) {
-        final res = await Supabase.instance.client
-            .from('mechanic')
-            .select('first_name, last_name')
-            .eq('uid', uid)
-            .maybeSingle();
-        if (res != null && mounted) {
-          setState(() {
-            _mechanicName = '${res['first_name']}';
-          });
-        } else if (mounted) {
-          setState(() {
-            _mechanicName = 'Mechanic';
-          });
-        }
-      }
-    } catch (_) {
-      if (mounted) setState(() => _mechanicName = 'Mechanic');
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFB703),
-        borderRadius: BorderRadius.circular(32),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+      decoration: const BoxDecoration(
+        color: Color(0xFFFFB703),
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,7 +138,7 @@ class _HeaderSectionState extends State<_HeaderSection> {
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    _mechanicName,
+                    'iShowSpeed',
                     style: GoogleFonts.montserrat(
                       fontSize: 28,
                       fontWeight: FontWeight.w700,
