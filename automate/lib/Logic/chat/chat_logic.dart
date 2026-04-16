@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class ChatLogic {
@@ -143,7 +144,7 @@ class ChatLogic {
   }
 
   Future<String?> _resolveUserName(String uid) async {
-    // Try mechanic
+    // Try mechanic table
     try {
       final res = await _supabase
           .from('mechanic')
@@ -151,19 +152,11 @@ class ChatLogic {
           .eq('uid', uid)
           .maybeSingle();
       if (res != null) return '${res['first_name']} ${res['last_name']}'.trim();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[ChatLogic] mechanic lookup failed for $uid: $e');
+    }
 
-    // Try driver
-    try {
-      final res = await _supabase
-          .from('driver')
-          .select('first_name, last_name')
-          .eq('uid', uid)
-          .maybeSingle();
-      if (res != null) return '${res['first_name']} ${res['last_name']}'.trim();
-    } catch (_) {}
-
-    // Try user
+    // Try user table (singular)
     try {
       final res = await _supabase
           .from('user')
@@ -171,8 +164,23 @@ class ChatLogic {
           .eq('uid', uid)
           .maybeSingle();
       if (res != null) return '${res['first_name']} ${res['last_name']}'.trim();
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('[ChatLogic] user lookup failed for $uid: $e');
+    }
 
+    // Try users table (plural)
+    try {
+      final res = await _supabase
+          .from('users')
+          .select('first_name, last_name')
+          .eq('uid', uid)
+          .maybeSingle();
+      if (res != null) return '${res['first_name']} ${res['last_name']}'.trim();
+    } catch (e) {
+      debugPrint('[ChatLogic] users lookup failed for $uid: $e');
+    }
+
+    debugPrint('[ChatLogic] could not resolve name for uid: $uid');
     return null;
   }
 }
