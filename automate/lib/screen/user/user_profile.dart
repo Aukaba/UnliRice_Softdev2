@@ -13,6 +13,69 @@ class UserProfileScreen extends StatefulWidget {
 class _UserProfileScreenState extends State<UserProfileScreen> {
   static final _supabase = Supabase.instance.client;
   bool _isSigningOut = false;
+  bool _isLoading = true;
+
+  String _userName = '';
+  String _userEmail = '';
+  String _userPhone = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserInfo();
+  }
+
+  Future<void> _loadUserInfo() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
+
+    try {
+      // Trying 'driver' table first
+      Map<String, dynamic>? data;
+      try {
+        data = await _supabase
+            .from('driver')
+            .select('first_name, last_name, phone_number')
+            .eq('uid', user.id)
+            .single();
+      } catch (_) {
+        // Fallback to 'users' table if driver fails
+        try {
+          data = await _supabase
+              .from('users')
+              .select('first_name, last_name, phone_number')
+              .eq('uid', user.id)
+              .single();
+        } catch (_) {
+          // Fallback to 'user' table
+          data = await _supabase
+              .from('user')
+              .select('first_name, last_name, phone_number')
+              .eq('uid', user.id)
+              .single();
+        }
+      }
+
+      setState(() {
+        final firstName = data?['first_name'] ?? '';
+        final lastName = data?['last_name'] ?? '';
+        _userName = '$firstName $lastName'.trim();
+        _userPhone = data?['phone_number'] ?? '';
+        _userEmail = user.email ?? '';
+      });
+    } catch (e) {
+      print('Error fetching user info: $e');
+      if (mounted) {
+        setState(() {
+          _userName = 'Error';
+          _userEmail = user.email ?? 'Error';
+          _userPhone = 'Error';
+        });
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   Future<void> _signOut() async {
     // Confirmation dialog first
@@ -96,17 +159,17 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   // Contact Info Section
                   _buildSectionTitle(Icons.phone_in_talk_outlined, 'Contact Info'),
                   const SizedBox(height: 12),
-                  _buildContactInfoCard(
-                    icon: Icons.email_outlined,
-                    label: 'Email',
-                    value: 'KimMinji@gmail.com',
-                  ),
-                  const SizedBox(height: 12),
-                  _buildContactInfoCard(
-                    icon: Icons.phone_outlined,
-                    label: 'Phone',
-                    value: '0987 678 6578',
-                  ),
+                    _buildContactInfoCard(
+                      icon: Icons.email_outlined,
+                      label: 'Email',
+                      value: _isLoading ? 'Loading...' : (_userEmail.isEmpty ? 'N/A' : _userEmail),
+                    ),
+                    const SizedBox(height: 12),
+                    _buildContactInfoCard(
+                      icon: Icons.phone_outlined,
+                      label: 'Phone',
+                      value: _isLoading ? 'Loading...' : (_userPhone.isEmpty ? 'N/A' : _userPhone),
+                    ),
                   const SizedBox(height: 28),
 
                   // ── Log Out Button ──────────────────────────────────
@@ -173,23 +236,14 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         children: [
           Row(
             children: [
-              ClipRRect(
-                borderRadius: BorderRadius.circular(16),
-                child: Image.asset(
-                  'assets/images/profile_placeholder.png', // Assuming user will add their asset, or we can use network/icon. Using network for visual testing:
-                  width: 70,
-                  height: 70,
-                  fit: BoxFit.cover,
-                  errorBuilder: (context, error, stackTrace) => Container(
-                    width: 70,
-                    height: 70,
-                    decoration: BoxDecoration(
-                      color: Colors.grey.shade300,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Icon(Icons.person, size: 40, color: Colors.white),
-                  ),
+              Container(
+                width: 70,
+                height: 70,
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade300,
+                  borderRadius: BorderRadius.circular(16),
                 ),
+                child: const Icon(Icons.person, size: 40, color: Colors.white),
               ),
               const SizedBox(width: 16),
               Expanded(
@@ -197,7 +251,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Kim Minji',
+                      _isLoading ? 'Loading...' : (_userName.isEmpty ? 'User Profile' : _userName),
                       style: GoogleFonts.montserrat(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../widgets/calendar_widget.dart';
 import 'user_looking_mechanic.dart';
+import '../../Logic/jobs/jobs_logic.dart';
 
 class UserDashboardScreen extends StatefulWidget {
   const UserDashboardScreen({super.key});
@@ -12,6 +13,92 @@ class UserDashboardScreen extends StatefulWidget {
 
 class _UserDashboardScreenState extends State<UserDashboardScreen> {
   bool isEmergency = true; // State for Service Type toggle
+  
+  final TextEditingController _titleController = TextEditingController();
+  final TextEditingController _vehicleController = TextEditingController();
+  final TextEditingController _locationController = TextEditingController();
+  final TextEditingController _descriptionController = TextEditingController();
+  DateTime? _selectedDate;
+  bool _isLoading = false;
+
+  @override
+  void dispose() {
+    _titleController.dispose();
+    _vehicleController.dispose();
+    _locationController.dispose();
+    _descriptionController.dispose();
+    super.dispose();
+  }
+
+  void _submitJobRequest() async {
+    if (_titleController.text.isEmpty || _locationController.text.isEmpty || _vehicleController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please fill all required fields.')));
+      return;
+    }
+
+    setState(() => _isLoading = true);
+    
+    try {
+      await JobsLogic().createJob(
+        title: _titleController.text,
+        vehicle: _vehicleController.text,
+        pickupLocation: _locationController.text,
+        serviceType: isEmergency ? 'emergency' : 'scheduled',
+        scheduledDate: isEmergency ? null : (_selectedDate ?? DateTime.now()),
+        issueDescription: _descriptionController.text.isEmpty ? null : _descriptionController.text,
+      );
+      
+      if (mounted) {
+        if (isEmergency) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const UserLookingMechanicScreen(),
+            ),
+          );
+        } else {
+          // Reset fields
+          _titleController.clear();
+          _locationController.clear();
+          _vehicleController.clear();
+          _descriptionController.clear();
+          setState(() {
+            _selectedDate = null;
+          });
+
+          showDialog(
+            context: context,
+            builder: (ctx) => AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: Text(
+                'Job Scheduled',
+                style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, color: const Color(0xFF19456B)),
+              ),
+              content: Text(
+                'Your scheduled service request has been successfully posted! Mechanics will review it, and you can track updates in your Activity tab.',
+                style: GoogleFonts.inriaSans(fontSize: 16),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(ctx),
+                  child: Text(
+                    'OK',
+                    style: GoogleFonts.montserrat(fontWeight: FontWeight.bold, color: const Color(0xFF19456B)),
+                  ),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -139,6 +226,70 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                     ),
                     const SizedBox(height: 16),
                     Text(
+                      "Issue Title",
+                      style: GoogleFonts.montserrat(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFEFEF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: TextField(
+                        controller: _titleController,
+                        decoration: InputDecoration(
+                          hintText: "e.g., Engine won't start",
+                          hintStyle: GoogleFonts.montserrat(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.black54,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      "Vehicle Information",
+                      style: GoogleFonts.montserrat(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        color: Colors.black87,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFEFEFEF),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: TextField(
+                        controller: _vehicleController,
+                        decoration: InputDecoration(
+                          hintText: "e.g., Toyota Vios",
+                          hintStyle: GoogleFonts.montserrat(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w400,
+                            color: Colors.black54,
+                          ),
+                          border: InputBorder.none,
+                          contentPadding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 16,
+                          ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
                       "Pickup Location",
                       style: GoogleFonts.montserrat(
                         fontSize: 14,
@@ -153,6 +304,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: TextField(
+                        controller: _locationController,
                         decoration: InputDecoration(
                           hintText: "Cebu Institute of Technology - University",
                           hintStyle: GoogleFonts.montserrat(
@@ -263,7 +415,11 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                         ),
                       ),
                       const SizedBox(height: 12),
-                      const CalendarWidget(),
+                      CalendarWidget(
+                        onDateSelected: (date) {
+                          _selectedDate = date;
+                        },
+                      ),
                       const SizedBox(height: 20),
                     ],
 
@@ -282,6 +438,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: TextField(
+                        controller: _descriptionController,
                         maxLines: 4,
                         decoration: InputDecoration(
                           hintText: "Describe your issue...",
@@ -325,31 +482,30 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                         Expanded(
                           flex: 6,
                           child: GestureDetector(
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const UserLookingMechanicScreen(),
-                                ),
-                              );
-                            },
+                            onTap: _isLoading ? null : _submitJobRequest,
                             child: Container(
                               padding: const EdgeInsets.symmetric(vertical: 18),
                               decoration: BoxDecoration(
-                                color: const Color(0xFF19456B),
+                                color: _isLoading ? Colors.grey : const Color(0xFF19456B),
                                 borderRadius: BorderRadius.circular(12),
                               ),
                               alignment: Alignment.center,
-                              child: Text(
-                                isEmergency
-                                    ? "Request Help"
-                                    : "Request Service",
-                                style: GoogleFonts.montserrat(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w600,
-                                  color: Colors.white,
-                                ),
-                              ),
+                              child: _isLoading 
+                                  ? const SizedBox(
+                                      width: 20,
+                                      height: 20,
+                                      child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                                    )
+                                  : Text(
+                                      isEmergency
+                                          ? "Request Help"
+                                          : "Request Service",
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.white,
+                                      ),
+                                    ),
                             ),
                           ),
                         ),

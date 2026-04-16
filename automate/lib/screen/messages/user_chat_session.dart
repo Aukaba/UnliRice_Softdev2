@@ -4,11 +4,19 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:image_picker/image_picker.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../Logic/chat/chat_logic.dart';
+import 'package:intl/intl.dart';
 
 class UserChatSessionScreen extends StatefulWidget {
   final String mechanicName;
+  final String partnerId;
 
-  const UserChatSessionScreen({super.key, required this.mechanicName});
+  const UserChatSessionScreen({
+    super.key,
+    required this.mechanicName,
+    this.partnerId = '',
+  });
 
   @override
   State<UserChatSessionScreen> createState() => _UserChatSessionScreenState();
@@ -16,139 +24,14 @@ class UserChatSessionScreen extends StatefulWidget {
 
 class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
   final TextEditingController _msgController = TextEditingController();
-  final ImagePicker _picker = ImagePicker();
-  bool _isLoading = false;
-  
-  // Store messages dynamically instead of hardcoded
-  List<ChatMessage> _messages = [];
-  
-  // Ollama configuration
-  final String ollamaUrl = "https://supposedly-abdicative-ben.ngrok-free.dev/api/chat"; // YOUR IP HERE
-  final String modelName = "llama3.2-vision";
+  late Stream<List<Map<String, dynamic>>> _messagesStream;
 
   bool get _isMechMate => widget.mechanicName == "MechMate";
 
   @override
   void initState() {
     super.initState();
-    // Initialize with welcome message if it's MechMate
-    if (_isMechMate) {
-      _messages.add(ChatMessage(
-        message: "Hello! I'm MechMate, your AI assistant. How can I help with your vehicle today?",
-        time: _getCurrentTime(),
-        isMe: false,
-      ));
-    }
-  }
-
-  String _getCurrentTime() {
-    final now = DateTime.now();
-    return "${now.hour}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'PM' : 'AM'}";
-  }
-
-  /// Send message to Ollama AI
-  Future<void> _sendToOllama({String? text, String? imageBase64}) async {
-    setState(() => _isLoading = true);
-
-    try {
-      final response = await http.post(
-        Uri.parse(ollamaUrl),
-        headers: {
-          'Content-Type': 'application/json',
-          'ngrok-skip-browser-warning': 'true',
-        },
-        body: jsonEncode({
-          "model": modelName,
-          "messages": [
-            {
-              "role": "user",
-              "content": text ?? "Look at this vehicle part. What visible failures or issues are present? List 3 possibilities.",
-              if (imageBase64 != null) "images": [imageBase64]
-            }
-          ],
-          "stream": false
-        }),
-      ).timeout(const Duration(seconds: 90));
-
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body);
-        final botMessage = data['message']['content'];
-        
-        setState(() {
-          _messages.add(ChatMessage(
-            message: botMessage,
-            time: _getCurrentTime(),
-            isMe: false,
-          ));
-        });
-      } else {
-        _showError("Server error: ${response.statusCode}");
-      }
-    } catch (e) {
-      _showError("Connection failed: $e");
-    } finally {
-      setState(() => _isLoading = false);
-    }
-  }
-
-  void _showError(String error) {
-    setState(() {
-      _messages.add(ChatMessage(
-        message: "❌ $error",
-        time: _getCurrentTime(),
-        isMe: false,
-        isError: true,
-      ));
-    });
-  }
-
-  void _handleSendMessage() {
-    if (_msgController.text.trim().isEmpty) return;
-    
-    final text = _msgController.text;
-    
-    // Add user message to chat
-    setState(() {
-      _messages.add(ChatMessage(
-        message: text,
-        time: _getCurrentTime(),
-        isMe: true,
-      ));
-    });
-    
-    _msgController.clear();
-    
-    // If it's MechMate, send to Ollama
-    if (_isMechMate) {
-      _sendToOllama(text: text);
-    }
-    // For human mechanics, you'd implement real-time messaging here
-  }
-
-  void _handleImageCapture() async {
-    final XFile? photo = await _picker.pickImage(
-      source: ImageSource.camera,
-      maxWidth: 800,
-      maxHeight: 800,
-      imageQuality: 50,
-    );
-
-    if (photo != null) {
-      setState(() {
-        _messages.add(ChatMessage(
-          message: "[Image sent for diagnosis]",
-          time: _getCurrentTime(),
-          isMe: true,
-        ));
-      });
-      
-      final bytes = await File(photo.path).readAsBytes();
-      final base64String = base64Encode(bytes);
-      
-      if (_isMechMate) {
-        _sendToOllama(imageBase64: base64String);
-      }
-    }
+    _messagesStream = ChatLogic().getMessagesWith(widget.partnerId);
   }
 
   @override
@@ -161,31 +44,76 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
 
           // Main Chat Body - Now dynamic
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final msg = _messages[index];
-                return _buildMessageBubble(
-                  message: msg.message,
-                  time: msg.time,
-                  isMe: msg.isMe,
-                );
-              },
-            ),
+            child: _isMechMate
+                ? _buildDummyMessages()
+                : StreamBuilder<List<Map<String, dynamic>>>(
+                    stream: _messagesStream,
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      if (snapshot.hasError) {
+                        return const Center(child: Text("Error loading messages"));
+                      }
+                      
+                      final messages = snapshot.data ?? [];
+                      final myId = Supabase.instance.client.auth.currentUser?.id;
+                      
+                      return ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                        itemCount: messages.length,
+                        itemBuilder: (context, index) {
+                          final msg = messages[index];
+                          final isMe = msg['sender_id'] == myId;
+                          final rawTime = msg['created_at'];
+                          
+                          String timeStr = "";
+                          if (rawTime != null) {
+                            final parsed = DateTime.parse(rawTime).toLocal();
+                            timeStr = DateFormat('jm').format(parsed);
+                          }
+                          
+                          return _buildMessageBubble(
+                            message: msg['content'] ?? '',
+                            time: timeStr,
+                            isMe: isMe,
+                          );
+                        },
+                      );
+                    },
+                  ),
           ),
-
-          // Loading indicator
-          if (_isLoading)
-            const LinearProgressIndicator(
-              backgroundColor: Colors.grey,
-              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF19456B)),
-            ),
 
           // Input Bar - Now with camera option for MechMate
           _buildInputBar(),
         ],
       ),
+    );
+  }
+
+  Widget _buildDummyMessages() {
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      children: [
+        _buildMessageBubble(
+          message: "Hi! How can I assist you today?",
+          time: "Now",
+          isMe: false,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDummyMessages() {
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+      children: [
+        _buildMessageBubble(
+          message: "Hi! How can I assist you today?",
+          time: "Now",
+          isMe: false,
+        ),
+      ],
     );
   }
 
@@ -353,18 +281,28 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
           ),
           const SizedBox(width: 10),
           GestureDetector(
-            onTap: _isLoading ? null : _handleSendMessage,
+            onTap: () async {
+              final text = _msgController.text.trim();
+              if (text.isEmpty || _isMechMate || widget.partnerId.isEmpty) return;
+              
+              _msgController.clear();
+              try {
+                await ChatLogic().sendMessage(widget.partnerId, text);
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Failed to send: $e')),
+                  );
+                }
+              }
+            },
             child: Container(
               padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: _isLoading ? Colors.grey : const Color(0xFF19456B),
+              decoration: const BoxDecoration(
+                color: Color(0xFF19456B),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.send_rounded,
-                color: Colors.white,
-                size: 22,
-              ),
+              child: const Icon(Icons.send_rounded, color: Colors.white, size: 22),
             ),
           ),
         ],

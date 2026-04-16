@@ -1,0 +1,52 @@
+USER 
+ 
+This is the main dashboard for the user here you can ask for help by clicking the ask for help button 
+ 
+By clicking the ask for help bytton we will see thus screen where you will pin your current location so the mechanic would know where to go also you can choose between an emergency and scheduled 
+emergency is only applicable for those mechanic that have their emergency availability on and it is automatic pairing like an hailing app scheduled on other hand is available even for those mechanic that have off availability and mechanic can choose whether they will accept the job or not, it will be explain futher on mechanic side of the screen. 
+ 
+Scrolling down you will seethe confirmation of the request 
+ 
+ 
+ 
+After confirmation this screen will be shown if they have chosen the emergency as the system is searching for an available mechanic 
+ 
+After matching with a mechanic this will show to indicate that the paired mechanic is on the way 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+After the job done this screen will be shown to the user here they can see the receipt or their total bill and they can also rate the mechanic in this screen 
+ 
+ 
+MECHANIC 
+ 
+In this screen mechanics can see the scheduled jobs available 
+ 
+After accepting a job this screen will be shown on the mechanics screen to see the info about the job and their clients. After accepting the job accepted will be seen on the mechanics schedule and the job would be removed from the job section as it has been accepted by a mechanic once a mechanic accept a job or paired a chat will be created between the driver and the client 
+   
+ 
+ 
+2 days after the job the chat will be deleted 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+ 
+And on emergency as I have said previously the job will be automatically pair therefore the mechanic will see a screen showing the clients pinned location and their diagnosis(no screen yet make one) 
+ 
+  
+ 

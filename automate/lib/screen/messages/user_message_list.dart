@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'user_chat_session.dart';
+import '../../Logic/chat/chat_logic.dart';
+import 'package:intl/intl.dart';
 
 class UserMessageListScreen extends StatefulWidget {
   const UserMessageListScreen({super.key});
@@ -10,6 +12,14 @@ class UserMessageListScreen extends StatefulWidget {
 }
 
 class _UserMessageListScreenState extends State<UserMessageListScreen> {
+  late Stream<List<Map<String, dynamic>>> _partnersStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _partnersStream = ChatLogic().getActivePartners();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -179,7 +189,9 @@ class _UserMessageListScreenState extends State<UserMessageListScreen> {
                 Expanded(
                   child: Padding(
                     padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                    child: Container(
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
                         border: Border.all(color: Colors.grey.shade300, width: 1),
@@ -191,70 +203,96 @@ class _UserMessageListScreenState extends State<UserMessageListScreen> {
                           ),
                         ],
                       ),
-                      child: ListView(
-                        padding: EdgeInsets.zero,
-                        children: [
-                          _buildMechanicCard(
-                            name: "Romel Escape",
-                            vehicle: "ADV 160 ROADSYNC",
-                            lastMessage: "I'll be there in 5 minutes",
-                            time: "2 min ago",
-                            hasNewMessage: true,
-                            badgeCount: 3,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const UserChatSessionScreen(mechanicName: "Romel Escape"),
+                      child: StreamBuilder<List<Map<String, dynamic>>>(
+                        stream: _partnersStream,
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting && snapshot.data == null) {
+                            return const Center(child: Padding(padding: EdgeInsets.all(20), child: CircularProgressIndicator()));
+                          }
+                          if (snapshot.hasError && snapshot.data == null) {
+                            return Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(20.0),
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(Icons.wifi_off, size: 40, color: Colors.grey.shade400),
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      "Could not load conversations.",
+                                      style: GoogleFonts.montserrat(
+                                        color: Colors.black54,
+                                        fontWeight: FontWeight.w600,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    TextButton(
+                                      onPressed: () {
+                                        setState(() {
+                                          _partnersStream = ChatLogic().getActivePartners();
+                                        });
+                                      },
+                                      child: Text(
+                                        'Retry',
+                                        style: GoogleFonts.montserrat(color: const Color(0xFF2B5A82)),
+                                      ),
+                                    ),
+                                  ],
                                 ),
+                              ),
+                            );
+                          }
+
+                          final partners = snapshot.data ?? [];
+                          
+                          if (partners.isEmpty) {
+                            return Center(
+                              child: Padding(
+                                padding: const EdgeInsets.all(24.0),
+                                child: Text(
+                                  "No messages yet.",
+                                  style: GoogleFonts.montserrat(color: Colors.black54),
+                                ),
+                              ),
+                            );
+                          }
+
+                          return ListView.builder(
+                            padding: EdgeInsets.zero,
+                            shrinkWrap: true,
+                            itemCount: partners.length,
+                            itemBuilder: (context, index) {
+                              final p = partners[index];
+                              final rawTime = p['time'];
+                              String timeStr = "";
+                              if (rawTime != null) {
+                                final parsed = DateTime.parse(rawTime).toLocal();
+                                timeStr = DateFormat('MMM d, h:mm a').format(parsed);
+                              }
+
+                              return _buildMechanicCard(
+                                name: p['name'],
+                                lastMessage: p['last_message'],
+                                time: timeStr,
+                                hasNewMessage: p['is_unread'] == true,
+                                isLast: index == partners.length - 1,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => UserChatSessionScreen(
+                                        mechanicName: p['name'],
+                                        partnerId: p['partner_id'],
+                                      ),
+                                    ),
+                                  );
+                                },
                               );
                             },
-                          ),
-                          _buildMechanicCard(
-                            name: "Sarah Johnson",
-                            lastMessage: "Your tire replacement is complete!",
-                            time: "Yesterday",
-                            hasNewMessage: false,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const UserChatSessionScreen(mechanicName: "Sarah Johnson"),
-                                ),
-                              );
-                            },
-                          ),
-                          _buildMechanicCard(
-                            name: "Regin Mercado",
-                            lastMessage: "Oil change done, all good!",
-                            time: "3 days ago",
-                            hasNewMessage: false,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const UserChatSessionScreen(mechanicName: "Regin Mercado"),
-                                ),
-                              );
-                            },
-                          ),
-                          _buildMechanicCard(
-                            name: "Mike Wilson",
-                            lastMessage: "Booking was unfortunately canceled.",
-                            time: "1 week ago",
-                            hasNewMessage: false,
-                            isLast: true,
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) => const UserChatSessionScreen(mechanicName: "Mike Wilson"),
-                                ),
-                              );
-                            },
-                          ),
-                        ],
+                          );
+                        },
                       ),
+                    ),
                     ),
                   ),
                 ),

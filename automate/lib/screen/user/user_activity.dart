@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import '../messages/user_message_list.dart';
+import '../messages/user_chat_session.dart';
+import '../../Logic/jobs/jobs_logic.dart';
 
 class UserActivityScreen extends StatelessWidget {
   final VoidCallback? onMessageTap;
@@ -54,54 +55,94 @@ class UserActivityScreen extends StatelessWidget {
                 ),
                 // List of Activities
                 Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-                    children: [
-                      _buildActivityCard(
-                        context: context,
-                        name: 'Romel Escape',
-                        service: 'Engine Diagnostics',
-                        status: 'Completed',
-                        time: 'Today, 2:30 PM',
-                        price: '₱5,000',
-                        rating: '4.8',
-                        avatarColor: const Color(0xFF6A8FB0),
-                        onMessageTap: onMessageTap,
-                      ),
-                      _buildActivityCard(
-                        context: context,
-                        name: 'Sarah Johnson',
-                        service: 'Tire Replacement',
-                        status: 'Completed',
-                        time: 'Yesterday, 4:15 PM',
-                        price: '₱3,067',
-                        rating: '5.0',
-                        avatarColor: const Color(0xFF6A8FB0),
-                        onMessageTap: onMessageTap,
-                      ),
-                      _buildActivityCard(
-                        context: context,
-                        name: 'Regin Mercado',
-                        service: 'Oil Change',
-                        status: 'Completed',
-                        time: '3 days ago, 10:00 AM',
-                        price: '₱3,067',
-                        rating: '4.5',
-                        avatarColor: const Color(0xFF6A8FB0),
-                        onMessageTap: onMessageTap,
-                      ),
-                      _buildActivityCard(
-                        context: context,
-                        name: 'Mike Wilson',
-                        service: 'Battery Check',
-                        status: 'Canceled',
-                        time: '1 week ago, 6:45 PM',
-                        price: '₱3,067',
-                        rating: '4.5',
-                        avatarColor: const Color(0xFF6A8FB0),
-                        onMessageTap: onMessageTap,
-                      ),
-                    ],
+                  child: StreamBuilder<List<Map<String, dynamic>>>(
+                    stream: JobsLogic().getUserActivityJobs(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      
+                      final jobs = snapshot.data ?? [];
+                      if (jobs.isEmpty) {
+                        return Center(
+                          child: Text(
+                            'No past activities yet.',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 16,
+                              color: Colors.grey.shade600,
+                            ),
+                          ),
+                        );
+                      }
+                      
+                      // Sort jobs by most recent
+                      jobs.sort((a, b) {
+                        final aDate = DateTime.tryParse(a['created_at'] ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+                        final bDate = DateTime.tryParse(b['created_at'] ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+                        return bDate.compareTo(aDate);
+                      });
+
+                      return ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                        itemCount: jobs.length,
+                        itemBuilder: (context, index) {
+                          final job = jobs[index];
+                          
+                          // Determine status logic
+                          final rawStatus = job['status'] as String? ?? 'pending';
+                          String displayStatus = 'Pending';
+                          if (rawStatus == 'completed') displayStatus = 'Done';
+                          else if (rawStatus == 'canceled') displayStatus = 'Canceled';
+                          else if (rawStatus == 'accepted') {
+                            final schedStr = job['scheduled_date'];
+                            if (schedStr != null) {
+                              final schedDate = DateTime.tryParse(schedStr);
+                              if (schedDate != null) {
+                                if (schedDate.isAfter(DateTime.now())) {
+                                  displayStatus = 'Assigned';
+                                } else {
+                                  displayStatus = 'On Going';
+                                }
+                              } else {
+                                displayStatus = 'On Going';
+                              }
+                            } else {
+                              displayStatus = 'On Going';
+                            }
+                          }
+
+                          // Determine time logic
+                          final dateStr = job['created_at'];
+                          String timeDisplay = 'Recently';
+                          if (dateStr != null) {
+                            final date = DateTime.tryParse(dateStr);
+                            if (date != null) {
+                              final diff = DateTime.now().difference(date);
+                              if (diff.inDays == 0) {
+                                timeDisplay = 'Today, ${date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour)}:${date.minute.toString().padLeft(2, '0')} ${date.hour >= 12 ? 'PM' : 'AM'}';
+                              } else if (diff.inDays == 1) {
+                                timeDisplay = 'Yesterday, ${date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour)}:${date.minute.toString().padLeft(2, '0')} ${date.hour >= 12 ? 'PM' : 'AM'}';
+                              } else {
+                                timeDisplay = '${diff.inDays} days ago';
+                              }
+                            }
+                          }
+
+                          return _buildActivityCard(
+                            context: context,
+                            name: job['mechanic_name'] ?? (job['mechanic_id'] != null ? 'Mechanic Assigned' : 'Waiting for Mechanic'),
+                            partnerId: job['mechanic_id'],
+                            service: job['title'] ?? 'Service',
+                            status: displayStatus,
+                            time: timeDisplay,
+                            price: 'TBD', // Would fetch real price if available
+                            rating: '-', // Ratings logic not implemented yet
+                            avatarColor: const Color(0xFF6A8FB0),
+                            onMessageTap: onMessageTap,
+                          );
+                        },
+                      );
+                    }
                   ),
                 ),
               ],
@@ -121,9 +162,29 @@ class UserActivityScreen extends StatelessWidget {
     required String price,
     required String rating,
     required Color avatarColor,
+    String? partnerId,
     VoidCallback? onMessageTap,
   }) {
-    bool isCompleted = status == 'Completed';
+    bool isCompleted = status == 'Done' || status == 'Completed';
+    bool isOngoingOrAssigned = status == 'Assigned' || status == 'On Going';
+    bool isPending = status == 'Pending';
+
+    Color statusBgColor = isCompleted
+        ? const Color(0xFFA5D6A7).withOpacity(0.8)
+        : isOngoingOrAssigned
+            ? const Color(0xFFFFCC80).withOpacity(0.8) // assigned/ongoing -> orange
+            : isPending
+                ? Colors.grey.shade300
+                : const Color(0xFFEF9A9A).withOpacity(0.8); // canceled -> red
+
+    Color statusTextColor = isCompleted
+        ? Colors.green.shade800
+        : isOngoingOrAssigned
+            ? Colors.deepOrange.shade800
+            : isPending
+                ? Colors.black54
+                : Colors.red.shade800;
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16.0),
       decoration: BoxDecoration(
@@ -178,7 +239,7 @@ class UserActivityScreen extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                   decoration: BoxDecoration(
-                    color: isCompleted ? const Color(0xFFA5D6A7).withOpacity(0.8) : const Color(0xFFEF9A9A).withOpacity(0.8), // subtle green / red background
+                    color: statusBgColor,
                     borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
@@ -186,7 +247,7 @@ class UserActivityScreen extends StatelessWidget {
                     style: GoogleFonts.montserrat(
                       fontSize: 12,
                       fontWeight: FontWeight.w600,
-                      color: isCompleted ? Colors.green.shade800 : Colors.red.shade800,
+                      color: statusTextColor,
                     ),
                   ),
                 ),
@@ -234,38 +295,42 @@ class UserActivityScreen extends StatelessWidget {
                   ),
                 ),
                 const Spacer(),
-                InkWell(
-                  borderRadius: BorderRadius.circular(8),
-                  onTap: () {
-                    if (onMessageTap != null) {
-                      onMessageTap();
-                    } else {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) => const UserMessageListScreen(),
-                        ),
-                      );
-                    }
-                  },
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
-                    child: Row(
-                      children: [
-                        Icon(Icons.chat_bubble_outline, size: 16, color: const Color(0xFF6A8FB0)),
-                        const SizedBox(width: 6),
-                        Text(
-                          'Message',
-                          style: GoogleFonts.montserrat(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: const Color(0xFF6A8FB0),
+                if (partnerId != null && partnerId.isNotEmpty)
+                  InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () {
+                      if (onMessageTap != null) {
+                        onMessageTap();
+                      } else {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => UserChatSessionScreen(
+                              mechanicName: name,
+                              partnerId: partnerId,
+                            ),
                           ),
-                        ),
-                      ],
+                        );
+                      }
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(vertical: 4.0, horizontal: 8.0),
+                      child: Row(
+                        children: [
+                          Icon(Icons.chat_bubble_outline, size: 16, color: const Color(0xFF6A8FB0)),
+                          const SizedBox(width: 6),
+                          Text(
+                            'Message',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w600,
+                              color: const Color(0xFF6A8FB0),
+                            ),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
-                ),
               ],
             ),
           ],

@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class CalendarWidget extends StatefulWidget {
-  const CalendarWidget({super.key});
+  final ValueChanged<DateTime>? onDateSelected;
+
+  const CalendarWidget({super.key, this.onDateSelected});
 
   @override
   State<CalendarWidget> createState() => _CalendarWidgetState();
@@ -190,11 +192,20 @@ class _CalendarWidgetState extends State<CalendarWidget> {
                 final bool isCurrent = cell['current'] as bool;
                 final bool selected = _isSelected(date);
                 final bool today = _isToday(date);
+                
+                final now = DateTime.now();
+                final todayDate = DateTime(now.year, now.month, now.day);
+                final bool isPast = date.isBefore(todayDate);
 
                 return Expanded(
                   child: GestureDetector(
-                    onTap: isCurrent
-                        ? () => setState(() => _selectedDate = date)
+                    onTap: (isCurrent && !isPast)
+                        ? () {
+                            setState(() => _selectedDate = date);
+                            if (widget.onDateSelected != null) {
+                              widget.onDateSelected!(date);
+                            }
+                          }
                         : null,
                     child: AnimatedContainer(
                       duration: const Duration(milliseconds: 180),
@@ -220,8 +231,8 @@ class _CalendarWidgetState extends State<CalendarWidget> {
                               : FontWeight.w600,
                           color: selected
                               ? Colors.white
-                              : !isCurrent
-                                  ? Colors.grey.shade400
+                              : (!isCurrent || isPast)
+                                  ? Colors.grey.shade300
                                   : Colors.black87,
                         ),
                       ),
