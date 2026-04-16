@@ -14,15 +14,15 @@ class _AdminMechanicVerificationContentState
   final List<Map<String, dynamic>> _pendingMechanics = [
     {
       'id': 1,
-      'name': 'Bernante, Vince',
-      'email': 'VinceBernante@gmail.com',
-      'contact': '09987654321',
+      'name': 'Aaron Barnaija',
+      'email': 'AaronBarnaija@gmail.com',
+      'contact': '09123456789',
     },
     {
       'id': 2,
-      'name': 'Aaron, Barnaija',
-      'email': 'AaronBarnaija@gmail.com',
-      'contact': '09123456789',
+      'name': 'Vince Bernante',
+      'email': 'VinceBernante@gmail.com',
+      'contact': '09987654321',
     },
     {
       'id': 3,
@@ -56,101 +56,110 @@ class _AdminMechanicVerificationContentState
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          // Full screen background gradient
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [
-                    Color(0xFF164D83),
-                    Color(0xFF1A5A96),
-                    Color(0xFFD6E4F0),
-                    Color(0xFFF0F5FA),
-                  ],
-                  stops: [0.0, 0.25, 0.65, 1.0],
-                ),
+      backgroundColor: Colors.white,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            // ── Header ───────────────────────────────────────────
+            Container(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Image.asset(
+                    'assets/images/AutoMate_logo.png',
+                    width: 44,
+                    height: 44,
+                    errorBuilder: (_, __, ___) => Container(
+                      width: 44,
+                      height: 44,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF164D83).withOpacity(0.1),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(Icons.admin_panel_settings,
+                          color: Color(0xFF164D83), size: 26),
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  const Text(
+                    'Mechanic Verification',
+                    style: TextStyle(
+                      color: Color(0xFF1A1A1A),
+                      fontSize: 17,
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    onPressed: () {},
+                    icon: const Icon(Icons.notifications_outlined,
+                        color: Color(0xFF164D83), size: 26),
+                  ),
+                ],
               ),
             ),
-          ),
 
-          SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                // ── Header ───────────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.2),
-                          border: Border.all(
-                              color: Colors.white.withOpacity(0.4),
-                              width: 2),
-                        ),
-                        child: ClipOval(
-                          child: Image.asset(
-                            'assets/logo.png',
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
-                              Icons.person,
-                              color: Colors.white,
-                              size: 28,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 14),
-                      const Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            'Admin',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 20,
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          Text(
-                            'Management System',
-                            style: TextStyle(
-                              color: Color(0xCCFFFFFF),
-                              fontSize: 13,
-                              fontFamily: 'Inter',
-                            ),
-                          ),
-                        ],
-                      ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () {},
-                        child: const Icon(
-                          Icons.notifications_outlined,
-                          color: Colors.white,
-                          size: 28,
-                        ),
-                      ),
-                    ],
+            // Divider
+            Container(
+              height: 1,
+              decoration: BoxDecoration(
+                color: const Color(0xFFE5E5E5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 4,
+                    offset: const Offset(0, 2),
                   ),
-                ),
+                ],
+              ),
+            ),
 
-                // ── Cards list ────────────────────────────────────────
-                Expanded(
-                  child: _pendingMechanics.isEmpty
+            // ── Body with gradient background ─────────────────────
+            Expanded(
+              child: Stack(
+                children: [
+                  // Gradient background — top: 302 equivalent, fades toward bottom
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    height: MediaQuery.of(context).size.height * 0.60,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          begin: Alignment.topCenter,
+                          end: Alignment.bottomCenter,
+                          colors: [
+                            const Color(0xFF164D83),
+                            const Color(0xFF164D83).withOpacity(0.8),
+                            const Color(0xFF164D83).withOpacity(0.4),
+                          ],
+                        ),
+                        borderRadius: const BorderRadius.only(
+                          topLeft: Radius.circular(19),
+                          topRight: Radius.circular(19),
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  // Cards list
+                  _pendingMechanics.isEmpty
                       ? _buildEmptyState()
                       : ListView.separated(
-                          padding:
-                              const EdgeInsets.fromLTRB(20, 0, 20, 24),
+                          padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
                           itemCount: _pendingMechanics.length,
                           separatorBuilder: (_, __) =>
                               const SizedBox(height: 16),
@@ -165,11 +174,11 @@ class _AdminMechanicVerificationContentState
                             );
                           },
                         ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -180,23 +189,21 @@ class _AdminMechanicVerificationContentState
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Icon(Icons.check_circle_outline_rounded,
-              size: 64, color: Colors.white.withOpacity(0.5)),
+              size: 64, color: Colors.grey.shade300),
           const SizedBox(height: 12),
-          const Text(
+          Text(
             'No pending mechanics',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: Colors.white,
+              color: Colors.grey.shade400,
               fontFamily: 'Poppins',
             ),
           ),
           const SizedBox(height: 6),
           Text(
             'All mechanics have been reviewed.',
-            style: TextStyle(
-                fontSize: 13,
-                color: Colors.white.withOpacity(0.7)),
+            style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
           ),
         ],
       ),
@@ -204,7 +211,7 @@ class _AdminMechanicVerificationContentState
   }
 }
 
-// ── Mechanic card — matching image 3 ─────────────────────────────────────────
+// ── Mechanic card ────────────────────────────────────────────────────────────
 
 class _MechanicCard extends StatelessWidget {
   final Map<String, dynamic> mechanic;
@@ -221,176 +228,162 @@ class _MechanicCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.all(14),
+      decoration: ShapeDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(20),
-        boxShadow: [
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(width: 1, color: Color(0xFFE5E5E5)),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        shadows: const [
           BoxShadow(
-            color: Colors.black.withOpacity(0.10),
-            blurRadius: 16,
-            offset: const Offset(0, 6),
+            color: Color(0x3F000000),
+            blurRadius: 4,
+            offset: Offset(0, 4),
+            spreadRadius: 0,
           ),
         ],
       ),
       child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Name
-          Text(
-            mechanic['name'] ?? '—',
-            style: const TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 20,
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          const SizedBox(height: 4),
-
-          // Pending label
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-            decoration: BoxDecoration(
-              color: const Color(0xFFFFF3CD),
-              borderRadius: BorderRadius.circular(20),
-            ),
-            child: const Text(
-              'Pending Approval',
+          const Text('Name:',
               style: TextStyle(
-                color: Color(0xFF856404),
-                fontSize: 13,
-                fontFamily: 'Inter',
+                color: Color(0xFF1A1A1A),
+                fontSize: 18,
+                fontFamily: 'Poppins',
                 fontWeight: FontWeight.w600,
+              )),
+          Text(mechanic['name'] ?? '—',
+              style: const TextStyle(
+                color: Color(0xFF1A1A1A),
+                fontSize: 16,
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w500,
+              )),
+          const SizedBox(height: 8),
+          const Text('Email:',
+              style: TextStyle(
+                color: Color(0xFF1A1A1A),
+                fontSize: 16,
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w600,
+              )),
+          Text(mechanic['email'] ?? '—',
+              style: const TextStyle(
+                color: Color(0xFF1A1A1A),
+                fontSize: 16,
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w500,
+              )),
+          const SizedBox(height: 8),
+          const Text('Contact:',
+              style: TextStyle(
+                color: Color(0xFF1A1A1A),
+                fontSize: 16,
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w600,
+              )),
+          Text(mechanic['contact'] ?? '—',
+              style: const TextStyle(
+                color: Color(0xFF1A1A1A),
+                fontSize: 16,
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w500,
+              )),
+          const SizedBox(height: 12),
+          const Text('CERTIFICATION:',
+              style: TextStyle(
+                color: Color(0xFF1A1A1A),
+                fontSize: 16,
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w600,
+                decoration: TextDecoration.underline,
+              )),
+          const SizedBox(height: 10),
+          Center(
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 31, vertical: 8),
+              decoration: ShapeDecoration(
+                color: const Color(0xFF203C63),
+                shape: RoundedRectangleBorder(
+                  side: BorderSide(
+                      width: 1, color: Colors.black.withOpacity(0.50)),
+                  borderRadius: BorderRadius.circular(19),
+                ),
+              ),
+              child: const Text(
+                'See Certification Here',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
           ),
-
-          const SizedBox(height: 16),
-          const Divider(color: Color(0xFFEEEEEE)),
           const SizedBox(height: 12),
-
-          // Email row
-          _InfoRow(label: 'Email:', value: mechanic['email'] ?? '—'),
-          const SizedBox(height: 6),
-          _InfoRow(label: 'Contact:', value: mechanic['contact'] ?? '—'),
-          const SizedBox(height: 12),
-
-          // Certification link
-          Row(
-            children: [
-              const Text(
-                'CERTIFICATION:  ',
-                style: TextStyle(
-                  color: Color(0xFF1A1A1A),
-                  fontSize: 13,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
-                ),
+          const Center(
+            child: Text(
+              'Waiting for approval',
+              style: TextStyle(
+                color: Color(0xFF666666),
+                fontSize: 12,
+                fontFamily: 'Inter',
+                fontWeight: FontWeight.w400,
               ),
-              GestureDetector(
-                onTap: () {},
-                child: const Text(
-                  'See Certification Here',
-                  style: TextStyle(
-                    color: Color(0xFF164D83),
-                    fontSize: 13,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w600,
-                    decoration: TextDecoration.underline,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-
-          const SizedBox(height: 16),
-
-          // Approve / Reject buttons
+          const SizedBox(height: 12),
           Row(
             children: [
-              Expanded(
-                child: ElevatedButton(
-                  onPressed: onApprove,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF4CAF50),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                  ),
-                  child: const Text(
-                    'Approve',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 15,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
               Expanded(
                 child: OutlinedButton(
                   onPressed: onReject,
                   style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
                     side: const BorderSide(
-                        color: Color(0xFFEF4444), width: 1.5),
+                        color: Color(0xFFBF2D2D), width: 1.5),
                     shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
+                        borderRadius: BorderRadius.circular(49)),
+                  ),
+                  child: const Text('Reject',
+                      style: TextStyle(
+                        color: Color(0xFFBF2D2D),
+                        fontSize: 16,
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w600,
+                      )),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: onApprove,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF009227),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      side: const BorderSide(color: Color(0xFF22C55E)),
+                      borderRadius: BorderRadius.circular(49),
                     ),
                   ),
-                  child: const Text(
-                    'Reject',
-                    style: TextStyle(
-                      color: Color(0xFFEF4444),
-                      fontSize: 15,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  child: const Text('Approve',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 16,
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w500,
+                      )),
                 ),
               ),
             ],
           ),
         ],
       ),
-    );
-  }
-}
-
-class _InfoRow extends StatelessWidget {
-  final String label;
-  final String value;
-  const _InfoRow({required this.label, required this.value});
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 80,
-          child: Text(label,
-              style: const TextStyle(
-                color: Color(0xFF1A1A1A),
-                fontSize: 13,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w600,
-              )),
-        ),
-        Expanded(
-          child: Text(value,
-              style: const TextStyle(
-                color: Color(0xFF444444),
-                fontSize: 13,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w400,
-              )),
-        ),
-      ],
     );
   }
 }

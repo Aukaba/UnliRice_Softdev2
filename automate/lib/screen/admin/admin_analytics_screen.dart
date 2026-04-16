@@ -1,4 +1,3 @@
-import 'dart:math';
 import 'package:flutter/material.dart';
 import 'admin_transaction_history_screen.dart';
 
@@ -6,425 +5,397 @@ class AdminAnalyticsContent extends StatelessWidget {
   const AdminAnalyticsContent({super.key});
 
   static const List<Map<String, dynamic>> _chartData = [
-    {'month': 'Jan', 'value': 60},
-    {'month': 'Feb', 'value': 75},
-    {'month': 'Mar', 'value': 85},
-    {'month': 'Apr', 'value': 65},
-    {'month': 'May', 'value': 70},
-    {'month': 'Jun', 'value': 80},
-    {'month': 'Dec', 'value': 55},
+    {'month': 'Jan', 'value': 95},
+    {'month': 'Feb', 'value': 110},
+    {'month': 'Mar', 'value': 128},
+    {'month': 'Apr', 'value': 102},
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          // Full screen background gradient
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [
-                    Color(0xFF164D83),
-                    Color(0xFF1A5A96),
-                    Color(0xFFD6E4F0),
-                    Color(0xFFF0F5FA),
+      body: Container(
+        // Gradient: white at top → navy at bottom
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [
+              Colors.white,
+              Colors.white,
+              Color(0x80164D83),
+            ],
+            stops: [0.0, 0.45, 1.0],
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              // ── Header ───────────────────────────────────────────
+              Container(
+                padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
                   ],
-                  stops: [0.0, 0.25, 0.65, 1.0],
+                ),
+                child: Row(
+                  children: [
+                    Image.asset(
+                      'assets/images/AutoMate_logo.png',
+                      width: 44,
+                      height: 44,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF164D83).withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.admin_panel_settings,
+                            color: Color(0xFF164D83), size: 26),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Analytics',
+                      style: TextStyle(
+                        color: Color(0xFF1A1A1A),
+                        fontSize: 18,
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () {},
+                      icon: const Icon(Icons.notifications_outlined,
+                          color: Color(0xFF164D83), size: 26),
+                    ),
+                  ],
                 ),
               ),
-            ),
-          ),
 
-          SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                // ── Header ─────────────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-                  child: Row(
+              // Divider
+              Container(
+                height: 1,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE5E5E5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+              ),
+
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Container(
-                        width: 52,
-                        height: 52,
-                        decoration: BoxDecoration(
-                          shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.2),
-                          border: Border.all(
-                              color: Colors.white.withOpacity(0.4),
-                              width: 2),
-                        ),
-                        child: ClipOval(
-                          child: Image.asset(
-                            'assets/logo.png',
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
-                              Icons.person,
-                              color: Colors.white,
-                              size: 28,
-                            ),
-                          ),
-                        ),
+                      // Stat cards
+                      _StatCard(
+                        title: 'Transaction this Month:',
+                        value: '67',
+                        percentage: '+12.5%',
+                        isPositive: false,
                       ),
-                      const SizedBox(width: 14),
+                      const SizedBox(height: 12),
+                      _StatCard(
+                        title: 'Total Revenue:',
+                        value: '₱ 84,300.00',
+                        percentage: '+9%',
+                        isPositive: true,
+                      ),
+
+                      const SizedBox(height: 20),
+
                       const Text(
-                        'Analytics',
+                        'Month Breakdown',
                         style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 20,
-                          fontFamily: 'Poppins',
-                          fontWeight: FontWeight.w700,
+                          color: Color(0xFF1A1A1A),
+                          fontSize: 14,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w600,
                         ),
                       ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () {},
-                        child: const Icon(
-                          Icons.notifications_outlined,
+                      const SizedBox(height: 10),
+
+                      // Bar chart
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.fromLTRB(12, 20, 12, 12),
+                        decoration: ShapeDecoration(
                           color: Colors.white,
-                          size: 28,
+                          shape: RoundedRectangleBorder(
+                            side: const BorderSide(
+                                width: 1, color: Color(0x7F203C63)),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          shadows: const [
+                            BoxShadow(
+                              color: Color(0x1A000000),
+                              blurRadius: 8,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            SizedBox(
+                              height: 140,
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.end,
+                                children: _chartData.map((data) {
+                                  final barHeight =
+                                      (data['value'] / 160.0) * 110;
+                                  return Expanded(
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 6),
+                                      child: Column(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.end,
+                                        children: [
+                                          Text(
+                                            '${data['value']}',
+                                            style: const TextStyle(
+                                              fontSize: 10,
+                                              color: Color(0xFF555555),
+                                              fontFamily: 'Inter',
+                                            ),
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Container(
+                                            height: barHeight,
+                                            decoration: BoxDecoration(
+                                              gradient: const LinearGradient(
+                                                begin: Alignment.topCenter,
+                                                end: Alignment.bottomCenter,
+                                                colors: [
+                                                  Color(0xFFFB8500),
+                                                  Color(0xCCFB8500),
+                                                ],
+                                              ),
+                                              borderRadius:
+                                                  const BorderRadius.vertical(
+                                                top: Radius.circular(4),
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(height: 6),
+                                          Text(
+                                            data['month'],
+                                            style: const TextStyle(
+                                              fontSize: 11,
+                                              color: Color(0xFF555555),
+                                              fontFamily: 'Inter',
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  );
+                                }).toList(),
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            Row(
+                              children: [
+                                Container(
+                                  width: 12,
+                                  height: 12,
+                                  decoration: BoxDecoration(
+                                    color: const Color(0xFFFB8500),
+                                    borderRadius: BorderRadius.circular(2),
+                                  ),
+                                ),
+                                const SizedBox(width: 6),
+                                const Text('Transaction',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Color(0xFF555555),
+                                      fontFamily: 'Inter',
+                                    )),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      const SizedBox(height: 20),
+
+                      // Transaction History row
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 16, vertical: 14),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            begin: Alignment.centerLeft,
+                            end: Alignment.centerRight,
+                            colors: [
+                              const Color(0xFF164D83),
+                              const Color(0xFF164D83).withOpacity(0.8),
+                            ],
+                          ),
+                          borderRadius: BorderRadius.circular(12),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x3F000000),
+                              blurRadius: 8,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Text(
+                              'Transaction History:',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                                fontFamily: 'Inter',
+                                fontWeight: FontWeight.w700,
+                              ),
+                            ),
+                            GestureDetector(
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        const AdminTransactionHistoryScreen(),
+                                  ),
+                                );
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 20, vertical: 8),
+                                decoration: BoxDecoration(
+                                  border:
+                                      Border.all(color: Colors.white, width: 1),
+                                  borderRadius: BorderRadius.circular(60),
+                                ),
+                                child: const Text(
+                                  'See Here',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 15,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
                 ),
-
-                // ── Content ─────────────────────────────────────────────
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Stat cards row
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _MiniStatCard(
-                                title: 'Transaction\nthis Month',
-                                value: '1,388',
-                                subtitle: 'Transaction',
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _MiniStatCard(
-                                title: 'Total\nRevenue',
-                                value: '\$139.6K',
-                                subtitle: 'Total Revenue',
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Month Breakdown chart card
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              const Text(
-                                'Month Breakdown',
-                                style: TextStyle(
-                                  color: Color(0xFF1A1A1A),
-                                  fontSize: 15,
-                                  fontFamily: 'Inter',
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                              const SizedBox(height: 16),
-
-                              // Y axis labels + bars — dynamic max scaling
-                              Builder(builder: (context) {
-                                final maxValue = _chartData
-                                    .map((d) => d['value'] as num)
-                                    .reduce(max)
-                                    .toDouble();
-                                final ticks = [
-                                  maxValue,
-                                  (maxValue * 0.8).roundToDouble(),
-                                  (maxValue * 0.6).roundToDouble(),
-                                  (maxValue * 0.4).roundToDouble(),
-                                  (maxValue * 0.2).roundToDouble(),
-                                  0.0,
-                                ];
-                                return Row(
-                                  crossAxisAlignment:
-                                      CrossAxisAlignment.end,
-                                  children: [
-                                    // Y axis
-                                    Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.end,
-                                      children: ticks
-                                          .map((v) => SizedBox(
-                                                height: 20,
-                                                child: Text(
-                                                  v.toInt().toString(),
-                                                  style: TextStyle(
-                                                    fontSize: 10,
-                                                    color: Colors
-                                                        .grey.shade400,
-                                                  ),
-                                                ),
-                                              ))
-                                          .toList(),
-                                    ),
-                                    const SizedBox(width: 8),
-                                    // Bars
-                                    Expanded(
-                                      child: SizedBox(
-                                        height: 120,
-                                        child: Row(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.end,
-                                          children:
-                                              _chartData.map((data) {
-                                            final barH =
-                                                ((data['value'] as num) /
-                                                        maxValue) *
-                                                    110;
-                                            return Expanded(
-                                              child: Padding(
-                                                padding:
-                                                    const EdgeInsets
-                                                        .symmetric(
-                                                        horizontal: 3),
-                                                child: Column(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment
-                                                          .end,
-                                                  children: [
-                                                    Container(
-                                                      height: barH,
-                                                      decoration:
-                                                          BoxDecoration(
-                                                        color: const Color(
-                                                            0xFF164D83),
-                                                        borderRadius:
-                                                            const BorderRadius
-                                                                .vertical(
-                                                          top: Radius
-                                                              .circular(
-                                                                  4),
-                                                        ),
-                                                      ),
-                                                    ),
-                                                  ],
-                                                ),
-                                              ),
-                                            );
-                                          }).toList(),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                );
-                              }),
-
-                              const SizedBox(height: 8),
-
-                              // X axis labels
-                              Padding(
-                                padding:
-                                    const EdgeInsets.only(left: 28),
-                                child: Row(
-                                  children: _chartData.map((data) {
-                                    return Expanded(
-                                      child: Text(
-                                        data['month'],
-                                        textAlign: TextAlign.center,
-                                        style: TextStyle(
-                                          fontSize: 10,
-                                          color: Colors.grey.shade500,
-                                          fontFamily: 'Inter',
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        // Transaction History row
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(16),
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black.withOpacity(0.08),
-                                blurRadius: 12,
-                                offset: const Offset(0, 4),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  const Text(
-                                    'Transaction History',
-                                    style: TextStyle(
-                                      color: Color(0xFF1A1A1A),
-                                      fontSize: 15,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  GestureDetector(
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (_) => const AdminTransactionHistoryScreen(),
-                                        ),
-                                      );
-                                    },
-                                    child: const Text(
-                                      'See Here',
-                                      style: TextStyle(
-                                        color: Color(0xFF164D83),
-                                        fontSize: 13,
-                                        fontFamily: 'Inter',
-                                        fontWeight: FontWeight.w700,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'View all completed transactions',
-                                style: TextStyle(
-                                  color: Colors.grey.shade500,
-                                  fontSize: 12,
-                                  fontFamily: 'Inter',
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (_) => const AdminTransactionHistoryScreen(),
-                                    ),
-                                  );
-                                },
-                                child: Container(
-                                  width: double.infinity,
-                                  padding: const EdgeInsets.symmetric(
-                                      vertical: 14),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFF164D83),
-                                    borderRadius:
-                                        BorderRadius.circular(12),
-                                  ),
-                                  alignment: Alignment.center,
-                                  child: const Text(
-                                    'See Here',
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 15,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
 }
 
-class _MiniStatCard extends StatelessWidget {
+// ── Stat card ─────────────────────────────────────────────────────────────────
+
+class _StatCard extends StatelessWidget {
   final String title;
   final String value;
-  final String subtitle;
-  const _MiniStatCard(
-      {required this.title,
-      required this.value,
-      required this.subtitle});
+  final String percentage;
+  final bool isPositive;
+
+  const _StatCard({
+    required this.title,
+    required this.value,
+    required this.percentage,
+    required this.isPositive,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: ShapeDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(width: 1, color: Color(0xFFE5E5E5)),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        shadows: const [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Color(0x3F000000),
+            blurRadius: 4,
+            offset: Offset(0, 4),
+            spreadRadius: 0,
           ),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Text(title,
+          SizedBox(
+            width: 260,
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Color(0xFF1A1A1A),
+                fontSize: 18,
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w600,
+                height: 1.50,
+              ),
+            ),
+          ),
+          Positioned(
+            right: 0,
+            top: 4,
+            child: Text(
+              percentage,
               style: TextStyle(
-                color: Colors.grey.shade600,
+                color: isPositive
+                    ? const Color(0xFF22C55E)
+                    : const Color(0xFFEF4444),
                 fontSize: 12,
                 fontFamily: 'Inter',
                 fontWeight: FontWeight.w500,
-              )),
-          const SizedBox(height: 6),
-          Text(value,
-              style: const TextStyle(
-                color: Color(0xFF1A1A1A),
-                fontSize: 22,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w800,
-              )),
-          Text(subtitle,
-              style: TextStyle(
-                color: Colors.grey.shade500,
-                fontSize: 11,
-                fontFamily: 'Inter',
-              )),
+              ),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: 36),
+            child: SizedBox(
+              width: double.infinity,
+              child: Text(
+                value,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Color(0xFF1A1A1A),
+                  fontSize: 28,
+                  fontFamily: 'Inter',
+                  fontWeight: FontWeight.w700,
+                  height: 1.50,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );

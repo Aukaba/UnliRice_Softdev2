@@ -10,7 +10,8 @@ class AdminUpdatePasswordScreen extends StatefulWidget {
       _AdminUpdatePasswordScreenState();
 }
 
-class _AdminUpdatePasswordScreenState extends State<AdminUpdatePasswordScreen> {
+class _AdminUpdatePasswordScreenState
+    extends State<AdminUpdatePasswordScreen> {
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _reEnterPasswordController = TextEditingController();
@@ -66,7 +67,8 @@ class _AdminUpdatePasswordScreenState extends State<AdminUpdatePasswordScreen> {
       if (e.toString().contains('User not found.')) {
         _showError('User not found.');
       } else {
-        _showError('Failed to update password. Please check your current password and try again.');
+        _showError(
+            'Failed to update password. Please check your current password and try again.');
       }
     } finally {
       if (mounted) setState(() => _isLoading = false);
@@ -79,7 +81,8 @@ class _AdminUpdatePasswordScreenState extends State<AdminUpdatePasswordScreen> {
         content: Text(message),
         backgroundColor: const Color(0xFFEF4444),
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        shape:
+            RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     );
   }
@@ -147,9 +150,7 @@ class _AdminUpdatePasswordScreenState extends State<AdminUpdatePasswordScreen> {
                     color: const Color(0xFF203C63),
                     shape: RoundedRectangleBorder(
                       side: const BorderSide(
-                        width: 1,
-                        color: Color(0xFF164D83),
-                      ),
+                          width: 1, color: Color(0xFF164D83)),
                       borderRadius: BorderRadius.circular(25),
                     ),
                     shadows: const [
@@ -183,262 +184,248 @@ class _AdminUpdatePasswordScreenState extends State<AdminUpdatePasswordScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final size = MediaQuery.of(context).size;
-
     return Scaffold(
-      backgroundColor: Colors.white,
-      body: SafeArea(
-        bottom: false,
-        child: Stack(
-          children: [
-            // Blue layered backgrounds rising from bottom — original Figma design
-            Positioned(
-              left: -1,
-              top: size.height * 0.67,
-              child: Container(
-                width: size.width + 2,
-                height: size.height * 0.38,
-                decoration: ShapeDecoration(
-                  color: const Color(0x38164D83),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(19),
-                  ),
-                  shadows: const [
+      body: Container(
+        // Subtle diagonal gradient matching other screens
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0x1A164D83),
+              Colors.white,
+            ],
+          ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              // ── Header ───────────────────────────────────────────
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.85),
+                  boxShadow: [
                     BoxShadow(
-                      color: Color(0x3F000000),
-                      blurRadius: 4,
-                      offset: Offset(0, 4),
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    // Back button
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: Color(0xFF164D83),
+                        size: 22,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    // Logo
+                    Image.asset(
+                      'assets/images/AutoMate_logo.png',
+                      width: 44,
+                      height: 44,
+                      errorBuilder: (_, __, ___) => Container(
+                        width: 44,
+                        height: 44,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF164D83).withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(Icons.admin_panel_settings,
+                            color: Color(0xFF164D83), size: 26),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Change Password',
+                      style: TextStyle(
+                        color: Color(0xFF1A1A1A),
+                        fontSize: 18,
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const Spacer(),
+                    // Notifications button
+                    IconButton(
+                      onPressed: () {},
+                      icon: const Icon(Icons.notifications_outlined,
+                          color: Color(0xFF164D83), size: 26),
                     ),
                   ],
                 ),
               ),
-            ),
-            Positioned(
-              left: -1,
-              top: size.height * 0.76,
-              child: Container(
-                width: size.width + 2,
-                height: size.height * 0.30,
-                decoration: ShapeDecoration(
-                  color: const Color(0x7F164D83),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(19),
-                  ),
-                  shadows: const [
-                    BoxShadow(
-                      color: Color(0x3F000000),
-                      blurRadius: 4,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            Positioned(
-              left: -1,
-              top: size.height * 0.83,
-              child: Container(
-                width: size.width + 2,
-                height: size.height * 0.22,
-                decoration: ShapeDecoration(
-                  color: const Color(0xAA164D83),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(19),
-                  ),
-                  shadows: const [
-                    BoxShadow(
-                      color: Color(0x3F000000),
-                      blurRadius: 4,
-                      offset: Offset(0, 4),
-                    ),
-                  ],
-                ),
-              ),
-            ),
 
-            // Main content
-            Column(
-              children: [
-                // Header
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
-                  child: Row(
+              // Divider with drop shadow
+              Container(
+                height: 1,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE5E5E5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+              ),
+
+              // ── Body ─────────────────────────────────────────────
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.fromLTRB(26, 32, 26, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Back button
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: const Icon(
-                          Icons.arrow_back_ios_new_rounded,
-                          color: Color(0xFF19456B),
-                          size: 22,
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Container(
-                        width: 60,
-                        height: 60,
-                        decoration: ShapeDecoration(
-                          image: const DecorationImage(
-                            image: NetworkImage("https://placehold.co/98x98"),
-                            fit: BoxFit.cover,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(9999),
+                      // Title
+                      const Center(
+                        child: Text(
+                          'Change Password',
+                          style: TextStyle(
+                            color: Color(0xFF164D83),
+                            fontSize: 22,
+                            fontFamily: 'Montserrat',
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(height: 8),
+                      Center(
+                        child: Text(
+                          'Enter your current and new password below.',
+                          style: TextStyle(
+                            color: Colors.grey.shade500,
+                            fontSize: 13,
+                            fontFamily: 'Inter',
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                      const SizedBox(height: 36),
+
+                      // Current Password
                       const Text(
-                        'Change Password',
+                        'Current Password',
                         style: TextStyle(
-                          color: Color(0xFF1A1A1A),
-                          fontSize: 18,
-                          fontFamily: 'Poppins',
-                          fontWeight: FontWeight.w700,
+                          color: Colors.black,
+                          fontSize: 13,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w400,
                         ),
                       ),
-                      const Spacer(),
-                      const Icon(
-                        Icons.notifications_outlined,
-                        color: Color(0xFF19456B),
-                        size: 28,
+                      const SizedBox(height: 6),
+                      _PasswordField(
+                        controller: _currentPasswordController,
+                        show: _showCurrent,
+                        onToggle: () =>
+                            setState(() => _showCurrent = !_showCurrent),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // New Password
+                      const Text(
+                        'New Password',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 13,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      _PasswordField(
+                        controller: _newPasswordController,
+                        show: _showNew,
+                        onToggle: () =>
+                            setState(() => _showNew = !_showNew),
+                      ),
+
+                      const SizedBox(height: 24),
+
+                      // Re-Enter New Password
+                      const Text(
+                        'Re-Enter New Password',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 13,
+                          fontFamily: 'Inter',
+                          fontWeight: FontWeight.w400,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      _PasswordField(
+                        controller: _reEnterPasswordController,
+                        show: _showReEnter,
+                        onToggle: () =>
+                            setState(() => _showReEnter = !_showReEnter),
+                      ),
+
+                      const SizedBox(height: 40),
+
+                      // Enter button
+                      GestureDetector(
+                        onTap: _isLoading ? null : _submit,
+                        child: Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.symmetric(vertical: 20),
+                          decoration: BoxDecoration(
+                            gradient: const LinearGradient(
+                              begin: Alignment.centerLeft,
+                              end: Alignment.centerRight,
+                              colors: [
+                                Color(0xFF164D83),
+                                Color(0xFF1D3557),
+                              ],
+                            ),
+                            borderRadius: BorderRadius.circular(25),
+                            border: Border.all(
+                                color: const Color(0xFF164D83), width: 1),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x3F000000),
+                                blurRadius: 19,
+                                offset: Offset(0, 4),
+                                spreadRadius: 4,
+                              ),
+                            ],
+                          ),
+                          alignment: Alignment.center,
+                          child: _isLoading
+                              ? const SizedBox(
+                                  width: 22,
+                                  height: 22,
+                                  child: CircularProgressIndicator(
+                                    color: Colors.white,
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : const Text(
+                                  'Enter',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 20,
+                                    fontFamily: 'Inter',
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                        ),
                       ),
                     ],
                   ),
                 ),
-
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(26, 24, 26, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Title
-                        const Center(
-                          child: Text(
-                            'Change Password',
-                            style: TextStyle(
-                              color: Colors.black,
-                              fontSize: 20,
-                              fontFamily: 'Montserrat',
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 32),
-
-                        // Current Password
-                        const Text(
-                          'Current Password',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 13,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        _PasswordField(
-                          controller: _currentPasswordController,
-                          show: _showCurrent,
-                          onToggle: () =>
-                              setState(() => _showCurrent = !_showCurrent),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // New Password
-                        const Text(
-                          'New Password',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 13,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        _PasswordField(
-                          controller: _newPasswordController,
-                          show: _showNew,
-                          onToggle: () => setState(() => _showNew = !_showNew),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Re-Enter New Password
-                        const Text(
-                          'Re-Enter New Password',
-                          style: TextStyle(
-                            color: Colors.black,
-                            fontSize: 13,
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.w400,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        _PasswordField(
-                          controller: _reEnterPasswordController,
-                          show: _showReEnter,
-                          onToggle: () =>
-                              setState(() => _showReEnter = !_showReEnter),
-                        ),
-
-                        const SizedBox(height: 40),
-
-                        // Enter button
-                        GestureDetector(
-                          onTap: _isLoading ? null : _submit,
-                          child: Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.symmetric(vertical: 20),
-                            decoration: ShapeDecoration(
-                              color: const Color(0xFF1D3557),
-                              shape: RoundedRectangleBorder(
-                                side: const BorderSide(
-                                  width: 1,
-                                  color: Color(0xFF164D83),
-                                ),
-                                borderRadius: BorderRadius.circular(25),
-                              ),
-                              shadows: const [
-                                BoxShadow(
-                                  color: Color(0x3F000000),
-                                  blurRadius: 19,
-                                  offset: Offset(0, 4),
-                                  spreadRadius: 4,
-                                ),
-                              ],
-                            ),
-                            alignment: Alignment.center,
-                            child: _isLoading
-                                ? const SizedBox(
-                                    width: 22,
-                                    height: 22,
-                                    child: CircularProgressIndicator(
-                                      color: Colors.white,
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Text(
-                                    'Enter',
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 20,
-                                      fontFamily: 'Inter',
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -469,6 +456,13 @@ class _PasswordField extends StatelessWidget {
           side: const BorderSide(width: 1, color: Color(0x3F26518E)),
           borderRadius: BorderRadius.circular(10),
         ),
+        shadows: const [
+          BoxShadow(
+            color: Color(0x0F000000),
+            blurRadius: 4,
+            offset: Offset(0, 2),
+          ),
+        ],
       ),
       child: TextField(
         controller: controller,
@@ -482,7 +476,9 @@ class _PasswordField extends StatelessWidget {
           suffixIcon: GestureDetector(
             onTap: onToggle,
             child: Icon(
-              show ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+              show
+                  ? Icons.visibility_off_outlined
+                  : Icons.visibility_outlined,
               color: const Color(0xFF26518E).withOpacity(0.5),
               size: 20,
             ),

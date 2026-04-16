@@ -6,146 +6,146 @@ class AdminTransactionHistoryScreen extends StatelessWidget {
   static const List<Map<String, String>> _transactions = [
     {
       'service': 'Service #1234',
-      'driver': 'Alerta',
-      'mechanic': 'Doman',
-      'payment': '\$139.00',
-      'status': 'Complete',
+      'driver': 'John Smith',
+      'mechanic': 'Aaron, Barnaija',
+      'payment': 'P 1,354.00',
+      'date': 'March 12, 2026',
+      'status': 'Completed',
     },
     {
       'service': 'Service #1324',
-      'driver': 'Alerta',
-      'mechanic': 'Mechanic',
-      'payment': '\$150.00',
-      'status': 'Complete',
+      'driver': 'Mark Diaz',
+      'mechanic': 'Aaron, Barnaija',
+      'payment': 'P 1,250.00',
+      'date': 'March 9, 2026',
+      'status': 'Completed',
     },
     {
       'service': 'Service #1198',
-      'driver': 'Alerta',
-      'mechanic': 'Mechanic',
-      'payment': '\$130.00',
-      'status': 'Complete',
+      'driver': 'Maria Santos',
+      'mechanic': 'Vince Bernante',
+      'payment': 'P 2,100.00',
+      'date': 'March 5, 2026',
+      'status': 'Completed',
     },
     {
       'service': 'Service #1101',
-      'driver': 'Alerta',
-      'mechanic': 'Mechanic',
-      'payment': '\$100.00',
-      'status': 'Complete',
+      'driver': 'Pedro Reyes',
+      'mechanic': 'Vince Bernante',
+      'payment': 'P 850.00',
+      'date': 'Feb 28, 2026',
+      'status': 'Completed',
     },
   ];
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        children: [
-          // Full screen background gradient
-          Positioned.fill(
-            child: Container(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.centerLeft,
-                  end: Alignment.centerRight,
-                  colors: [
-                    Color(0xFF164D83),
-                    Color(0xFF1A5A96),
-                    Color(0xFFD6E4F0),
-                    Color(0xFFF0F5FA),
-                  ],
-                  stops: [0.0, 0.25, 0.65, 1.0],
-                ),
-              ),
-            ),
+      body: Container(
+        // Subtle diagonal gradient: pale navy top-left → white bottom-right
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [
+              Color(0x1A164D83),
+              Colors.white,
+            ],
           ),
-
-          SafeArea(
-            bottom: false,
-            child: Column(
-              children: [
-                // ── Header ─────────────────────────────────────────────
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
-                  child: Row(
-                    children: [
-                      GestureDetector(
-                        onTap: () => Navigator.pop(context),
-                        child: Container(
-                          width: 38,
-                          height: 38,
-                          decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.2),
-                            shape: BoxShape.circle,
-                          ),
-                          child: const Icon(
-                            Icons.arrow_back_ios_new_rounded,
-                            color: Colors.white,
-                            size: 18,
-                          ),
-                        ),
+        ),
+        child: SafeArea(
+          bottom: false,
+          child: Column(
+            children: [
+              // ── Header ───────────────────────────────────────────
+              Container(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.85),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 6,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: Row(
+                  children: [
+                    GestureDetector(
+                      onTap: () => Navigator.pop(context),
+                      child: const Icon(
+                        Icons.arrow_back_ios_new_rounded,
+                        color: Color(0xFF164D83),
+                        size: 22,
                       ),
-                      const SizedBox(width: 14),
-                      Container(
+                    ),
+                    const SizedBox(width: 10),
+                    Image.asset(
+                      'assets/images/AutoMate_logo.png',
+                      width: 44,
+                      height: 44,
+                      errorBuilder: (_, __, ___) => Container(
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
+                          color: const Color(0xFF164D83).withOpacity(0.1),
                           shape: BoxShape.circle,
-                          color: Colors.white.withOpacity(0.2),
-                          border: Border.all(
-                            color: Colors.white.withOpacity(0.4),
-                            width: 2,
-                          ),
                         ),
-                        child: ClipOval(
-                          child: Image.asset(
-                            'assets/logo.png',
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => const Icon(
-                              Icons.person,
-                              color: Colors.white,
-                              size: 22,
-                            ),
-                          ),
-                        ),
+                        child: const Icon(Icons.admin_panel_settings,
+                            color: Color(0xFF164D83), size: 26),
                       ),
-                      const SizedBox(width: 12),
-                      const Text(
-                        'Transaction History',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontFamily: 'Poppins',
-                          fontWeight: FontWeight.w700,
-                        ),
+                    ),
+                    const SizedBox(width: 12),
+                    const Text(
+                      'Transaction History',
+                      style: TextStyle(
+                        color: Color(0xFF1A1A1A),
+                        fontSize: 18,
+                        fontFamily: 'Poppins',
+                        fontWeight: FontWeight.w700,
                       ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () {},
-                        child: const Icon(
-                          Icons.notifications_outlined,
-                          color: Colors.white,
-                          size: 26,
-                        ),
-                      ),
-                    ],
-                  ),
+                    ),
+                    const Spacer(),
+                    IconButton(
+                      onPressed: () {},
+                      icon: const Icon(Icons.notifications_outlined,
+                          color: Color(0xFF164D83), size: 26),
+                    ),
+                  ],
                 ),
+              ),
 
-                // ── Transaction cards ─────────────────────────────────
-                Expanded(
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 24),
-                    itemCount: _transactions.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 14),
-                    itemBuilder: (context, index) {
-                      final t = _transactions[index];
-                      return _TransactionCard(transaction: t);
-                    },
-                  ),
+              // Divider
+              Container(
+                height: 1,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE5E5E5),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.08),
+                      blurRadius: 4,
+                      offset: const Offset(0, 2),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+
+              // ── Transaction cards ─────────────────────────────────
+              Expanded(
+                child: ListView.separated(
+                  padding: const EdgeInsets.fromLTRB(24, 20, 24, 24),
+                  itemCount: _transactions.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 16),
+                  itemBuilder: (context, index) {
+                    final t = _transactions[index];
+                    return _TransactionCard(transaction: t);
+                  },
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -159,136 +159,125 @@ class _TransactionCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final isComplete = transaction['status'] == 'Complete';
+    final isCompleted = transaction['status'] == 'Completed';
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
+      padding: const EdgeInsets.all(14),
+      decoration: ShapeDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        boxShadow: [
+        shape: RoundedRectangleBorder(
+          side: const BorderSide(width: 1, color: Color(0xFFE5E5E5)),
+          borderRadius: BorderRadius.circular(4),
+        ),
+        shadows: const [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            color: Color(0x3F000000),
+            blurRadius: 4,
+            offset: Offset(0, 4),
+            spreadRadius: 0,
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Service number + status badge
+          // Service number with colored left border accent
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
+              Container(
+                width: 4,
+                height: 22,
+                decoration: BoxDecoration(
+                  color: const Color(0xFF164D83),
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+              const SizedBox(width: 8),
               Text(
                 transaction['service'] ?? '—',
                 style: const TextStyle(
                   color: Color(0xFF1A1A1A),
-                  fontSize: 16,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
+                  fontSize: 18,
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w600,
+                  height: 1.50,
                 ),
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
-                ),
-                decoration: BoxDecoration(
-                  color: isComplete
-                      ? const Color(0xFF4CAF50)
+            ],
+          ),
+          const SizedBox(height: 8),
+          _InfoRow(label: 'Driver:', value: transaction['driver'] ?? '—'),
+          _InfoRow(label: 'Mechanic:', value: transaction['mechanic'] ?? '—'),
+          _InfoRow(
+              label: 'Tot. Payment:', value: transaction['payment'] ?? '—'),
+          _InfoRow(label: 'Date:', value: transaction['date'] ?? '—'),
+          Row(
+            children: [
+              const SizedBox(
+                width: 100,
+                child: Text('Status:',
+                    style: TextStyle(
+                      color: Color(0xFF1A1A1A),
+                      fontSize: 16,
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w600,
+                      height: 1.69,
+                    )),
+              ),
+              Text(
+                transaction['status'] ?? '—',
+                style: TextStyle(
+                  color: isCompleted
+                      ? const Color(0xFF29A017)
                       : const Color(0xFFEF4444),
-                  borderRadius: BorderRadius.circular(20),
-                ),
-                child: Text(
-                  transaction['status'] ?? '—',
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 12,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          // Driver
-          Row(
-            children: [
-              Text(
-                'Driver: ',
-                style: TextStyle(
-                  color: Colors.grey.shade500,
-                  fontSize: 13,
-                  fontFamily: 'Inter',
-                ),
-              ),
-              Text(
-                transaction['driver'] ?? '—',
-                style: const TextStyle(
-                  color: Color(0xFF1A1A1A),
-                  fontSize: 13,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-
-          // Mechanic
-          Row(
-            children: [
-              Text(
-                'Mechanic: ',
-                style: TextStyle(
-                  color: Colors.grey.shade500,
-                  fontSize: 13,
-                  fontFamily: 'Inter',
-                ),
-              ),
-              Text(
-                transaction['mechanic'] ?? '—',
-                style: const TextStyle(
-                  color: Color(0xFF1A1A1A),
-                  fontSize: 13,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-
-          // Payment
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                'Payment',
-                style: TextStyle(
-                  color: Colors.grey.shade500,
-                  fontSize: 13,
-                  fontFamily: 'Inter',
-                ),
-              ),
-              Text(
-                transaction['payment'] ?? '—',
-                style: const TextStyle(
-                  color: Color(0xFF1A1A1A),
-                  fontSize: 15,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
+                  fontSize: 16,
+                  fontFamily: 'Poppins',
+                  fontWeight: FontWeight.w500,
+                  height: 1.69,
                 ),
               ),
             ],
           ),
         ],
       ),
+    );
+  }
+}
+
+// ── Info row ──────────────────────────────────────────────────────────────────
+
+class _InfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _InfoRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 100,
+          child: Text(label,
+              style: const TextStyle(
+                color: Color(0xFF1A1A1A),
+                fontSize: 16,
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w600,
+                height: 1.69,
+              )),
+        ),
+        Expanded(
+          child: Text(value,
+              style: const TextStyle(
+                color: Color(0xFF1A1A1A),
+                fontSize: 16,
+                fontFamily: 'Poppins',
+                fontWeight: FontWeight.w500,
+                height: 1.69,
+              )),
+        ),
+      ],
     );
   }
 }
