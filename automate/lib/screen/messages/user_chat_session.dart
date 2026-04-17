@@ -1,9 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'dart:convert';
-import 'dart:io';
-import 'package:http/http.dart' as http;
-import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../Logic/chat/chat_logic.dart';
 import 'package:intl/intl.dart';
@@ -42,7 +38,7 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
         children: [
           _isMechMate ? _buildMechMateHeader() : _buildMechanicHeader(),
 
-          // Main Chat Body - Now dynamic
+          // Main Chat Body
           Expanded(
             child: _isMechMate
                 ? _buildDummyMessages()
@@ -84,7 +80,7 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
                   ),
           ),
 
-          // Input Bar - Now with camera option for MechMate
+          // Input Bar
           _buildInputBar(),
         ],
       ),
@@ -104,19 +100,7 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
     );
   }
 
-  Widget _buildDummyMessages() {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      children: [
-        _buildMessageBubble(
-          message: "Hi! How can I assist you today?",
-          time: "Now",
-          isMe: false,
-        ),
-      ],
-    );
-  }
-
+  /// MechMate-specific header: light blue background, robot avatar on the right
   Widget _buildMechMateHeader() {
     return Container(
       padding: EdgeInsets.only(
@@ -126,7 +110,7 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
         right: 16,
       ),
       decoration: const BoxDecoration(
-        color: Color(0xFFB3D9F2),
+        color: Color(0xFFB3D9F2), // Light blue
         borderRadius: BorderRadius.only(
           bottomLeft: Radius.circular(20),
           bottomRight: Radius.circular(20),
@@ -134,6 +118,7 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
       ),
       child: Row(
         children: [
+          // Back arrow
           GestureDetector(
             onTap: () => Navigator.pop(context),
             child: const Padding(
@@ -142,6 +127,7 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
             ),
           ),
           const SizedBox(width: 4),
+          // Title
           Expanded(
             child: Row(
               children: [
@@ -153,13 +139,11 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
                     color: Colors.black87,
                   ),
                 ),
-                const Text(
-                  "✦",
-                  style: TextStyle(fontSize: 16, color: Colors.blueAccent),
-                ),
+                const Text("✦", style: TextStyle(fontSize: 16, color: Colors.blueAccent)),
               ],
             ),
           ),
+          // Robot avatar on the right
           Container(
             width: 50,
             height: 50,
@@ -175,13 +159,17 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
               ],
             ),
             clipBehavior: Clip.antiAlias,
-            child: Image.asset('assets/images/robotttt.png', fit: BoxFit.cover),
+            child: Image.asset(
+              'assets/images/robotttt.png',
+              fit: BoxFit.cover,
+            ),
           ),
         ],
       ),
     );
   }
 
+  /// Regular mechanic header: gold background
   Widget _buildMechanicHeader() {
     return Container(
       padding: EdgeInsets.only(
@@ -249,12 +237,6 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
       ),
       child: Row(
         children: [
-          // Camera button for MechMate
-          if (_isMechMate)
-            IconButton(
-              onPressed: _isLoading ? null : _handleImageCapture,
-              icon: Icon(Icons.camera_alt, color: _isLoading ? Colors.grey : const Color(0xFF19456B)),
-            ),
           Expanded(
             child: Container(
               decoration: BoxDecoration(
@@ -265,9 +247,8 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: TextField(
                 controller: _msgController,
-                enabled: !_isLoading,
                 decoration: InputDecoration(
-                  hintText: _isMechMate ? "Ask MechMate anything..." : "Type a message....",
+                  hintText: "Type a message....",
                   hintStyle: GoogleFonts.montserrat(
                     fontSize: 14,
                     fontWeight: FontWeight.w400,
@@ -321,14 +302,12 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
         crossAxisAlignment: CrossAxisAlignment.end,
         mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
+          // Show robot avatar on the left side for bot messages (MechMate only)
           if (!isMe && _isMechMate) ...[
             Container(
               width: 34,
               height: 34,
-              decoration: const BoxDecoration(
-                shape: BoxShape.circle,
-                color: Colors.white,
-              ),
+              decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
               clipBehavior: Clip.antiAlias,
               child: Image.asset(
                 'assets/images/robotttt.png',
@@ -337,6 +316,7 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
             ),
             const SizedBox(width: 8),
           ],
+          // Message bubble
           Flexible(
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
@@ -380,19 +360,4 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
       ),
     );
   }
-}
-
-// Message model class
-class ChatMessage {
-  final String message;
-  final String time;
-  final bool isMe;
-  final bool isError;
-
-  ChatMessage({
-    required this.message,
-    required this.time,
-    required this.isMe,
-    this.isError = false,
-  });
 }
