@@ -17,7 +17,7 @@ class MechanicProfileScreen extends StatefulWidget {
 
 class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
   static final _supabase = Supabase.instance.client;
-  bool _availableForEmergency = true;
+  bool _availableForEmergency = false;
   bool _isLoading = true;
   String _mechanicName = '';
 
@@ -34,7 +34,7 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
 
       final data = await _supabase
           .from('mechanic')
-          .select('first_name, last_name')
+          .select('first_name, last_name, available_for_emergency')
           .eq('uid', uid)
           .single();
 
@@ -42,6 +42,7 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
         final firstName = data['first_name'] ?? '';
         final lastName = data['last_name'] ?? '';
         _mechanicName = '$firstName $lastName'.trim();
+        _availableForEmergency = data['available_for_emergency'] ?? false;
       });
     } catch (e, stackTrace) {
       debugPrint('Failed to load mechanic info: $e');
@@ -303,8 +304,19 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
                               ),
                               Switch(
                                 value: _availableForEmergency,
-                                onChanged: (v) =>
-                                    setState(() => _availableForEmergency = v),
+                                onChanged: (v) async {
+                                  setState(() => _availableForEmergency = v);
+                                  final uid = _supabase.auth.currentUser?.id;
+                                  if (uid != null) {
+                                    try {
+                                      await _supabase.from('mechanic').update({
+                                        'available_for_emergency': v
+                                      }).eq('uid', uid);
+                                    } catch (e) {
+                                      debugPrint('Failed to update emergency availability: $e');
+                                    }
+                                  }
+                                },
                                 activeColor: Colors.white,
                                 activeTrackColor: const Color(0xFF3FDF21),
                                 inactiveThumbColor: Colors.white,

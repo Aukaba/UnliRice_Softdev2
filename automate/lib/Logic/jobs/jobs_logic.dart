@@ -116,6 +116,7 @@ class JobsLogic {
           .from('jobs')
           .select()
           .eq('status', 'pending')
+          .neq('service_type', 'emergency')
           .order('created_at', ascending: false);
       debugPrint('[JobsLogic] getPendingJobs: ${res.length} rows');
       return List<Map<String, dynamic>>.from(res);
@@ -224,5 +225,102 @@ class JobsLogic {
       'status': 'accepted',
       'mechanic_id': user.id,
     }).eq('id', jobId);
+  }
+
+  // ─── Emergency Auto-Match ──────────────────────────────────────────
+  Future<void> dispatchEmergency({
+    required String title,
+    required String vehicle,
+    required String pickupLocation,
+    String? issueDescription,
+  }) async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) throw Exception('User is not logged in.');
+
+    // 1. Create the job
+    final jobRes = await _supabase.from('jobs').insert({
+      'user_id': user.id,
+      'title': title,
+      'vehicle': vehicle,
+      'pickup_location': pickupLocation,
+      'service_type': 'emergency',
+      'issue_description': issueDescription,
+      'status': 'pending',
+      'priority': 'High',
+    }).select('id').single();
+
+    final jobId = jobRes['id'];
+
+    // 2. Pick a random available mechanic
+    final mechanicsRes = await _supabase
+        .from('mechanic')
+        .select('uid')
+        .eq('available_for_emergency', true)
+        .limit(1);
+
+    debugPrint('[JobsLogic] dispatchEmergency - matching mechanics count: ${(mechanicsRes as List).length}');
+
+    if (mechanicsRes.isNotEmpty) {
+      final mechanicId = mechanicsRes[0]['uid'];
+      debugPrint('[JobsLogic] dispatchEmergency - dispatching to mechanicId: $mechanicId');
+      
+      // 3. Insert dispatch
+      await _supabase.from('emergency_dispatches').insert({
+        'job_id': jobId,
+        'mechanic_id': mechanicId,
+        'status': 'pending',
+      });
+    } else {
+      debugPrint('[JobsLogic] dispatchEmergency - NO AVAILABLE MECHANIC FOUND');
+    }
+  }
+
+  Stream<List<Map<String, dynamic>>> getMyEmergencyDispatch() {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return const Stream.empty();
+
+    return _pollingStream(() async {
+      try {
+        final res = await _supabase
+            .from('emergency_dispatches')
+            .select('*, jobs(*)')
+            .eq('mechanic_id', user.id)
+            .eq('status', 'pending')
+            .order('created_at', ascending: false)
+            .limit(1);
+        
+        final dispatches = List<Map<String, dynamic>>.from(res);
+        if (dispatches.isNotEmpty) {
+          debugPrint('[JobsLogic] getMyEmergencyDispatch - fetched ${dispatches.length} pending dispatches');
+        }
+
+        // We should also enrich the job with the user name
+        for (var dispatch in dispatches) {
+          final job = dispatch['jobs'];
+          if (job != null && job['user_id'] != null) {
+            final uName = await _lookupName(job['user_id']);
+            job['user_name'] = uName;
+          }
+        }
+
+        return dispatches;
+      } catch (e) {
+        debugPrint('[JobsLogic] getMyEmergencyDispatch ERROR: $e');
+        return [];
+      }
+    });
+  }
+
+  Future<void> respondToDispatch(String dispatchId, String jobId, bool accept) async {
+    final status = accept ? 'accepted' : 'declined';
+    
+    await _supabase.from('emergency_dispatches').update({
+      'status': status,
+      'responded_at': DateTime.now().toIso8601String(),
+    }).eq('id', dispatchId);
+
+    if (accept) {
+      await acceptJob(jobId);
+    }
   }
 }
