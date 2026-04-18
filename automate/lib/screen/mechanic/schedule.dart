@@ -43,6 +43,7 @@ class MechanicScheduleScreen extends StatefulWidget {
 class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
   DateTime _focusedMonth = DateTime.now();
   late DateTime _selectedDay;
+  late final Stream<List<Map<String, dynamic>>> _scheduleStream;
 
   List<_ScheduledJob> _mapJobs(List<Map<String, dynamic>> rawJobs) {
     return rawJobs.map((j) {
@@ -89,6 +90,7 @@ class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
     final now = DateTime.now();
     _focusedMonth = DateTime(now.year, now.month);
     _selectedDay = DateTime(now.year, now.month, now.day);
+    _scheduleStream = JobsLogic().getMechanicScheduledJobs();
   }
 
   void _prevMonth() =>
@@ -235,9 +237,11 @@ class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
             // ── Scrollable body ──
             Expanded(
               child: StreamBuilder<List<Map<String, dynamic>>>(
-                stream: JobsLogic().getMechanicScheduledJobs(),
+                stream: _scheduleStream,
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
+                  // Show spinner only on very first load (no data yet)
+                  if (snapshot.connectionState == ConnectionState.waiting &&
+                      snapshot.data == null) {
                     return const Center(child: CircularProgressIndicator());
                   }
                   
