@@ -282,17 +282,12 @@ class _DashboardTabState extends State<_DashboardTab> {
                 ),
               ),
 
-              // ── White card body ───────────────────────────────────
+              // ── White flat body — no border radius, fills from just below divider ──
               Expanded(
                 child: Container(
                   width: double.infinity,
-                  margin: const EdgeInsets.only(top: 16),
                   decoration: const BoxDecoration(
                     color: Colors.white,
-                    borderRadius: BorderRadius.only(
-                      topLeft: Radius.circular(28),
-                      topRight: Radius.circular(28),
-                    ),
                     boxShadow: [
                       BoxShadow(
                         color: Color(0x22000000),
@@ -301,12 +296,7 @@ class _DashboardTabState extends State<_DashboardTab> {
                       ),
                     ],
                   ),
-                  child: ClipRRect(
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(28),
-                      topRight: Radius.circular(28),
-                    ),
-                    child: _isLoading
+                  child: _isLoading
                         ? const Center(
                             child: CircularProgressIndicator(
                                 color: Color(0xFF164D83)))
@@ -374,7 +364,6 @@ class _DashboardTabState extends State<_DashboardTab> {
                               ],
                             ),
                           ),
-                  ),
                 ),
               ),
             ],
