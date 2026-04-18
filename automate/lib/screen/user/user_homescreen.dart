@@ -18,10 +18,12 @@ class UserHomeScreen extends StatefulWidget {
 
 class _UserHomeScreenState extends State<UserHomeScreen> {
   String _firstName = '';
+  late final Stream<List<Map<String, dynamic>>> _activityStream;
 
   @override
   void initState() {
     super.initState();
+    _activityStream = JobsLogic().getUserActivityJobs();
     _loadUserName();
   }
 
@@ -30,34 +32,23 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
     final uid = supabase.auth.currentUser?.id;
     if (uid == null) return;
 
-    // Try 'driver' table first, then 'mechanic', then 'user'
-    try {
-      final res = await supabase
-          .from('driver')
-          .select('first_name')
-          .eq('uid', uid)
-          .maybeSingle();
-      if (res != null && mounted) {
-        setState(() => _firstName = res['first_name'] ?? '');
-        return;
-      }
-    } catch (_) {}
-
-    try {
-      final res = await supabase
-          .from('mechanic')
-          .select('first_name')
-          .eq('uid', uid)
-          .maybeSingle();
-      if (res != null && mounted) {
-        setState(() => _firstName = res['first_name'] ?? '');
-        return;
-      }
-    } catch (_) {}
-
+    // Try 'user' table (the table that actually exists)
     try {
       final res = await supabase
           .from('user')
+          .select('first_name')
+          .eq('uid', uid)
+          .maybeSingle();
+      if (res != null && mounted) {
+        setState(() => _firstName = res['first_name'] ?? '');
+        return;
+      }
+    } catch (_) {}
+
+    // Fallback: mechanic table
+    try {
+      final res = await supabase
+          .from('mechanic')
           .select('first_name')
           .eq('uid', uid)
           .maybeSingle();
@@ -81,7 +72,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
               child: StreamBuilder<List<Map<String, dynamic>>>(
-                stream: JobsLogic().getUserActivityJobs(),
+                stream: _activityStream,
                 builder: (context, snapshot) {
                   final jobs = snapshot.data ?? [];
 
@@ -148,11 +139,14 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                       const SizedBox(height: 16),
 
                       // Recent Activity Cards
-                      if (snapshot.connectionState == ConnectionState.waiting)
-                        const Center(child: Padding(
-                          padding: EdgeInsets.symmetric(vertical: 24),
-                          child: CircularProgressIndicator(),
-                        ))
+                      if (recentJobs.isEmpty &&
+                          snapshot.connectionState == ConnectionState.waiting)
+                        const Center(
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(vertical: 24),
+                            child: CircularProgressIndicator(),
+                          ),
+                        )
                       else if (recentJobs.isEmpty)
                         _buildEmptyActivityCard()
                       else
@@ -229,7 +223,8 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                                   ),
                                   const SizedBox(height: 4),
                                   Text(
-                                    snapshot.connectionState == ConnectionState.waiting
+                                    snapshot.connectionState == ConnectionState.waiting &&
+                                            snapshot.data == null
                                         ? '—'
                                         : '$totalRequests',
                                     style: GoogleFonts.montserrat(

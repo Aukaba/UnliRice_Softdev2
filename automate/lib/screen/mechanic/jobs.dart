@@ -15,6 +15,13 @@ class MechanicJobsScreen extends StatefulWidget {
 class _MechanicJobsScreenState extends State<MechanicJobsScreen> {
   String _selectedFilter = 'All';
   final List<String> _filters = ['All', 'Urgent', 'Medium', 'Low'];
+  late final Stream<List<Map<String, dynamic>>> _pendingJobsStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _pendingJobsStream = JobsLogic().getPendingJobs();
+  }
 
   List<Map<String, dynamic>> _filterJobs(List<Map<String, dynamic>> jobs) {
     if (_selectedFilter == 'All') return jobs;
@@ -183,9 +190,10 @@ class _MechanicJobsScreenState extends State<MechanicJobsScreen> {
             // Job cards list
             Expanded(
               child: StreamBuilder<List<Map<String, dynamic>>>(
-                stream: JobsLogic().getPendingJobs(),
+                stream: _pendingJobsStream,
                 builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
+                  if (snapshot.connectionState == ConnectionState.waiting &&
+                      snapshot.data == null) {
                     return const Center(child: CircularProgressIndicator());
                   }
                   if (snapshot.hasError) {
