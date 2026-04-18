@@ -3,6 +3,10 @@ import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class JobsLogic {
+  static final JobsLogic _instance = JobsLogic._internal();
+  factory JobsLogic() => _instance;
+  JobsLogic._internal();
+
   final SupabaseClient _supabase = Supabase.instance.client;
 
   // ─── Polling interval ────────────────────────────────────────────────────────
@@ -149,9 +153,20 @@ class JobsLogic {
           .cast<String>();
 
       final profilesMap = <String, String>{};
-      for (final id in userIds) {
-        final name = await _lookupName(id);
-        if (name != null) profilesMap[id] = name;
+      if (userIds.isNotEmpty) {
+        try {
+          final resProfiles = await _supabase
+              .from('user')
+              .select('uid, first_name, last_name')
+              .inFilter('uid', userIds.toList());
+          for (var p in resProfiles) {
+            final first = p['first_name'] ?? '';
+            final last = p['last_name'] ?? '';
+            profilesMap[p['uid']] = '$first $last'.trim();
+          }
+        } catch (e) {
+          debugPrint('[JobsLogic] batch lookup user names error: $e');
+        }
       }
 
       return jobs.map((job) {
@@ -190,9 +205,20 @@ class JobsLogic {
           .cast<String>();
 
       final profilesMap = <String, String>{};
-      for (final id in mechanicIds) {
-        final name = await _lookupMechanicName(id);
-        if (name != null) profilesMap[id] = name;
+      if (mechanicIds.isNotEmpty) {
+        try {
+          final resProfiles = await _supabase
+              .from('mechanic')
+              .select('uid, first_name, last_name')
+              .inFilter('uid', mechanicIds.toList());
+          for (var p in resProfiles) {
+            final first = p['first_name'] ?? '';
+            final last = p['last_name'] ?? '';
+            profilesMap[p['uid']] = '$first $last'.trim();
+          }
+        } catch (e) {
+          debugPrint('[JobsLogic] batch lookup mechanic names error: $e');
+        }
       }
 
       return jobs.map((job) {
@@ -296,11 +322,16 @@ class JobsLogic {
 
         // We should also enrich the job with the user name
         for (var dispatch in dispatches) {
-          final job = dispatch['jobs'];
+          var jobRaw = dispatch['jobs'];
+          if (jobRaw is List) {
+            jobRaw = jobRaw.isNotEmpty ? jobRaw.first : null;
+          }
+          final job = jobRaw as Map<String, dynamic>?;
           if (job != null && job['user_id'] != null) {
             final uName = await _lookupName(job['user_id']);
             job['user_name'] = uName;
           }
+          dispatch['jobs'] = job;
         }
 
         return dispatches;

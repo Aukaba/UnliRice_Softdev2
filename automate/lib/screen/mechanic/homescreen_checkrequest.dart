@@ -320,7 +320,7 @@ class _LocationDistanceRow extends StatelessWidget {
                 size: 18, color: Colors.black54),
             const SizedBox(width: 8),
             Text(
-              '6.7 km away',
+              'Distance unavailable',
               style: GoogleFonts.inriaSans(
                 fontSize: 14,
                 fontWeight: FontWeight.w500,

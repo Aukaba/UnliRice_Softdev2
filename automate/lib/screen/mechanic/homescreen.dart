@@ -519,7 +519,7 @@ class _RequestCard extends StatelessWidget {
       title: title,
       subtitle: subtitle,
       badge: badge,
-      price: 'TBD',
+      price: 'Pending ext.',
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
@@ -869,7 +869,7 @@ class _EmergencyAlertDialogState extends State<_EmergencyAlertDialog> {
     final job = widget.dispatch['jobs'] as Map<String, dynamic>? ?? {};
     final title = job['title'] ?? job['issue_description'] ?? 'Emergency Service';
     final vehicle = job['vehicle'] ?? 'Unknown Vehicle';
-    final distance = '6.7 km'; // Placeholder, could add location logic or calculate
+    final distance = 'Distance unavailable';
     final userName = job['user_name'] ?? 'A Client';
 
     return Dialog(

@@ -149,7 +149,7 @@ class _UserActivityScreenState extends State<UserActivityScreen> {
                             service: job['title'] ?? 'Service',
                             status: displayStatus,
                             time: timeDisplay,
-                            price: 'TBD', // Would fetch real price if available
+                            price: 'Pending', // Would fetch real price if available
                             rating: '-', // Ratings logic not implemented yet
                             avatarColor: const Color(0xFF6A8FB0),
                             onMessageTap: widget.onMessageTap,
