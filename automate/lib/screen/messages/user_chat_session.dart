@@ -11,7 +11,7 @@ class UserChatSessionScreen extends StatefulWidget {
   const UserChatSessionScreen({
     super.key,
     required this.mechanicName,
-    this.partnerId = '',
+    required this.partnerId,
   });
 
   @override
@@ -21,8 +21,6 @@ class UserChatSessionScreen extends StatefulWidget {
 class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
   final TextEditingController _msgController = TextEditingController();
   late Stream<List<Map<String, dynamic>>> _messagesStream;
-
-  bool get _isMechMate => widget.mechanicName == "MechMate";
 
   @override
   void initState() {
@@ -36,134 +34,62 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
       backgroundColor: Colors.white,
       body: Column(
         children: [
-          _isMechMate ? _buildMechMateHeader() : _buildMechanicHeader(),
+          _buildMechanicHeader(),
 
           // Main Chat Body
           Expanded(
-            child: _isMechMate
-                ? _buildDummyMessages()
-                : StreamBuilder<List<Map<String, dynamic>>>(
-                    stream: _messagesStream,
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      }
-                      if (snapshot.hasError) {
-                        return const Center(child: Text("Error loading messages"));
-                      }
-                      
-                      final messages = snapshot.data ?? [];
-                      final myId = Supabase.instance.client.auth.currentUser?.id;
-                      
-                      return ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-                        itemCount: messages.length,
-                        itemBuilder: (context, index) {
-                          final msg = messages[index];
-                          final isMe = msg['sender_id'] == myId;
-                          final rawTime = msg['created_at'];
-                          
-                          String timeStr = "";
-                          if (rawTime != null) {
-                            final parsed = DateTime.parse(rawTime).toLocal();
-                            timeStr = DateFormat('jm').format(parsed);
-                          }
-                          
-                          return _buildMessageBubble(
-                            message: msg['content'] ?? '',
-                            time: timeStr,
-                            isMe: isMe,
-                          );
-                        },
-                      );
-                    },
-                  ),
+            child: StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _messagesStream,
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+                if (snapshot.hasError) {
+                  return const Center(child: Text("Error loading messages"));
+                }
+                
+                final messages = snapshot.data ?? [];
+                final myId = Supabase.instance.client.auth.currentUser?.id;
+                
+                if (messages.isEmpty) {
+                  return Center(
+                    child: Text(
+                      "No messages yet. Say hello!",
+                      style: GoogleFonts.montserrat(
+                        color: Colors.black54,
+                        fontSize: 14,
+                      ),
+                    ),
+                  );
+                }
+                
+                return ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
+                  itemCount: messages.length,
+                  itemBuilder: (context, index) {
+                    final msg = messages[index];
+                    final isMe = msg['sender_id'] == myId;
+                    final rawTime = msg['created_at'];
+                    
+                    String timeStr = "";
+                    if (rawTime != null) {
+                      final parsed = DateTime.parse(rawTime).toLocal();
+                      timeStr = DateFormat('jm').format(parsed);
+                    }
+                    
+                    return _buildMessageBubble(
+                      message: msg['content'] ?? '',
+                      time: timeStr,
+                      isMe: isMe,
+                    );
+                  },
+                );
+              },
+            ),
           ),
 
           // Input Bar
           _buildInputBar(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDummyMessages() {
-    return ListView(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
-      children: [
-        _buildMessageBubble(
-          message: "Hi! How can I assist you today?",
-          time: "Now",
-          isMe: false,
-        ),
-      ],
-    );
-  }
-
-  /// MechMate-specific header: light blue background, robot avatar on the right
-  Widget _buildMechMateHeader() {
-    return Container(
-      padding: EdgeInsets.only(
-        top: MediaQuery.of(context).padding.top + 12,
-        bottom: 16,
-        left: 12,
-        right: 16,
-      ),
-      decoration: const BoxDecoration(
-        color: Color(0xFFB3D9F2), // Light blue
-        borderRadius: BorderRadius.only(
-          bottomLeft: Radius.circular(20),
-          bottomRight: Radius.circular(20),
-        ),
-      ),
-      child: Row(
-        children: [
-          // Back arrow
-          GestureDetector(
-            onTap: () => Navigator.pop(context),
-            child: const Padding(
-              padding: EdgeInsets.all(8.0),
-              child: Icon(Icons.arrow_back, color: Colors.black87, size: 26),
-            ),
-          ),
-          const SizedBox(width: 4),
-          // Title
-          Expanded(
-            child: Row(
-              children: [
-                Text(
-                  "MechMate ",
-                  style: GoogleFonts.montserrat(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black87,
-                  ),
-                ),
-                const Text("✦", style: TextStyle(fontSize: 16, color: Colors.blueAccent)),
-              ],
-            ),
-          ),
-          // Robot avatar on the right
-          Container(
-            width: 50,
-            height: 50,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: Colors.white,
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 6,
-                  offset: const Offset(0, 2),
-                ),
-              ],
-            ),
-            clipBehavior: Clip.antiAlias,
-            child: Image.asset(
-              'assets/images/robotttt.png',
-              fit: BoxFit.cover,
-            ),
-          ),
         ],
       ),
     );
@@ -264,7 +190,7 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
           GestureDetector(
             onTap: () async {
               final text = _msgController.text.trim();
-              if (text.isEmpty || _isMechMate || widget.partnerId.isEmpty) return;
+              if (text.isEmpty || widget.partnerId.isEmpty) return;
               
               _msgController.clear();
               try {
@@ -302,20 +228,6 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
         crossAxisAlignment: CrossAxisAlignment.end,
         mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         children: [
-          // Show robot avatar on the left side for bot messages (MechMate only)
-          if (!isMe && _isMechMate) ...[
-            Container(
-              width: 34,
-              height: 34,
-              decoration: const BoxDecoration(shape: BoxShape.circle, color: Colors.white),
-              clipBehavior: Clip.antiAlias,
-              child: Image.asset(
-                'assets/images/robotttt.png',
-                fit: BoxFit.cover,
-              ),
-            ),
-            const SizedBox(width: 8),
-          ],
           // Message bubble
           Flexible(
             child: Container(
