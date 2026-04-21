@@ -30,31 +30,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     if (user == null) return;
 
     try {
-      // Trying 'driver' table first
-      Map<String, dynamic>? data;
-      try {
-        data = await _supabase
-            .from('driver')
-            .select('first_name, last_name, phone_number')
-            .eq('uid', user.id)
-            .single();
-      } catch (_) {
-        // Fallback to 'users' table if driver fails
-        try {
-          data = await _supabase
-              .from('users')
-              .select('first_name, last_name, phone_number')
-              .eq('uid', user.id)
-              .single();
-        } catch (_) {
-          // Fallback to 'user' table
-          data = await _supabase
-              .from('user')
-              .select('first_name, last_name, phone_number')
-              .eq('uid', user.id)
-              .single();
-        }
-      }
+      // Query the 'user' table directly (driver/users tables don't exist)
+      Map<String, dynamic>? data = await _supabase
+          .from('user')
+          .select('first_name, last_name, phone_number')
+          .eq('uid', user.id)
+          .maybeSingle();
 
       setState(() {
         final firstName = data?['first_name'] ?? '';

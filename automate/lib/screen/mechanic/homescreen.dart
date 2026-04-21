@@ -1,14 +1,56 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../Logic/jobs/jobs_logic.dart';
 import 'homescreen_checkrequest.dart';
 import 'jobs.dart';
 import 'schedule.dart';
 import '../messages/user_message_list.dart';
 import 'profile.dart';
 
-class MechanicHomeScreen extends StatelessWidget {
+class MechanicHomeScreen extends StatefulWidget {
   const MechanicHomeScreen({super.key});
+
+  @override
+  State<MechanicHomeScreen> createState() => _MechanicHomeScreenState();
+}
+
+class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
+  StreamSubscription? _dispatchSub;
+  bool _isDialogShowing = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _listenForEmergencyDispatches();
+  }
+
+  void _listenForEmergencyDispatches() {
+    _dispatchSub = JobsLogic().getMyEmergencyDispatch().listen((dispatches) {
+      if (dispatches.isNotEmpty && !_isDialogShowing && mounted) {
+        final dispatch = dispatches.first;
+        _showEmergencyDialog(dispatch);
+      }
+    });
+  }
+
+  void _showEmergencyDialog(Map<String, dynamic> dispatch) {
+    _isDialogShowing = true;
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => _EmergencyAlertDialog(dispatch: dispatch),
+    ).then((_) {
+      _isDialogShowing = false;
+    });
+  }
+
+  @override
+  void dispose() {
+    _dispatchSub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -119,6 +161,7 @@ class _HeaderSection extends StatefulWidget {
 
 class _HeaderSectionState extends State<_HeaderSection> {
   String _mechanicName = 'Loading...';
+  bool _isOnline = false;
 
   @override
   void initState() {
@@ -132,21 +175,28 @@ class _HeaderSectionState extends State<_HeaderSection> {
       if (uid != null) {
         final res = await Supabase.instance.client
             .from('mechanic')
-            .select('first_name, last_name')
+            .select('first_name, last_name, available_for_emergency')
             .eq('uid', uid)
             .maybeSingle();
         if (res != null && mounted) {
           setState(() {
             _mechanicName = '${res['first_name']}';
+            _isOnline = res['available_for_emergency'] ?? false;
           });
         } else if (mounted) {
           setState(() {
             _mechanicName = 'Mechanic';
+            _isOnline = false;
           });
         }
       }
     } catch (_) {
-      if (mounted) setState(() => _mechanicName = 'Mechanic');
+      if (mounted) {
+        setState(() {
+          _mechanicName = 'Mechanic';
+          _isOnline = false;
+        });
+      }
     }
   }
 
@@ -209,10 +259,10 @@ class _HeaderSectionState extends State<_HeaderSection> {
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.circle, size: 10, color: Color(0xFF3FDF21)),
+                    Icon(Icons.circle, size: 10, color: _isOnline ? const Color(0xFF3FDF21) : const Color(0xFFD72B2B)),
                     const SizedBox(width: 8),
                     Text(
-                      'You\u2019re online',
+                      _isOnline ? 'You\u2019re online' : 'You\u2019re offline',
                       style: GoogleFonts.inriaSans(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -321,8 +371,23 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-class _IncomingRequestsSection extends StatelessWidget {
+
+class _IncomingRequestsSection extends StatefulWidget {
   const _IncomingRequestsSection();
+
+  @override
+  State<_IncomingRequestsSection> createState() =>
+      _IncomingRequestsSectionState();
+}
+
+class _IncomingRequestsSectionState extends State<_IncomingRequestsSection> {
+  late final Stream<List<Map<String, dynamic>>> _stream;
+
+  @override
+  void initState() {
+    super.initState();
+    _stream = JobsLogic().getPendingJobs();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -341,48 +406,87 @@ class _IncomingRequestsSection extends StatelessWidget {
                   color: Colors.black,
                 ),
               ),
-              Text(
-                'View all',
-                style: GoogleFonts.inriaSans(
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                  color: const Color(0xFF121212),
+              GestureDetector(
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (_) => const MechanicJobsScreen()),
+                ),
+                child: Text(
+                  'View all',
+                  style: GoogleFonts.inriaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF121212),
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          _RequestCard(
-            title: 'Engine won\u2019t start',
-            subtitle: 'Ron Seldizo \u2022 Toyota Vios',
-            badge: 'Urgent',
-            price: '₱1,500 - ₱2,000',
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const MechanicCheckRequestScreen())),
-          ),
-          const SizedBox(height: 12),
-          _RequestCard(
-            title: 'Flat tire on CBL',
-            subtitle: 'Aaron Barnaija \u2022 Yamaha N-115',
-            badge: 'Normal',
-            price: '₱1,000 - ₱1,300',
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const MechanicCheckRequestScreen())),
-          ),
-          const SizedBox(height: 12),
-          _RequestCard(
-            title: 'AC not cooling',
-            subtitle: 'Mambaling motorcab \u2022 Toyota Vios',
-            badge: 'Normal',
-            price: '₱1,500 - ₱2,000',
-            onTap: () => Navigator.push(context,
-                MaterialPageRoute(builder: (_) => const MechanicCheckRequestScreen())),
+          StreamBuilder<List<Map<String, dynamic>>>(
+            stream: _stream,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting &&
+                  snapshot.data == null) {
+                return const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 24),
+                  child: Center(child: CircularProgressIndicator()),
+                );
+              }
+
+              final jobs = snapshot.data ?? [];
+              final top3 = jobs.take(3).toList();
+
+              if (top3.isEmpty) {
+                return Container(
+                  padding: const EdgeInsets.symmetric(
+                      vertical: 32, horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Color(0x0F000000),
+                        blurRadius: 18,
+                        offset: Offset(0, 10),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    children: [
+                      const Icon(Icons.inbox_outlined,
+                          size: 40, color: Colors.black26),
+                      const SizedBox(height: 12),
+                      Text(
+                        'No incoming requests',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black45,
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+
+              return Column(
+                children: [
+                  for (int i = 0; i < top3.length; i++) ...[
+                    _RequestCard.fromJob(top3[i], context),
+                    if (i < top3.length - 1) const SizedBox(height: 12),
+                  ],
+                ],
+              );
+            },
           ),
         ],
       ),
     );
   }
 }
+
 
 class _RequestCard extends StatelessWidget {
   final String title;
@@ -398,6 +502,32 @@ class _RequestCard extends StatelessWidget {
     required this.price,
     required this.onTap,
   });
+
+  /// Build a card from a live pending-job map from the database.
+  static Widget fromJob(Map<String, dynamic> job, BuildContext context) {
+    final title = (job['title'] as String?)?.isNotEmpty == true
+        ? job['title'] as String
+        : (job['issue_description'] as String?)??
+              'Service Request';
+    final vehicle = job['vehicle'] as String? ?? 'Unknown vehicle';
+    final location = job['pickup_location'] as String? ?? '';
+    final subtitle = location.isNotEmpty ? '$vehicle • $location' : vehicle;
+    final priority = job['priority'] as String? ?? 'Medium';
+    final badge = priority == 'High' ? 'Urgent' : 'Normal';
+
+    return _RequestCard(
+      title: title,
+      subtitle: subtitle,
+      badge: badge,
+      price: 'Pending ext.',
+      onTap: () => Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => const MechanicCheckRequestScreen(),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -427,10 +557,19 @@ class _RequestCard extends StatelessWidget {
                   width: 46,
                   height: 46,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFF5F7FA),
+                    color: badge == 'Urgent'
+                        ? const Color(0xFFFFE5E5)
+                        : const Color(0xFFF5F7FA),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: const Icon(Icons.build_circle_outlined, color: Color(0xFF121212)),
+                  child: Icon(
+                    badge == 'Urgent'
+                        ? Icons.warning_amber_rounded
+                        : Icons.build_circle_outlined,
+                    color: badge == 'Urgent'
+                        ? const Color(0xFFD72B2B)
+                        : const Color(0xFF121212),
+                  ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
@@ -439,18 +578,21 @@ class _RequestCard extends StatelessWidget {
                     children: [
                       Text(title,
                           style: GoogleFonts.montserrat(
-                              fontSize: 16,
+                              fontSize: 15,
                               fontWeight: FontWeight.w700,
                               color: Colors.black)),
                       const SizedBox(height: 4),
                       Text(subtitle,
                           style: GoogleFonts.inriaSans(
-                              fontSize: 13,
+                              fontSize: 12,
                               fontWeight: FontWeight.w500,
-                              color: Colors.black54)),
+                              color: Colors.black54),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
                     ],
                   ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                   decoration: BoxDecoration(
@@ -631,3 +773,216 @@ class _NavItem extends StatelessWidget {
     );
   }
 }
+
+class _EmergencyAlertDialog extends StatefulWidget {
+  final Map<String, dynamic> dispatch;
+
+  const _EmergencyAlertDialog({required this.dispatch});
+
+  @override
+  State<_EmergencyAlertDialog> createState() => _EmergencyAlertDialogState();
+}
+
+class _EmergencyAlertDialogState extends State<_EmergencyAlertDialog> {
+  int _countdown = 10;
+  Timer? _timer;
+  bool _isResponding = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _startTimer();
+  }
+
+  void _startTimer() {
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      if (_countdown > 0) {
+        setState(() {
+          _countdown--;
+        });
+      } else {
+        timer.cancel();
+        _handleDecline(); // Auto decline when timer runs out
+      }
+    });
+  }
+
+  Future<void> _handleAccept() async {
+    if (_isResponding) return;
+    setState(() => _isResponding = true);
+    _timer?.cancel();
+
+    try {
+      final dispatchId = widget.dispatch['id'].toString();
+      final job = widget.dispatch['jobs'] as Map<String, dynamic>?;
+      final jobId = job?['id']?.toString();
+
+      if (jobId != null) {
+        await JobsLogic().respondToDispatch(dispatchId, jobId, true);
+        if (mounted) {
+          Navigator.pop(context); // Close dialog
+          // Go to check request screen
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => const MechanicCheckRequestScreen(),
+            ),
+          );
+        }
+      }
+    } catch (e) {
+      debugPrint('Error accepting dispatch: $e');
+      if (mounted) Navigator.pop(context);
+    }
+  }
+
+  Future<void> _handleDecline() async {
+    if (_isResponding) return;
+    setState(() => _isResponding = true);
+    _timer?.cancel();
+
+    try {
+      final dispatchId = widget.dispatch['id'].toString();
+      final job = widget.dispatch['jobs'] as Map<String, dynamic>?;
+      final jobId = job?['id']?.toString();
+
+      if (jobId != null) {
+        await JobsLogic().respondToDispatch(dispatchId, jobId, false);
+      }
+    } catch (e) {
+      debugPrint('Error declining dispatch: $e');
+    } finally {
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final job = widget.dispatch['jobs'] as Map<String, dynamic>? ?? {};
+    final title = job['title'] ?? job['issue_description'] ?? 'Emergency Service';
+    final vehicle = job['vehicle'] ?? 'Unknown Vehicle';
+    final distance = 'Distance unavailable';
+    final userName = job['user_name'] ?? 'A Client';
+
+    return Dialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      backgroundColor: Colors.white,
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 32.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.warning_amber_rounded,
+              color: Colors.red,
+              size: 64,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Emergency Alert',
+              style: GoogleFonts.montserrat(
+                fontSize: 24,
+                fontWeight: FontWeight.w700,
+                color: Colors.black,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Auto Paired',
+              style: GoogleFonts.inriaSans(
+                fontSize: 14,
+                fontWeight: FontWeight.w700,
+                color: const Color(0xFF3FDF21),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '$userName needs your help immediately!',
+              style: GoogleFonts.montserrat(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.black,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Text(
+              title,
+              style: GoogleFonts.inriaSans(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.black87,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.directions_car_outlined, size: 18, color: Colors.black87),
+                const SizedBox(width: 4),
+                Text(
+                  vehicle,
+                  style: GoogleFonts.inriaSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                const Icon(Icons.location_on_outlined, size: 18, color: Colors.black87),
+                const SizedBox(width: 4),
+                Text(
+                  distance,
+                  style: GoogleFonts.inriaSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 32),
+            SizedBox(
+              width: double.infinity,
+              height: 56,
+              child: ElevatedButton(
+                onPressed: _isResponding ? null : _handleAccept,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFFE50914),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(28),
+                  ),
+                  elevation: 0,
+                ),
+                child: _isResponding
+                    ? const SizedBox(
+                        height: 24,
+                        width: 24,
+                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                      )
+                    : Text(
+                        'Continue... ($_countdown)',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}

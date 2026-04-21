@@ -39,14 +39,23 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
     setState(() => _isLoading = true);
     
     try {
-      await JobsLogic().createJob(
-        title: _titleController.text,
-        vehicle: _vehicleController.text,
-        pickupLocation: _locationController.text,
-        serviceType: isEmergency ? 'emergency' : 'scheduled',
-        scheduledDate: isEmergency ? null : (_selectedDate ?? DateTime.now()),
-        issueDescription: _descriptionController.text.isEmpty ? null : _descriptionController.text,
-      );
+      if (isEmergency) {
+        await JobsLogic().dispatchEmergency(
+          title: _titleController.text,
+          vehicle: _vehicleController.text,
+          pickupLocation: _locationController.text,
+          issueDescription: _descriptionController.text.isEmpty ? null : _descriptionController.text,
+        );
+      } else {
+        await JobsLogic().createJob(
+          title: _titleController.text,
+          vehicle: _vehicleController.text,
+          pickupLocation: _locationController.text,
+          serviceType: 'scheduled',
+          scheduledDate: _selectedDate ?? DateTime.now(),
+          issueDescription: _descriptionController.text.isEmpty ? null : _descriptionController.text,
+        );
+      }
       
       if (mounted) {
         if (isEmergency) {

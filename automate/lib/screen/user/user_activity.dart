@@ -3,9 +3,22 @@ import 'package:google_fonts/google_fonts.dart';
 import '../messages/user_chat_session.dart';
 import '../../Logic/jobs/jobs_logic.dart';
 
-class UserActivityScreen extends StatelessWidget {
+class UserActivityScreen extends StatefulWidget {
   final VoidCallback? onMessageTap;
   const UserActivityScreen({super.key, this.onMessageTap});
+
+  @override
+  State<UserActivityScreen> createState() => _UserActivityScreenState();
+}
+
+class _UserActivityScreenState extends State<UserActivityScreen> {
+  late final Stream<List<Map<String, dynamic>>> _activityStream;
+
+  @override
+  void initState() {
+    super.initState();
+    _activityStream = JobsLogic().getUserActivityJobs();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -56,9 +69,10 @@ class UserActivityScreen extends StatelessWidget {
                 // List of Activities
                 Expanded(
                   child: StreamBuilder<List<Map<String, dynamic>>>(
-                    stream: JobsLogic().getUserActivityJobs(),
+                    stream: _activityStream,
                     builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
+                      if (snapshot.connectionState == ConnectionState.waiting &&
+                          snapshot.data == null) {
                         return const Center(child: CircularProgressIndicator());
                       }
                       
@@ -135,10 +149,10 @@ class UserActivityScreen extends StatelessWidget {
                             service: job['title'] ?? 'Service',
                             status: displayStatus,
                             time: timeDisplay,
-                            price: 'TBD', // Would fetch real price if available
+                            price: 'Pending', // Would fetch real price if available
                             rating: '-', // Ratings logic not implemented yet
                             avatarColor: const Color(0xFF6A8FB0),
-                            onMessageTap: onMessageTap,
+                            onMessageTap: widget.onMessageTap,
                           );
                         },
                       );
