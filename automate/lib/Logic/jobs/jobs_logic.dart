@@ -68,26 +68,6 @@ class JobsLogic {
     return null;
   }
 
-  // ─── Helper: look up a mechanic display name ──────────────────────────────────
-  Future<String?> _lookupMechanicName(String uid) async {
-    try {
-      final res = await _supabase
-          .from('mechanic')
-          .select('first_name, last_name')
-          .eq('uid', uid)
-          .maybeSingle();
-      if (res != null) {
-        final first = res['first_name'] ?? '';
-        final last = res['last_name'] ?? '';
-        final full = '$first $last'.trim();
-        if (full.isNotEmpty) return full;
-      }
-    } catch (e) {
-      debugPrint('[JobsLogic] _lookupMechanicName($uid): $e');
-    }
-    return null;
-  }
-
   // ─── Create a new job ─────────────────────────────────────────────────────────
   Future<void> createJob({
     required String title,
