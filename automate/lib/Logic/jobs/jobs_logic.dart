@@ -110,10 +110,10 @@ class JobsLogic {
       final today = DateTime(now.year, now.month, now.day);
 
       for (var job in jobs) {
-        final scheduledStr = job['scheduled_date'];
+        final dateStr = job['scheduled_date'] ?? job['created_at'];
         bool lapsed = false;
-        if (scheduledStr != null) {
-          final dt = DateTime.tryParse(scheduledStr);
+        if (dateStr != null) {
+          final dt = DateTime.tryParse(dateStr);
           if (dt != null && DateTime(dt.year, dt.month, dt.day).isBefore(today)) {
             lapsed = true;
           }
@@ -155,10 +155,10 @@ class JobsLogic {
       final today = DateTime(now.year, now.month, now.day);
 
       for (var job in allJobs) {
-        final scheduledStr = job['scheduled_date'];
+        final dateStr = job['scheduled_date'] ?? job['created_at'];
         bool lapsed = false;
-        if (scheduledStr != null) {
-          final dt = DateTime.tryParse(scheduledStr);
+        if (dateStr != null) {
+          final dt = DateTime.tryParse(dateStr);
           if (dt != null && DateTime(dt.year, dt.month, dt.day).isBefore(today)) {
             lapsed = true;
           }
@@ -230,10 +230,10 @@ class JobsLogic {
       final today = DateTime(now.year, now.month, now.day);
 
       for (var job in allJobs) {
-        final scheduledStr = job['scheduled_date'];
+        final dateStr = job['scheduled_date'] ?? job['created_at'];
         bool lapsed = false;
-        if (scheduledStr != null) {
-          final dt = DateTime.tryParse(scheduledStr);
+        if (dateStr != null) {
+          final dt = DateTime.tryParse(dateStr);
           if (dt != null && DateTime(dt.year, dt.month, dt.day).isBefore(today)) {
             lapsed = true;
           }

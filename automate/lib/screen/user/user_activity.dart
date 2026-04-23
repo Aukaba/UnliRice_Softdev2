@@ -106,7 +106,7 @@ class _UserActivityScreenState extends State<UserActivityScreen> {
                           final rawStatus = job['status'] as String? ?? 'pending';
                           String displayStatus = 'Pending';
                           if (rawStatus == 'completed') displayStatus = 'Done';
-                          else if (rawStatus == 'canceled') displayStatus = 'Canceled';
+                          else if (rawStatus == 'canceled' || rawStatus == 'cancelled') displayStatus = 'Canceled';
                           else if (rawStatus == 'accepted') {
                             final schedStr = job['scheduled_date'];
                             if (schedStr != null) {

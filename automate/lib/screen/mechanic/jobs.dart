@@ -29,19 +29,6 @@ class _MechanicJobsScreenState extends State<MechanicJobsScreen> {
     return jobs.where((j) => j['priority'] == _selectedFilter).toList();
   }
 
-  void _acceptJob(String jobId) async {
-    try {
-      await JobsLogic().acceptJob(jobId);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job accepted!')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -225,7 +212,6 @@ class _MechanicJobsScreenState extends State<MechanicJobsScreen> {
                       final job = filteredJobs[index];
                       return _JobCard(
                         job: job,
-                        onAccept: () => _acceptJob(job['id'].toString()),
                       );
                     },
                   );
@@ -264,9 +250,8 @@ class _MechanicJobsScreenState extends State<MechanicJobsScreen> {
 
 class _JobCard extends StatelessWidget {
   final Map<String, dynamic> job;
-  final VoidCallback onAccept;
   
-  const _JobCard({required this.job, required this.onAccept});
+  const _JobCard({required this.job});
 
   Color get _badgeBg => job['priority'] == 'High'
       ? const Color(0xFFFFE5E5)
@@ -431,25 +416,7 @@ class _JobCard extends StatelessWidget {
                   color: Colors.black38,
                 ),
               ),
-              const Spacer(),
-              GestureDetector(
-                onTap: onAccept,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF19456B),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    'Accept',
-                    style: GoogleFonts.montserrat(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
+
             ],
           ),
         ],

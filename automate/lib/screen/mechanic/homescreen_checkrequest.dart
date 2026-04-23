@@ -6,6 +6,7 @@ import 'schedule.dart';
 import '../messages/user_message_list.dart';
 import 'profile.dart';
 import 'active_job.dart';
+import '../../Logic/jobs/jobs_logic.dart';
 
 class MechanicCheckRequestScreen extends StatefulWidget {
   final bool isAccepted;
@@ -517,6 +518,16 @@ class _AcceptJobButton extends StatelessWidget {
       );
     } else {
       // Logic for accepting a job here
+      if (jobData != null && jobData!['id'] != null) {
+        JobsLogic().acceptJob(jobData!['id'].toString()).then((_) {
+          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job accepted!')));
+          Navigator.pop(context);
+        }).catchError((e) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+        });
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error: Invalid job data.')));
+      }
     }
   }
 
