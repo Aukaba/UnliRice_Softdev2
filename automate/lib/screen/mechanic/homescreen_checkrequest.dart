@@ -5,9 +5,17 @@ import 'jobs.dart';
 import 'schedule.dart';
 import '../messages/user_message_list.dart';
 import 'profile.dart';
+import 'active_job.dart';
 
 class MechanicCheckRequestScreen extends StatefulWidget {
-  const MechanicCheckRequestScreen({super.key});
+  final bool isAccepted;
+  final Map<String, dynamic>? jobData;
+
+  const MechanicCheckRequestScreen({
+    super.key,
+    this.isAccepted = false,
+    this.jobData,
+  });
 
   @override
   State<MechanicCheckRequestScreen> createState() =>
@@ -180,14 +188,17 @@ class _MechanicCheckRequestScreenState
                                 child: Column(
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
-                                  children: const [
-                                    _LocationDistanceRow(),
-                                    SizedBox(height: 20),
-                                    _ClientInformationCard(),
-                                    SizedBox(height: 16),
-                                    _IssueCard(),
-                                    SizedBox(height: 24),
-                                    _AcceptJobButton(),
+                                  children: [
+                                    const _LocationDistanceRow(),
+                                    const SizedBox(height: 20),
+                                    const _ClientInformationCard(),
+                                    const SizedBox(height: 16),
+                                    const _IssueCard(),
+                                    const SizedBox(height: 24),
+                                    _AcceptJobButton(
+                                      isAccepted: widget.isAccepted,
+                                      jobData: widget.jobData,
+                                    ),
                                   ],
                                 ),
                               ),
@@ -460,12 +471,59 @@ class _IssueCard extends StatelessWidget {
 }
 
 class _AcceptJobButton extends StatelessWidget {
-  const _AcceptJobButton();
+  final bool isAccepted;
+  final Map<String, dynamic>? jobData;
+
+  const _AcceptJobButton({
+    this.isAccepted = false,
+    this.jobData,
+  });
+
+  void _onPressed(BuildContext context) {
+    if (isAccepted) {
+      // Validate day
+      final rawDate = jobData?['scheduled_date'] ?? jobData?['created_at'];
+      DateTime jobDate = DateTime.now();
+      if (rawDate != null) {
+        jobDate = DateTime.tryParse(rawDate) ?? DateTime.now();
+      }
+      
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+      final jobDay = DateTime(jobDate.year, jobDate.month, jobDate.day);
+      
+      if (jobDay != today) {
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text('Error', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
+            content: Text('This job is not scheduled for today. You cannot start it yet.',
+                style: GoogleFonts.inriaSans()),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(ctx),
+                child: Text('OK', style: GoogleFonts.montserrat()),
+              ),
+            ],
+          ),
+        );
+        return;
+      }
+      
+      // Navigate to active job screen
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const MechanicActiveJobScreen()),
+      );
+    } else {
+      // Logic for accepting a job here
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return ElevatedButton(
-      onPressed: () {},
+      onPressed: () => _onPressed(context),
       style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF4CC32F),
         shape:
@@ -474,7 +532,7 @@ class _AcceptJobButton extends StatelessWidget {
         elevation: 0,
       ),
       child: Text(
-        'Accept Job',
+        isAccepted ? 'Start Job' : 'Accept Job',
         style: GoogleFonts.montserrat(
           fontSize: 16,
           fontWeight: FontWeight.w700,

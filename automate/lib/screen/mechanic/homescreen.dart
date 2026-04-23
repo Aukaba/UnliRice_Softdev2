@@ -525,7 +525,7 @@ class _RequestCard extends StatelessWidget {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => const MechanicCheckRequestScreen(),
+          builder: (_) => MechanicCheckRequestScreen(jobData: job, isAccepted: false),
         ),
       ),
     );

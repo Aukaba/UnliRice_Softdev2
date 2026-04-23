@@ -4,6 +4,7 @@ import 'homescreen.dart';
 import 'schedule.dart';
 import '../messages/user_message_list.dart';
 import '../../Logic/jobs/jobs_logic.dart';
+import 'homescreen_checkrequest.dart';
 
 class MechanicJobsScreen extends StatefulWidget {
   const MechanicJobsScreen({super.key});
@@ -301,19 +302,28 @@ class _JobCard extends StatelessWidget {
     final description = job['issue_description'] ?? 'No description provided.';
     final priority = job['priority'] ?? 'Medium';
     
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0F000000),
-            blurRadius: 18,
-            offset: Offset(0, 8),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MechanicCheckRequestScreen(jobData: job, isAccepted: false),
           ),
-        ],
-      ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0F000000),
+              blurRadius: 18,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -444,7 +454,7 @@ class _JobCard extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ));
   }
 }
 
