@@ -103,7 +103,32 @@ class JobsLogic {
           .neq('service_type', 'emergency')
           .order('created_at', ascending: false);
       debugPrint('[JobsLogic] getPendingJobs: ${res.length} rows');
-      return List<Map<String, dynamic>>.from(res);
+      final jobs = List<Map<String, dynamic>>.from(res);
+      final validJobs = <Map<String, dynamic>>[];
+      
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+
+      for (var job in jobs) {
+        final scheduledStr = job['scheduled_date'];
+        bool lapsed = false;
+        if (scheduledStr != null) {
+          final dt = DateTime.tryParse(scheduledStr);
+          if (dt != null && DateTime(dt.year, dt.month, dt.day).isBefore(today)) {
+            lapsed = true;
+          }
+        }
+
+        if (lapsed) {
+          _supabase.from('jobs').update({'status': 'cancelled'}).eq('id', job['id']).catchError((e) {
+            debugPrint('[JobsLogic] auto-cancel error: $e');
+          });
+          continue;
+        }
+        validJobs.add(job);
+      }
+
+      return validJobs;
     });
   }
 
@@ -123,7 +148,30 @@ class JobsLogic {
 
       debugPrint('[JobsLogic] getMechanicScheduledJobs: ${res.length} rows');
 
-      final jobs = List<Map<String, dynamic>>.from(res);
+      final allJobs = List<Map<String, dynamic>>.from(res);
+      final jobs = <Map<String, dynamic>>[];
+      
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+
+      for (var job in allJobs) {
+        final scheduledStr = job['scheduled_date'];
+        bool lapsed = false;
+        if (scheduledStr != null) {
+          final dt = DateTime.tryParse(scheduledStr);
+          if (dt != null && DateTime(dt.year, dt.month, dt.day).isBefore(today)) {
+            lapsed = true;
+          }
+        }
+
+        if (lapsed) {
+          _supabase.from('jobs').update({'status': 'cancelled'}).eq('id', job['id']).catchError((e) {
+            debugPrint('[JobsLogic] auto-cancel scheduled error: $e');
+          });
+          continue;
+        }
+        jobs.add(job);
+      }
 
       // Enrich with user names
       final userIds = jobs
@@ -175,7 +223,34 @@ class JobsLogic {
 
       debugPrint('[JobsLogic] getUserActivityJobs: ${res.length} rows');
 
-      final jobs = List<Map<String, dynamic>>.from(res);
+      final allJobs = List<Map<String, dynamic>>.from(res);
+      final jobs = <Map<String, dynamic>>[];
+
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+
+      for (var job in allJobs) {
+        final scheduledStr = job['scheduled_date'];
+        bool lapsed = false;
+        if (scheduledStr != null) {
+          final dt = DateTime.tryParse(scheduledStr);
+          if (dt != null && DateTime(dt.year, dt.month, dt.day).isBefore(today)) {
+            lapsed = true;
+          }
+        }
+
+        if (lapsed && job['status'] != 'cancelled') {
+          // Auto-cancel if it's lapsed but still pending/accepted
+          _supabase.from('jobs').update({'status': 'cancelled'}).eq('id', job['id']).catchError((e) {
+            debugPrint('[JobsLogic] auto-cancel user area error: $e');
+          });
+          final updatedJob = Map<String, dynamic>.from(job);
+          updatedJob['status'] = 'cancelled';
+          jobs.add(updatedJob);
+        } else {
+          jobs.add(job);
+        }
+      }
 
       // Enrich with mechanic names
       final mechanicIds = jobs
