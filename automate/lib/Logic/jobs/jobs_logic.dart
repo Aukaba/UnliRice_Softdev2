@@ -113,9 +113,10 @@ class JobsLogic {
         final dateStr = job['scheduled_date'] ?? job['created_at'];
         bool lapsed = false;
         if (dateStr != null) {
-          final dt = DateTime.tryParse(dateStr);
-          if (dt != null && DateTime(dt.year, dt.month, dt.day).isBefore(today)) {
-            lapsed = true;
+          final dt = DateTime.tryParse(dateStr)?.toLocal();
+          if (dt != null) {
+            final jobDay = DateTime(dt.year, dt.month, dt.day);
+            if (jobDay.isBefore(today)) lapsed = true;
           }
         }
 
@@ -158,9 +159,10 @@ class JobsLogic {
         final dateStr = job['scheduled_date'] ?? job['created_at'];
         bool lapsed = false;
         if (dateStr != null) {
-          final dt = DateTime.tryParse(dateStr);
-          if (dt != null && DateTime(dt.year, dt.month, dt.day).isBefore(today)) {
-            lapsed = true;
+          final dt = DateTime.tryParse(dateStr)?.toLocal();
+          if (dt != null) {
+            final jobDay = DateTime(dt.year, dt.month, dt.day);
+            if (jobDay.isBefore(today)) lapsed = true;
           }
         }
 
@@ -233,9 +235,10 @@ class JobsLogic {
         final dateStr = job['scheduled_date'] ?? job['created_at'];
         bool lapsed = false;
         if (dateStr != null) {
-          final dt = DateTime.tryParse(dateStr);
-          if (dt != null && DateTime(dt.year, dt.month, dt.day).isBefore(today)) {
-            lapsed = true;
+          final dt = DateTime.tryParse(dateStr)?.toLocal();
+          if (dt != null) {
+            final jobDay = DateTime(dt.year, dt.month, dt.day);
+            if (jobDay.isBefore(today)) lapsed = true;
           }
         }
 

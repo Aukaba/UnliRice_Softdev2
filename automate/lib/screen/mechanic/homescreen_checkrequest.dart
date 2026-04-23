@@ -482,48 +482,49 @@ class _AcceptJobButton extends StatelessWidget {
 
   void _onPressed(BuildContext context) {
     if (isAccepted) {
-      // Validate day
+      // Validate day — normalize parsed (UTC) date to local before comparing
       final rawDate = jobData?['scheduled_date'] ?? jobData?['created_at'];
-      DateTime jobDate = DateTime.now();
-      if (rawDate != null) {
-        jobDate = DateTime.tryParse(rawDate) ?? DateTime.now();
-      }
-      
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
-      final jobDay = DateTime(jobDate.year, jobDate.month, jobDate.day);
-      
-      if (jobDay != today) {
-        showDialog(
-          context: context,
-          builder: (ctx) => AlertDialog(
-            title: Text('Error', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
-            content: Text('This job is not scheduled for today. You cannot start it yet.',
-                style: GoogleFonts.inriaSans()),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(ctx),
-                child: Text('OK', style: GoogleFonts.montserrat()),
+
+      if (rawDate != null) {
+        final parsed = DateTime.tryParse(rawDate)?.toLocal();
+        if (parsed != null) {
+          final jobDay = DateTime(parsed.year, parsed.month, parsed.day);
+          if (jobDay != today) {
+            showDialog(
+              context: context,
+              builder: (ctx) => AlertDialog(
+                title: Text('Error', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
+                content: Text('This job is not scheduled for today. You cannot start it yet.',
+                    style: GoogleFonts.inriaSans()),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(ctx),
+                    child: Text('OK', style: GoogleFonts.montserrat()),
+                  ),
+                ],
               ),
-            ],
-          ),
-        );
-        return;
+            );
+            return;
+          }
+        }
       }
-      
-      // Navigate to active job screen
+
+      // Navigate to active job screen, passing the real job data
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => const MechanicActiveJobScreen()),
+        MaterialPageRoute(builder: (_) => MechanicActiveJobScreen(jobData: jobData)),
       );
     } else {
       // Logic for accepting a job here
       if (jobData != null && jobData!['id'] != null) {
+        final messenger = ScaffoldMessenger.of(context);
         JobsLogic().acceptJob(jobData!['id'].toString()).then((_) {
-          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job accepted!')));
-          Navigator.pop(context);
+          messenger.showSnackBar(const SnackBar(content: Text('Job accepted!')));
+          if (context.mounted) Navigator.pop(context);
         }).catchError((e) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+          messenger.showSnackBar(SnackBar(content: Text('Error: $e')));
         });
       } else {
         ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Error: Invalid job data.')));

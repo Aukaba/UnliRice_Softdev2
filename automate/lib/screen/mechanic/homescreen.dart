@@ -780,14 +780,14 @@ class _ScheduleSection extends StatelessWidget {
   const _ScheduleSection();
 
   String _mapStatus(String? rawStatus) {
-    if (rawStatus == null) return 'Unknown';
+    if (rawStatus == null || rawStatus.isEmpty) return 'Unknown';
     switch (rawStatus.toLowerCase()) {
       case 'accepted': return 'Incoming';
       case 'in-progress':
       case 'ongoing': return 'Ongoing';
       case 'completed':
       case 'done': return 'Done';
-      default: return rawStatus.substring(0, 1).toUpperCase() + rawStatus.substring(1);
+      default: return rawStatus[0].toUpperCase() + rawStatus.substring(1);
     }
   }
 
