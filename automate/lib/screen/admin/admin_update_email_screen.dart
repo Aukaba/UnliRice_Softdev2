@@ -18,7 +18,7 @@ class _AdminUpdateEmailScreenState extends State<AdminUpdateEmailScreen> {
 
   bool _isLoading = false;
   bool _showPassword = false;
-  bool _otpSent = false;
+  final bool _otpSent = false;
 
   @override
   void initState() {
@@ -134,7 +134,7 @@ class _AdminUpdateEmailScreenState extends State<AdminUpdateEmailScreen> {
                   width: 60,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: const Color(0xFF164D83).withOpacity(0.1),
+                    color: const Color(0xFF164D83).withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -451,7 +451,7 @@ class _AdminUpdateEmailScreenState extends State<AdminUpdateEmailScreen> {
                                       : Icons.visibility_outlined,
                                   color: const Color(
                                     0xFF26518E,
-                                  ).withOpacity(0.5),
+                                  ).withValues(alpha: 0.5),
                                   size: 20,
                                 ),
                               ),
