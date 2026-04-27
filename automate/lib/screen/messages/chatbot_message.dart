@@ -16,6 +16,8 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
   final TextEditingController _msgController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   bool _isLoading = false;
+  File? _selectedImage; // Track selected image before sending
+  String? _imageDescription; // Optional description for the image
   
   List<ChatMessage> _messages = [];
   
@@ -27,7 +29,7 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
     super.initState();
     // Initialize with welcome message
     _messages.add(ChatMessage(
-      message: "Hello! I'm MechMate, your AI assistant. How can I help with your vehicle today?",
+      message: "Hello! I'm MechMate, your AI assistant. I can analyze vehicle photos. Take a picture or describe your issue!",
       time: _getCurrentTime(),
       isMe: false,
     ));
@@ -35,10 +37,70 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
 
   String _getCurrentTime() {
     final now = DateTime.now();
-    return "${now.hour}:${now.minute.toString().padLeft(2, '0')} ${now.hour >= 12 ? 'PM' : 'AM'}";
+    final hour = now.hour % 12;
+    final minute = now.minute.toString().padLeft(2, '0');
+    final ampm = now.hour >= 12 ? 'PM' : 'AM';
+    return "$hour:$minute $ampm";
   }
 
-  /// Send message to Ollama AI
+  /// Show image source selection dialog
+  void _showImageSourceDialog() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text("Take Photo"),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.camera);
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text("Choose from Gallery"),
+              onTap: () {
+                Navigator.pop(context);
+                _pickImage(ImageSource.gallery);
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  /// Pick image from camera or gallery
+  Future<void> _pickImage(ImageSource source) async {
+    final XFile? photo = await _picker.pickImage(
+      source: source,
+      maxWidth: 800,
+      maxHeight: 800,
+      imageQuality: 80,
+    );
+
+    if (photo != null) {
+      setState(() {
+        _selectedImage = File(photo.path);
+      });
+    }
+  }
+
+  /// Remove selected image preview
+  void _removeSelectedImage() {
+    setState(() {
+      _selectedImage = null;
+      _imageDescription = null;
+    });
+  }
+
+  /// Send message with optional image to Ollama AI
   Future<void> _sendToOllama({String? text, String? imageBase64}) async {
     setState(() => _isLoading = true);
 
@@ -94,10 +156,52 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
     });
   }
 
+  /// Send message with image (both together)
+  Future<void> _sendMessageWithImage() async {
+    if (_selectedImage == null) return;
+    
+    final text = _msgController.text.trim();
+    final hasText = text.isNotEmpty;
+    
+    // Add user message with image preview
+    setState(() {
+      _messages.add(ChatMessage(
+        message: hasText ? text : "[Image sent for analysis]",
+        time: _getCurrentTime(),
+        isMe: true,
+        imageFile: _selectedImage, // Store image in message
+      ));
+      _isLoading = true;
+    });
+    
+    _msgController.clear();
+    
+    // Prepare the image as base64
+    final bytes = await _selectedImage!.readAsBytes();
+    final base64String = base64Encode(bytes);
+    
+    // Prepare the prompt (include text description if provided)
+    final prompt = hasText 
+        ? text 
+        : "Look at this vehicle image. What visible issues or potential problems can you identify? List 3 possibilities.";
+    
+    // Clear selected image after sending
+    setState(() {
+      _selectedImage = null;
+      _imageDescription = null;
+    });
+    
+    // Send to AI
+    await _sendToOllama(text: prompt, imageBase64: base64String);
+    
+    setState(() => _isLoading = false);
+  }
+
+  /// Send text-only message
   void _handleSendMessage() {
     if (_msgController.text.trim().isEmpty) return;
     
-    final text = _msgController.text;
+    final text = _msgController.text.trim();
     
     setState(() {
       _messages.add(ChatMessage(
@@ -105,34 +209,13 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
         time: _getCurrentTime(),
         isMe: true,
       ));
+      _isLoading = true;
     });
     
     _msgController.clear();
-    _sendToOllama(text: text);
-  }
-
-  void _handleImageCapture() async {
-    final XFile? photo = await _picker.pickImage(
-      source: ImageSource.camera,
-      maxWidth: 800,
-      maxHeight: 800,
-      imageQuality: 50,
-    );
-
-    if (photo != null) {
-      setState(() {
-        _messages.add(ChatMessage(
-          message: "[Image sent for diagnosis]",
-          time: _getCurrentTime(),
-          isMe: true,
-        ));
-      });
-      
-      final bytes = await File(photo.path).readAsBytes();
-      final base64String = base64Encode(bytes);
-      
-      _sendToOllama(imageBase64: base64String);
-    }
+    _sendToOllama(text: text).then((_) {
+      if (mounted) setState(() => _isLoading = false);
+    });
   }
 
   @override
@@ -154,10 +237,15 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
                   message: msg.message,
                   time: msg.time,
                   isMe: msg.isMe,
+                  imageFile: msg.imageFile,
                 );
               },
             ),
           ),
+
+          // Image Preview (if an image is selected but not yet sent)
+          if (_selectedImage != null)
+            _buildImagePreview(),
 
           // Loading indicator
           if (_isLoading)
@@ -168,6 +256,48 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
 
           // Input Bar
           _buildInputBar(),
+        ],
+      ),
+    );
+  }
+
+  /// Image preview widget before sending
+  Widget _buildImagePreview() {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey.shade300),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Stack(
+        children: [
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: Image.file(
+              _selectedImage!,
+              height: 120,
+              width: double.infinity,
+              fit: BoxFit.cover,
+            ),
+          ),
+          Positioned(
+            top: 8,
+            right: 8,
+            child: GestureDetector(
+              onTap: _removeSelectedImage,
+              child: Container(
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.6),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.close,
+                  color: Colors.white,
+                  size: 20,
+                ),
+              ),
+            ),
+          ),
         ],
       ),
     );
@@ -247,10 +377,11 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
       ),
       child: Row(
         children: [
+          // Attachment button (Camera/Gallery)
           IconButton(
-            onPressed: _isLoading ? null : _handleImageCapture,
+            onPressed: _isLoading ? null : _showImageSourceDialog,
             icon: Icon(
-              Icons.camera_alt,
+              Icons.attach_file,
               color: _isLoading ? Colors.grey : const Color(0xFF19456B),
             ),
           ),
@@ -266,7 +397,9 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
                 controller: _msgController,
                 enabled: !_isLoading,
                 decoration: InputDecoration(
-                  hintText: "Ask MechMate anything...",
+                  hintText: _selectedImage != null 
+                      ? "Add a description (optional)..." 
+                      : "Ask MechMate or upload a photo...",
                   hintStyle: GoogleFonts.montserrat(
                     fontSize: 14,
                     fontWeight: FontWeight.w400,
@@ -279,16 +412,25 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
             ),
           ),
           const SizedBox(width: 10),
+          // Send button - changes behavior based on whether an image is selected
           GestureDetector(
-            onTap: _isLoading ? null : _handleSendMessage,
+            onTap: _isLoading 
+                ? null 
+                : (_selectedImage != null 
+                    ? _sendMessageWithImage 
+                    : _handleSendMessage),
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: _isLoading ? Colors.grey : const Color(0xFF19456B),
+                color: _isLoading 
+                    ? Colors.grey 
+                    : (_selectedImage != null || _msgController.text.isNotEmpty
+                        ? const Color(0xFF19456B)
+                        : Colors.grey.shade400),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.send_rounded,
+              child: Icon(
+                _selectedImage != null ? Icons.send : Icons.send_rounded,
                 color: Colors.white,
                 size: 22,
               ),
@@ -303,6 +445,7 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
     required String message,
     required String time,
     required bool isMe,
+    File? imageFile,
   }) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 20.0),
@@ -344,14 +487,30 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    message,
-                    style: GoogleFonts.montserrat(
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: isMe ? Colors.white : Colors.black87,
+                  // Show image if present (like ChatGPT)
+                  if (imageFile != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(8),
+                        child: Image.file(
+                          imageFile,
+                          height: 180,
+                          width: double.infinity,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
                     ),
-                  ),
+                  // Show text message (if present)
+                  if (message.isNotEmpty)
+                    Text(
+                      message,
+                      style: GoogleFonts.montserrat(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        color: isMe ? Colors.white : Colors.black87,
+                      ),
+                    ),
                   const SizedBox(height: 4),
                   Text(
                     time,
@@ -371,17 +530,19 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
   }
 }
 
-// Message model class
+// Message model class (updated to include image)
 class ChatMessage {
   final String message;
   final String time;
   final bool isMe;
   final bool isError;
+  final File? imageFile;
 
   ChatMessage({
     required this.message,
     required this.time,
     required this.isMe,
     this.isError = false,
+    this.imageFile,
   });
 }
