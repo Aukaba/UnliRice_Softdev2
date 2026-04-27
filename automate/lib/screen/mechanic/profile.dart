@@ -3,7 +3,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'homescreen.dart';
 import 'jobs.dart';
 import 'schedule.dart';
-import 'chat.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../messages/user_message_list.dart';
 import '../authentication/login_screen.dart'; // Just in case for logout

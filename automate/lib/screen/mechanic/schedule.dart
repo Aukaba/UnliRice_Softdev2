@@ -4,6 +4,7 @@ import 'homescreen.dart'; // adjust import paths as needed
 import 'jobs.dart';
 import '../messages/user_message_list.dart';
 import '../../Logic/jobs/jobs_logic.dart';
+import 'homescreen_checkrequest.dart';
 
 // ─── Data model ───────────────────────────────────────────────────────────────
 
@@ -536,19 +537,37 @@ class _ScheduleJobCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0F000000),
-            blurRadius: 18,
-            offset: Offset(0, 8),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MechanicCheckRequestScreen(
+              isAccepted: true,
+              jobData: {
+                'scheduled_date': job.date.toIso8601String(),
+                'title': job.title,
+                'vehicle': job.vehicle,
+                'issue_description': job.description,
+                'pickup_location': job.location,
+              },
+            ),
           ),
-        ],
-      ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0F000000),
+              blurRadius: 18,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -675,7 +694,7 @@ class _ScheduleJobCard extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ));
   }
 }
 

@@ -68,26 +68,6 @@ class JobsLogic {
     return null;
   }
 
-  // ─── Helper: look up a mechanic display name ──────────────────────────────────
-  Future<String?> _lookupMechanicName(String uid) async {
-    try {
-      final res = await _supabase
-          .from('mechanic')
-          .select('first_name, last_name')
-          .eq('uid', uid)
-          .maybeSingle();
-      if (res != null) {
-        final first = res['first_name'] ?? '';
-        final last = res['last_name'] ?? '';
-        final full = '$first $last'.trim();
-        if (full.isNotEmpty) return full;
-      }
-    } catch (e) {
-      debugPrint('[JobsLogic] _lookupMechanicName($uid): $e');
-    }
-    return null;
-  }
-
   // ─── Create a new job ─────────────────────────────────────────────────────────
   Future<void> createJob({
     required String title,
@@ -123,7 +103,33 @@ class JobsLogic {
           .neq('service_type', 'emergency')
           .order('created_at', ascending: false);
       debugPrint('[JobsLogic] getPendingJobs: ${res.length} rows');
-      return List<Map<String, dynamic>>.from(res);
+      final jobs = List<Map<String, dynamic>>.from(res);
+      final validJobs = <Map<String, dynamic>>[];
+      
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+
+      for (var job in jobs) {
+        final dateStr = job['scheduled_date'] ?? job['created_at'];
+        bool lapsed = false;
+        if (dateStr != null) {
+          final dt = DateTime.tryParse(dateStr)?.toLocal();
+          if (dt != null) {
+            final jobDay = DateTime(dt.year, dt.month, dt.day);
+            if (jobDay.isBefore(today)) lapsed = true;
+          }
+        }
+
+        if (lapsed) {
+          _supabase.from('jobs').update({'status': 'cancelled'}).eq('id', job['id']).catchError((e) {
+            debugPrint('[JobsLogic] auto-cancel error: $e');
+          });
+          continue;
+        }
+        validJobs.add(job);
+      }
+
+      return validJobs;
     });
   }
 
@@ -143,7 +149,31 @@ class JobsLogic {
 
       debugPrint('[JobsLogic] getMechanicScheduledJobs: ${res.length} rows');
 
-      final jobs = List<Map<String, dynamic>>.from(res);
+      final allJobs = List<Map<String, dynamic>>.from(res);
+      final jobs = <Map<String, dynamic>>[];
+      
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+
+      for (var job in allJobs) {
+        final dateStr = job['scheduled_date'] ?? job['created_at'];
+        bool lapsed = false;
+        if (dateStr != null) {
+          final dt = DateTime.tryParse(dateStr)?.toLocal();
+          if (dt != null) {
+            final jobDay = DateTime(dt.year, dt.month, dt.day);
+            if (jobDay.isBefore(today)) lapsed = true;
+          }
+        }
+
+        if (lapsed) {
+          _supabase.from('jobs').update({'status': 'cancelled'}).eq('id', job['id']).catchError((e) {
+            debugPrint('[JobsLogic] auto-cancel scheduled error: $e');
+          });
+          continue;
+        }
+        jobs.add(job);
+      }
 
       // Enrich with user names
       final userIds = jobs
@@ -195,7 +225,35 @@ class JobsLogic {
 
       debugPrint('[JobsLogic] getUserActivityJobs: ${res.length} rows');
 
-      final jobs = List<Map<String, dynamic>>.from(res);
+      final allJobs = List<Map<String, dynamic>>.from(res);
+      final jobs = <Map<String, dynamic>>[];
+
+      final now = DateTime.now();
+      final today = DateTime(now.year, now.month, now.day);
+
+      for (var job in allJobs) {
+        final dateStr = job['scheduled_date'] ?? job['created_at'];
+        bool lapsed = false;
+        if (dateStr != null) {
+          final dt = DateTime.tryParse(dateStr)?.toLocal();
+          if (dt != null) {
+            final jobDay = DateTime(dt.year, dt.month, dt.day);
+            if (jobDay.isBefore(today)) lapsed = true;
+          }
+        }
+
+        if (lapsed && job['status'] != 'cancelled') {
+          // Auto-cancel if it's lapsed but still pending/accepted
+          _supabase.from('jobs').update({'status': 'cancelled'}).eq('id', job['id']).catchError((e) {
+            debugPrint('[JobsLogic] auto-cancel user area error: $e');
+          });
+          final updatedJob = Map<String, dynamic>.from(job);
+          updatedJob['status'] = 'cancelled';
+          jobs.add(updatedJob);
+        } else {
+          jobs.add(job);
+        }
+      }
 
       // Enrich with mechanic names
       final mechanicIds = jobs
