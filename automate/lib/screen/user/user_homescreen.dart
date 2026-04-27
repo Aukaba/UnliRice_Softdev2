@@ -154,7 +154,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                           final rawStatus = job['status'] as String? ?? 'pending';
                           String displayStatus = 'Pending';
                           if (rawStatus == 'completed') displayStatus = 'Completed';
-                          else if (rawStatus == 'canceled') displayStatus = 'Canceled';
+                          else if (rawStatus == 'canceled' || rawStatus == 'cancelled') displayStatus = 'Canceled';
                           else if (rawStatus == 'accepted') displayStatus = 'On Going';
 
                           // Time display

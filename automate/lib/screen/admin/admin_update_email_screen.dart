@@ -18,7 +18,6 @@ class _AdminUpdateEmailScreenState extends State<AdminUpdateEmailScreen> {
 
   bool _isLoading = false;
   bool _showPassword = false;
-  final bool _otpSent = false;
 
   @override
   void initState() {

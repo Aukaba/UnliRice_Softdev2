@@ -4,6 +4,7 @@ import 'homescreen.dart';
 import 'schedule.dart';
 import '../messages/user_message_list.dart';
 import '../../Logic/jobs/jobs_logic.dart';
+import 'homescreen_checkrequest.dart';
 
 class MechanicJobsScreen extends StatefulWidget {
   const MechanicJobsScreen({super.key});
@@ -26,19 +27,6 @@ class _MechanicJobsScreenState extends State<MechanicJobsScreen> {
   List<Map<String, dynamic>> _filterJobs(List<Map<String, dynamic>> jobs) {
     if (_selectedFilter == 'All') return jobs;
     return jobs.where((j) => j['priority'] == _selectedFilter).toList();
-  }
-
-  void _acceptJob(String jobId) async {
-    try {
-      await JobsLogic().acceptJob(jobId);
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Job accepted!')));
-      }
-    } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
-      }
-    }
   }
 
   @override
@@ -224,7 +212,6 @@ class _MechanicJobsScreenState extends State<MechanicJobsScreen> {
                       final job = filteredJobs[index];
                       return _JobCard(
                         job: job,
-                        onAccept: () => _acceptJob(job['id'].toString()),
                       );
                     },
                   );
@@ -263,9 +250,8 @@ class _MechanicJobsScreenState extends State<MechanicJobsScreen> {
 
 class _JobCard extends StatelessWidget {
   final Map<String, dynamic> job;
-  final VoidCallback onAccept;
   
-  const _JobCard({required this.job, required this.onAccept});
+  const _JobCard({required this.job});
 
   Color get _badgeBg => job['priority'] == 'High'
       ? const Color(0xFFFFE5E5)
@@ -301,19 +287,28 @@ class _JobCard extends StatelessWidget {
     final description = job['issue_description'] ?? 'No description provided.';
     final priority = job['priority'] ?? 'Medium';
     
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(28),
-        boxShadow: const [
-          BoxShadow(
-            color: Color(0x0F000000),
-            blurRadius: 18,
-            offset: Offset(0, 8),
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MechanicCheckRequestScreen(jobData: job, isAccepted: false),
           ),
-        ],
-      ),
+        );
+      },
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(28),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0F000000),
+              blurRadius: 18,
+              offset: Offset(0, 8),
+            ),
+          ],
+        ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -421,30 +416,12 @@ class _JobCard extends StatelessWidget {
                   color: Colors.black38,
                 ),
               ),
-              const Spacer(),
-              GestureDetector(
-                onTap: onAccept,
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF19456B),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    'Accept',
-                    style: GoogleFonts.montserrat(
-                      fontSize: 13,
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
-                    ),
-                  ),
-                ),
-              ),
+
             ],
           ),
         ],
       ),
-    );
+    ));
   }
 }
 
