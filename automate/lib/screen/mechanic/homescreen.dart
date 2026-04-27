@@ -6,8 +6,6 @@ import '../../Logic/jobs/jobs_logic.dart';
 import 'homescreen_checkrequest.dart';
 import 'jobs.dart';
 import 'schedule.dart';
-import '../messages/user_message_list.dart';
-import 'profile.dart';
 
 class MechanicHomeScreen extends StatefulWidget {
   const MechanicHomeScreen({super.key});
@@ -109,6 +107,8 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                         const SizedBox(height: 16),
                         const _StatsSection(),
                         const SizedBox(height: 24),
+                        const _ScheduleSection(),
+                        const SizedBox(height: 24),
                         const _IncomingRequestsSection(),
                         const SizedBox(height: 24),
                         const _PerformanceSection(),
@@ -121,32 +121,6 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
             ),
           ],
         ),
-      ),
-      bottomNavigationBar: _MechanicBottomNavigationBar(
-        currentIndex: 0,
-        onItemTapped: (index) {
-          if (index == 1) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MechanicJobsScreen()),
-            );
-          } else if (index == 2) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MechanicScheduleScreen()),
-            );
-          } else if (index == 3) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const UserMessageListScreen()),
-            );
-          } else if (index == 4) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MechanicProfileScreen()),
-            );
-          }
-        },
       ),
     );
   }
@@ -523,7 +497,7 @@ class _RequestCard extends StatelessWidget {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => const MechanicCheckRequestScreen(),
+          builder: (_) => MechanicCheckRequestScreen(jobData: job, isAccepted: false),
         ),
       ),
     );
@@ -709,66 +683,216 @@ class _PerformanceMetric extends StatelessWidget {
   }
 }
 
-class _MechanicBottomNavigationBar extends StatelessWidget {
-  final int currentIndex;
-  final ValueChanged<int> onItemTapped;
 
-  const _MechanicBottomNavigationBar(
-      {required this.currentIndex, required this.onItemTapped});
+class _ScheduleSection extends StatelessWidget {
+  const _ScheduleSection();
+
+  String _mapStatus(String? rawStatus) {
+    if (rawStatus == null || rawStatus.isEmpty) return 'Unknown';
+    switch (rawStatus.toLowerCase()) {
+      case 'accepted': return 'Incoming';
+      case 'in-progress':
+      case 'ongoing': return 'Ongoing';
+      case 'completed':
+      case 'done': return 'Done';
+      default: return rawStatus[0].toUpperCase() + rawStatus.substring(1);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Container(
-        color: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _NavItem(icon: Icons.home_outlined, label: 'Home', active: currentIndex == 0, onTap: () => onItemTapped(0)),
-            _NavItem(icon: Icons.inventory_2_outlined, label: 'Jobs', active: currentIndex == 1, onTap: () => onItemTapped(1)),
-            _NavItem(icon: Icons.calendar_month_outlined, label: 'Schedule', active: currentIndex == 2, onTap: () => onItemTapped(2)),
-            _NavItem(icon: Icons.chat_bubble_outline, label: 'Chat', active: currentIndex == 3, onTap: () => onItemTapped(3)),
-            _NavItem(icon: Icons.person_outline, label: 'Profile', active: currentIndex == 4, onTap: () => onItemTapped(4)),
-          ],
-        ),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Schedule',
+                style: GoogleFonts.montserrat(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black,
+                ),
+              ),
+              InkWell(
+                onTap: () {
+                   Navigator.push(context,
+                    MaterialPageRoute(builder: (_) => const MechanicScheduleScreen()));
+                },
+                child: Text(
+                  'View all',
+                  style: GoogleFonts.inriaSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF121212),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          StreamBuilder<List<Map<String, dynamic>>>(
+            stream: JobsLogic().getMechanicScheduledJobs(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final jobs = snapshot.data ?? [];
+              if (jobs.isEmpty) {
+                return Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Center(
+                    child: Text(
+                      'No upcoming schedule',
+                      style: GoogleFonts.inriaSans(
+                        fontSize: 14,
+                        color: Colors.black38,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                  ),
+                );
+              }
+              
+              final topJobs = jobs.take(3).toList();
+              
+              return Column(
+                children: topJobs.map((job) {
+                  final title = job['title'] ?? 'Service Request';
+                  final rawDate = job['scheduled_date'] ?? job['created_at'];
+                  DateTime date = DateTime.now();
+                  if (rawDate != null) {
+                    date = DateTime.tryParse(rawDate) ?? DateTime.now();
+                  }
+                  
+                  final hourStr = date.hour > 12 ? date.hour - 12 : date.hour == 0 ? 12 : date.hour;
+                  final timeString = '$hourStr:${date.minute.toString().padLeft(2, '0')} ${date.hour >= 12 ? 'PM' : 'AM'}';
+                  
+                  final now = DateTime.now();
+                  final today = DateTime(now.year, now.month, now.day);
+                  final jobDate = DateTime(date.year, date.month, date.day);
+                  
+                  String displayTime = timeString;
+                  if (jobDate != today) {
+                      displayTime = '${date.month}/${date.day} - $timeString';
+                  }
+
+                  final statusRaw = job['status'] as String?;
+                  final statusMapped = _mapStatus(statusRaw);
+
+                  return Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _ScheduleCard(
+                      title: title,
+                      time: displayTime,
+                      status: statusMapped,
+                      onTap: () {
+                         Navigator.push(context,
+                          MaterialPageRoute(builder: (_) => const MechanicScheduleScreen()));
+                      },
+                    ),
+                  );
+                }).toList(),
+              );
+            },
+          ),
+        ],
       ),
     );
   }
 }
 
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool active;
+class _ScheduleCard extends StatelessWidget {
+  final String title;
+  final String time;
+  final String status;
   final VoidCallback onTap;
 
-  const _NavItem(
-      {required this.icon, required this.label, this.active = false, required this.onTap});
+  const _ScheduleCard({
+    required this.title,
+    required this.time,
+    required this.status,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? const Color(0xFFFFB703) : Colors.black54;
-    return GestureDetector(
+    Color statusColor;
+    Color statusBgColor;
+
+    if (status == 'Ongoing') {
+      statusColor = const Color(0xFF0052CC);
+      statusBgColor = const Color(0xFFE5F0FF);
+    } else if (status == 'Incoming') {
+      statusColor = const Color(0xFFD72B2B);
+      statusBgColor = const Color(0xFFFFE5E5);
+    } else {
+      statusColor = const Color(0xFF2F8A48);
+      statusBgColor = const Color(0xFFE8F7EA);
+    }
+
+    return InkWell(
       onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: active ? const Color(0x33FFB703) : Colors.transparent,
-              borderRadius: BorderRadius.circular(14),
+      borderRadius: BorderRadius.circular(24),
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: const [
+            BoxShadow(
+              color: Color(0x0F000000),
+              blurRadius: 18,
+              offset: Offset(0, 10),
             ),
-            child: Icon(icon, size: 22, color: color),
-          ),
-          const SizedBox(height: 6),
-          Text(label,
-              style: GoogleFonts.inriaSans(
-                  fontSize: 11, fontWeight: FontWeight.w600, color: color)),
-        ],
+          ],
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 46,
+              height: 46,
+              decoration: BoxDecoration(
+                color: const Color(0xFFF5F7FA),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Icon(Icons.schedule, color: Color(0xFF121212)),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title,
+                      style: GoogleFonts.montserrat(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black)),
+                  const SizedBox(height: 4),
+                  Text(time,
+                      style: GoogleFonts.inriaSans(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black54)),
+                ],
+              ),
+            ),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: statusBgColor,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(status,
+                  style: GoogleFonts.inriaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: statusColor)),
+            ),
+          ],
+        ),
       ),
     );
   }
