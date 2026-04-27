@@ -5,7 +5,7 @@ import '../../Logic/authentication/login.dart';
 import 'signup_screen.dart';
 import 'forgot_password_screen.dart';
 import '../user/navigation_shell.dart';
-import '../mechanic/navigation_shell.dart';
+import '../mechanic/homescreen.dart';
 import '../admin/admin_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -84,7 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => const MechanicNavigationShell(),
+            builder: (context) => const MechanicHomeScreen(),
           ),
         );
       } else {
