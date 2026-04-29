@@ -220,7 +220,10 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white)),
                         onPressed: () {
-                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Diagnosis feature coming soon')));
+                          showDialog(
+                            context: context,
+                            builder: (context) => const _DiagnosisDialog(),
+                          );
                         },
                       ),
                       const SizedBox(height: 12),
