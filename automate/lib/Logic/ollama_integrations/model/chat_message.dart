@@ -1,22 +1,17 @@
+import 'dart:io';
+
 class ChatMessage {
-  final String content;
-  final bool isUser;
-  final DateTime timestamp;
-  final MessageType type;
+  final String message;
+  final String time;
+  final bool isMe;
+  final bool isError;
+  final File? imageFile;
 
   ChatMessage({
-    required this.content,
-    required this.isUser,
-    DateTime? timestamp,
-    this.type = MessageType.text,
-  }) : timestamp = timestamp ?? DateTime.now();
-
-  Map<String, dynamic> toJson() => {
-    'content': content,
-    'isUser': isUser,
-    'timestamp': timestamp.toIso8601String(),
-    'type': type.toString(),
-  };
+    required this.message,
+    required this.time,
+    required this.isMe,
+    this.isError = false,
+    this.imageFile,
+  });
 }
-
-enum MessageType { text, image, error }
