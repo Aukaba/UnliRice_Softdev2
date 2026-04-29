@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../Logic/jobs/jobs_logic.dart';
 import 'homescreen.dart';
 import 'jobs.dart';
 import 'schedule.dart';
@@ -22,6 +23,19 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
       (widget.jobData?[key]?.toString().isNotEmpty == true)
           ? widget.jobData![key].toString()
           : fallback;
+
+  @override
+  void initState() {
+    super.initState();
+    // Mark the job as in-progress in the DB as soon as the screen opens
+    final jobId = widget.jobData?['id']?.toString() ??
+                  widget.jobData?['job_id']?.toString();
+    if (jobId != null) {
+      JobsLogic().setJobInProgress(jobId).catchError((e) {
+        debugPrint('[ActiveJob] setJobInProgress error: $e');
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -754,19 +768,88 @@ class _NavItem extends StatelessWidget {
 
 // ── Job Complete Screen ───────────────────────────────────────────────────────
 
-class MechanicJobCompleteScreen extends StatelessWidget {
+class MechanicJobCompleteScreen extends StatefulWidget {
   final Map<String, dynamic>? jobData;
   const MechanicJobCompleteScreen({super.key, this.jobData});
 
+  @override
+  State<MechanicJobCompleteScreen> createState() => _MechanicJobCompleteScreenState();
+}
+
+class _MechanicJobCompleteScreenState extends State<MechanicJobCompleteScreen> {
+  final _supabase = Supabase.instance.client;
+
+  bool _isLoading = true;
+  List<Map<String, dynamic>> _diagnosisItems = [];
+  double _totalBill = 200.0;
+
   String _field(String key, String fallback) {
-    final v = jobData?[key]?.toString();
+    final v = widget.jobData?[key]?.toString();
     return (v != null && v.isNotEmpty) ? v : fallback;
   }
 
   String get _bookingId {
-    final id = jobData?['id']?.toString() ?? '';
+    final id = widget.jobData?['id']?.toString() ?? '';
     if (id.isEmpty) return 'N/A';
     return 'A-${id.substring(0, id.length < 8 ? id.length : 8).toUpperCase()}';
+  }
+
+  String? get _jobId {
+    final jobMap = widget.jobData?['jobs'] as Map<String, dynamic>?;
+    return widget.jobData?['id']?.toString() ??
+           widget.jobData?['job_id']?.toString() ??
+           jobMap?['id']?.toString();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchDiagnosis();
+  }
+
+  Future<void> _fetchDiagnosis() async {
+    if (_jobId == null) {
+      setState(() => _isLoading = false);
+      return;
+    }
+
+    try {
+      // Fetch the diagnosis record for this job
+      final diagRes = await _supabase
+          .from('job_diagnosis')
+          .select('id, total_bill, diagnosis_fee')
+          .eq('job_id', _jobId!)
+          .maybeSingle();
+
+      if (diagRes == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      final diagnosisId = diagRes['id']?.toString();
+      final totalBill   = double.tryParse(diagRes['total_bill']?.toString() ?? '') ?? 200.0;
+
+      // Fetch the individual items
+      List<Map<String, dynamic>> items = [];
+      if (diagnosisId != null) {
+        final itemsRes = await _supabase
+            .from('job_diagnosis_items')
+            .select('item_name, price')
+            .eq('job_diagnosis_id', diagnosisId);
+        items = List<Map<String, dynamic>>.from(itemsRes as List);
+      }
+
+      if (mounted) {
+        setState(() {
+          _diagnosisItems = items;
+          _totalBill      = totalBill;
+          _isLoading      = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching diagnosis for complete screen: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -790,24 +873,33 @@ class MechanicJobCompleteScreen extends StatelessWidget {
           Container(
             width: double.infinity,
             padding: const EdgeInsets.only(top: 52, left: 20, right: 20, bottom: 20),
-            color: const Color(0xFF1A3A5C),
+            decoration: const BoxDecoration(
+              color: Color(0xFFE51D1D),
+              borderRadius: BorderRadius.only(
+                bottomLeft: Radius.circular(20),
+                bottomRight: Radius.circular(20),
+              ),
+            ),
             child: Row(
               children: [
                 GestureDetector(
                   onTap: () => Navigator.pop(context),
                   child: const Icon(Icons.keyboard_arrow_down_rounded,
-                      color: Colors.white, size: 32),
+                      color: Colors.black, size: 32),
                 ),
                 const SizedBox(width: 12),
                 Text('$dateLabel  |  $timeLabel',
                     style: GoogleFonts.montserrat(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,
-                        color: Colors.white)),
+                        color: Colors.black)),
               ],
             ),
           ),
 
+          if (_isLoading)
+            const Expanded(child: Center(child: CircularProgressIndicator()))
+          else
           Expanded(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(16),
@@ -852,7 +944,7 @@ class MechanicJobCompleteScreen extends StatelessWidget {
                           height: 48,
                           decoration: const BoxDecoration(
                             shape: BoxShape.circle,
-                            color: Color(0xFF1A3A5C),
+                          color: Color(0xFFE51D1D),
                           ),
                           child: const Icon(Icons.person,
                               color: Colors.white, size: 26),
@@ -885,33 +977,28 @@ class MechanicJobCompleteScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Consumables Used:',
+                        Text('Items & Consumables:',
                             style: GoogleFonts.montserrat(
                                 fontSize: 13,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.black)),
                         const SizedBox(height: 12),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _ReceiptRow('Diagnosis Fee', '₱200'),
-                                ],
-                              ),
-                            ),
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  _ReceiptRow('Parts', 'See diagnosis'),
-                                ],
-                              ),
-                            ),
-                          ],
-                        ),
+                        // Diagnosis fee row
+                        _ReceiptItemRow('Diagnosis Fee', 200.0),
+                        // Dynamic items from DB
+                        if (_diagnosisItems.isEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text('No items added in diagnosis.',
+                                style: GoogleFonts.inriaSans(
+                                    fontSize: 12, color: Colors.black38)),
+                          )
+                        else
+                          ..._diagnosisItems.map((item) {
+                            final name  = item['item_name']?.toString() ?? 'Item';
+                            final price = double.tryParse(item['price']?.toString() ?? '0') ?? 0.0;
+                            return _ReceiptItemRow(name, price);
+                          }),
                         const Divider(height: 24),
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -921,11 +1008,11 @@ class MechanicJobCompleteScreen extends StatelessWidget {
                                     fontSize: 14,
                                     fontWeight: FontWeight.w700,
                                     color: Colors.black)),
-                            Text('₱200+',
+                            Text('₱${_totalBill.toStringAsFixed(2)}',
                                 style: GoogleFonts.montserrat(
                                     fontSize: 14,
                                     fontWeight: FontWeight.w800,
-                                    color: Color(0xFFE51D1D))),
+                                    color: const Color(0xFFE51D1D))),
                           ],
                         ),
                       ],
@@ -978,7 +1065,7 @@ class MechanicJobCompleteScreen extends StatelessWidget {
                   // Done button
                   ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF1A3A5C),
+                    backgroundColor: const Color(0xFFFFB703),
                       shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16)),
                       minimumSize: const Size.fromHeight(52),
@@ -1050,6 +1137,35 @@ class _ReceiptRow extends StatelessWidget {
                 fontWeight: FontWeight.w700,
                 color: Colors.black87),
           ),
+        ],
+      ),
+    );
+  }
+}
+
+// Receipt row for numeric prices (used in the completion screen)
+class _ReceiptItemRow extends StatelessWidget {
+  final String label;
+  final double price;
+  const _ReceiptItemRow(this.label, this.price);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Text(label,
+                style: GoogleFonts.inriaSans(
+                    fontSize: 13, color: Colors.black54)),
+          ),
+          Text('₱${price.toStringAsFixed(2)}',
+              style: GoogleFonts.inriaSans(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: Colors.black87)),
         ],
       ),
     );
