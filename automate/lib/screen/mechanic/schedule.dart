@@ -18,6 +18,7 @@ class _ScheduledJob {
   final String price;
   final String tag; // 'TODAY', 'TOMORROW', 'MON 03·27-28', etc.
   final DateTime date;
+  final Map<String, dynamic> rawJob;
 
   const _ScheduledJob({
     required this.title,
@@ -29,6 +30,7 @@ class _ScheduledJob {
     required this.price,
     required this.tag,
     required this.date,
+    required this.rawJob,
   });
 }
 
@@ -65,7 +67,7 @@ class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
       
       return _ScheduledJob(
         title: j['title'] ?? 'Service Request',
-        name: 'User',
+        name: j['user_name'] ?? 'User',
         vehicle: j['vehicle'] ?? 'Vehicle',
         description: j['issue_description'] ?? 'No description',
         location: j['pickup_location'] ?? 'Unknown location',
@@ -73,6 +75,7 @@ class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
         price: 'Pending Estimate', 
         tag: tag,
         date: date,
+        rawJob: j,
       );
     }).toList();
   }
@@ -544,13 +547,7 @@ class _ScheduleJobCard extends StatelessWidget {
           MaterialPageRoute(
             builder: (_) => MechanicCheckRequestScreen(
               isAccepted: true,
-              jobData: {
-                'scheduled_date': job.date.toIso8601String(),
-                'title': job.title,
-                'vehicle': job.vehicle,
-                'issue_description': job.description,
-                'pickup_location': job.location,
-              },
+              jobData: job.rawJob,
             ),
           ),
         );

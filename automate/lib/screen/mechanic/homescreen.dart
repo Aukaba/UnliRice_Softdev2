@@ -1041,7 +1041,7 @@ class _EmergencyAlertDialogState extends State<_EmergencyAlertDialog> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => const MechanicCheckRequestScreen(),
+              builder: (_) => MechanicCheckRequestScreen(jobData: job, isAccepted: true),
             ),
           );
         }
