@@ -33,11 +33,7 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
         children: [
           // ── Map Background Placeholder ──
           Positioned.fill(
-            child: Image.network(
-              'https://placehold.co/800x1200?text=Map+Background',
-              fit: BoxFit.cover,
-              errorBuilder: (_, __, ___) => Container(color: const Color(0xFFD9E2EC)),
-            ),
+            child: Container(color: const Color(0xFFD9E2EC)),
           ),
 
           // ── Red Top Header ──
@@ -140,18 +136,22 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          Row(children: [
-                            const Icon(Icons.location_on_outlined,
-                                size: 18, color: Color(0xFFE51D1D)),
-                            const SizedBox(width: 6),
-                            Flexible(
-                              child: Text(location,
-                                  style: GoogleFonts.inriaSans(
-                                      fontSize: 13,
-                                      fontWeight: FontWeight.w600,
-                                      color: Colors.black87)),
-                            ),
-                          ]),
+                          Expanded(
+                            child: Row(children: [
+                              const Icon(Icons.location_on_outlined,
+                                  size: 18, color: Color(0xFFE51D1D)),
+                              const SizedBox(width: 6),
+                              Expanded(
+                                child: Text(location,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.inriaSans(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87)),
+                              ),
+                            ]),
+                          ),
+                          const SizedBox(width: 10),
                           Row(children: [
                             const Icon(Icons.directions_car_outlined,
                                 size: 18, color: Colors.black87),
@@ -213,7 +213,9 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                                 fontSize: 15,
                                 fontWeight: FontWeight.w700,
                                 color: Colors.white)),
-                        onPressed: () {},
+                        onPressed: () {
+                          ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Diagnosis feature coming soon')));
+                        },
                       ),
                       const SizedBox(height: 12),
 
@@ -238,7 +240,9 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
                                     color: Colors.white)),
-                            onPressed: () {},
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Opening chat with $clientName')));
+                            },
                           ),
                         ),
                         const SizedBox(width: 12),
@@ -259,7 +263,9 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
                                     color: Colors.white)),
-                            onPressed: () {},
+                            onPressed: () {
+                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Calling $clientName...')));
+                            },
                           ),
                         ),
                       ]),
