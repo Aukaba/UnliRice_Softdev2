@@ -53,11 +53,13 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
     const welcomeMessage =
         "Hello! I'm MechMate, your AI assistant. I can analyze vehicle photos. Take a picture or describe your issue!";
 
-    _messages.add(ChatMessage(
-      message: welcomeMessage,
-      time: _getCurrentTime(),
-      isMe: false,
-    ));
+    _messages.add(
+      ChatMessage(
+        message: welcomeMessage,
+        time: _getCurrentTime(),
+        isMe: false,
+      ),
+    );
 
     _ollamaService.addWelcomeMessage(welcomeMessage);
   }
@@ -69,8 +71,6 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
     final ampm = now.hour >= 12 ? 'PM' : 'AM';
     return "$hour:$minute $ampm";
   }
-
-  // ── Image Picking ──────────────────────────────────────────────────────────
 
   void _showImageSourceDialog() {
     showModalBottomSheet(
@@ -120,8 +120,6 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
     setState(() => _selectedImage = null);
   }
 
-  // ── Sending Messages ───────────────────────────────────────────────────────
-
   Future<void> _sendMessageWithImage() async {
     if (_selectedImage == null) return;
 
@@ -131,24 +129,35 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
     final imageToSend = _selectedImage!;
 
     setState(() {
-      _messages.add(ChatMessage(
-        message: userMessageText,
-        time: _getCurrentTime(),
-        isMe: true,
-        imageFile: imageToSend,
-      ));
+      _messages.add(
+        ChatMessage(
+          message: userMessageText,
+          time: _getCurrentTime(),
+          isMe: true,
+          imageFile: _selectedImage,
+        ),
+      );
       _isLoading = true;
       _selectedImage = null;
     });
 
     _msgController.clear();
 
-    final bytes = await imageToSend.readAsBytes();
+    // Prepare image
+    final bytes = await _selectedImage!.readAsBytes();
     final base64String = base64Encode(bytes);
+
+    // Prepare prompt
     final prompt = hasText
         ? text
         : "Look at this vehicle image. What visible issues or potential problems can you identify? List 3 possibilities.";
 
+    // Clear selected image
+    setState(() {
+      _selectedImage = null;
+    });
+
+    // Send to AI
     final botResponse = await _ollamaService.sendMessage(
       text: prompt,
       imageBase64: base64String,
@@ -156,40 +165,45 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
 
     if (mounted) {
       setState(() {
-        _messages.add(ChatMessage(
-          message: botResponse,
-          time: _getCurrentTime(),
-          isMe: false,
-        ));
+        _messages.add(
+          ChatMessage(
+            message: botResponse,
+            time: _getCurrentTime(),
+            isMe: false,
+          ),
+        );
         _isLoading = false;
       });
     }
   }
 
   Future<void> _sendTextMessage() async {
+    if (_msgController.text.trim().isEmpty) return;
+
     final text = _msgController.text.trim();
     if (text.isEmpty) return;
 
     setState(() {
-      _messages.add(ChatMessage(
-        message: text,
-        time: _getCurrentTime(),
-        isMe: true,
-      ));
+      _messages.add(
+        ChatMessage(message: text, time: _getCurrentTime(), isMe: true),
+      );
       _isLoading = true;
     });
 
     _msgController.clear();
 
+    // Send to AI
     final botResponse = await _ollamaService.sendMessage(text: text);
 
     if (mounted) {
       setState(() {
-        _messages.add(ChatMessage(
-          message: botResponse,
-          time: _getCurrentTime(),
-          isMe: false,
-        ));
+        _messages.add(
+          ChatMessage(
+            message: botResponse,
+            time: _getCurrentTime(),
+            isMe: false,
+          ),
+        );
         _isLoading = false;
       });
     }
@@ -212,18 +226,20 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
       const welcomeMessage =
           "Hello! I'm MechMate, your AI assistant. How can I help with your vehicle today?";
 
-      _messages.add(ChatMessage(
-        message: welcomeMessage,
-        time: _getCurrentTime(),
-        isMe: false,
-      ));
+      _messages.add(
+        ChatMessage(
+          message: welcomeMessage,
+          time: _getCurrentTime(),
+          isMe: false,
+        ),
+      );
 
       _ollamaService.addWelcomeMessage(welcomeMessage);
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Conversation cleared!")),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("Conversation cleared!")));
   }
 
   // ── Build ──────────────────────────────────────────────────────────────────
@@ -267,118 +283,29 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
             ),
           ),
 
-          if (_selectedImage != null) _buildImagePreview(),
+          // Image Preview
+          if (_selectedImage != null)
+            ImagePreview(
+              imageFile: _selectedImage!,
+              onRemove: _removeSelectedImage,
+            ),
 
+          // Loading indicator
           if (_isLoading)
             const LinearProgressIndicator(
               backgroundColor: Colors.grey,
               valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF19456B)),
             ),
 
-          _buildInputBar(),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildImagePreview() {
-    return Container(
-      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      decoration: BoxDecoration(
-        border: Border.all(color: Colors.grey.shade300),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Stack(
-        children: [
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: Image.file(
-              _selectedImage!,
-              height: 120,
-              width: double.infinity,
-              fit: BoxFit.cover,
-            ),
-          ),
-          Positioned(
-            top: 8,
-            right: 8,
-            child: GestureDetector(
-              onTap: _removeSelectedImage,
-              child: Container(
-                decoration: BoxDecoration(
-                  color: Colors.black.withOpacity(0.6),
-                  shape: BoxShape.circle,
-                ),
-                child: const Icon(Icons.close, color: Colors.white, size: 20),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildInputBar() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-      decoration: BoxDecoration(
-        color: const Color(0xFFF1F1F1),
-        border: Border(top: BorderSide(color: Colors.grey.shade300, width: 1)),
-      ),
-      child: Row(
-        children: [
-          IconButton(
-            onPressed: _isLoading ? null : _showImageSourceDialog,
-            icon: Icon(
-              Icons.attach_file,
-              color: _isLoading ? Colors.grey : const Color(0xFF19456B),
-            ),
-          ),
-          Expanded(
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-              child: TextField(
-                controller: _msgController,
-                enabled: !_isLoading,
-                decoration: InputDecoration(
-                  hintText: _selectedImage != null
-                      ? "Add a description (optional)..."
-                      : "Ask MechMate or upload a photo...",
-                  hintStyle: GoogleFonts.montserrat(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w400,
-                    color: Colors.grey.shade500,
-                  ),
-                  border: InputBorder.none,
-                  isDense: true,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(width: 10),
-          GestureDetector(
-            onTap: _isLoading ? null : _handleSendMessage,
-            child: Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: _isLoading
-                    ? Colors.grey
-                    : (_selectedImage != null || _msgController.text.isNotEmpty
-                        ? const Color(0xFF19456B)
-                        : Colors.grey.shade400),
-                shape: BoxShape.circle,
-              ),
-              child: Icon(
-                _selectedImage != null ? Icons.send : Icons.send_rounded,
-                color: Colors.white,
-                size: 22,
-              ),
-            ),
+          // Input Bar
+          ChatInputBar(
+            controller: _msgController,
+            isLoading: _isLoading,
+            hasSelectedImage: _selectedImage != null,
+            onCameraTap: _showImageSourceDialog,
+            onSendTap: _selectedImage != null
+                ? _sendMessageWithImage
+                : _sendTextMessage,
           ),
         ],
       ),
