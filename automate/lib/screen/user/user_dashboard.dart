@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../../widgets/calendar_widget.dart';
 import 'user_looking_mechanic.dart';
 import '../../Logic/jobs/jobs_logic.dart';
@@ -20,6 +22,9 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
   final TextEditingController _descriptionController = TextEditingController();
   DateTime? _selectedDate;
   bool _isLoading = false;
+
+  final MapController _mapController = MapController();
+  LatLng _selectedLocation = const LatLng(10.2974, 123.8687); // Default to CIT-U, Cebu
 
   @override
   void dispose() {
@@ -45,6 +50,8 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
           vehicle: _vehicleController.text,
           pickupLocation: _locationController.text,
           issueDescription: _descriptionController.text.isEmpty ? null : _descriptionController.text,
+          latitude: _selectedLocation.latitude,
+          longitude: _selectedLocation.longitude,
         );
       } else {
         await JobsLogic().createJob(
@@ -54,6 +61,8 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
           serviceType: 'scheduled',
           scheduledDate: _selectedDate ?? DateTime.now(),
           issueDescription: _descriptionController.text.isEmpty ? null : _descriptionController.text,
+          latitude: _selectedLocation.latitude,
+          longitude: _selectedLocation.longitude,
         );
       }
       
@@ -115,101 +124,55 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // Background - Deep gold map overlay
+          // Background - Interactive Map
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             height: MediaQuery.of(context).size.height * 0.55,
-            child: Container(
-              color: const Color(0xFFF0EBE1), // Light base map tone
-              child: Stack(
-                children: [
-                  Positioned.fill(
-                    child: Container(
-                      color: const Color(
-                        0xFFD4AF37,
-                      ).withOpacity(0.15), // Deep gold overlay
-                    ),
-                  ),
-                  // Map lines placeholder
-                  Positioned(
-                    top: 150,
-                    left: 50,
-                    right: 0,
-                    child: Container(
-                      height: 2,
-                      color: Colors.white,
-                      transform: Matrix4.rotationZ(-0.2),
-                    ),
-                  ),
-                  // Search Bar
-                  SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 20.0,
-                        vertical: 12.0,
-                      ),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(12.0),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withOpacity(0.1),
-                              blurRadius: 8,
-                              offset: const Offset(0, 2),
-                            ),
-                          ],
-                        ),
-                        child: TextField(
-                          decoration: InputDecoration(
-                            hintText: "Search",
-                            hintStyle: GoogleFonts.montserrat(
-                              color: Colors.grey.shade500,
-                              fontWeight: FontWeight.w400,
-                            ),
-                            prefixIcon: Icon(
-                              Icons.search,
-                              color: Colors.grey.shade500,
-                            ),
-                            border: InputBorder.none,
-                            contentPadding: const EdgeInsets.symmetric(
-                              vertical: 16,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  // Map Pin
-                  Align(
-                    alignment: Alignment.center,
-                    child: Container(
-                      width: 40,
-                      height: 40,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF19456B).withOpacity(0.2),
-                        shape: BoxShape.circle,
-                      ),
+            child: FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: _selectedLocation,
+                initialZoom: 15.0,
+                onPositionChanged: (position, hasGesture) {
+                  if (hasGesture && position.center != null) {
+                    setState(() {
+                      _selectedLocation = position.center!;
+                    });
+                  }
+                },
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.automate',
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: _selectedLocation,
+                      width: 50,
+                      height: 50,
                       child: const Icon(
                         Icons.location_on,
-                        size: 28,
+                        size: 50,
                         color: Color(0xFF19456B),
                       ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ],
             ),
           ),
 
           // Foreground - Main White Card
-          Positioned.fill(
+          Positioned(
+            top: MediaQuery.of(context).size.height * 0.38,
+            left: 0,
+            right: 0,
+            bottom: 0,
             child: SingleChildScrollView(
-              padding: EdgeInsets.only(
-                top: MediaQuery.of(context).size.height * 0.38,
-              ),
               child: Container(
                 decoration: const BoxDecoration(
                   color: Colors.white,

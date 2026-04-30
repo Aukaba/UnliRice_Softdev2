@@ -76,6 +76,8 @@ class JobsLogic {
     required String serviceType,
     DateTime? scheduledDate,
     String? issueDescription,
+    double? latitude,
+    double? longitude,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('User is not logged in.');
@@ -90,6 +92,8 @@ class JobsLogic {
       'issue_description': issueDescription,
       'status': 'pending',
       'priority': serviceType == 'emergency' ? 'High' : 'Medium',
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
     });
   }
 
@@ -317,6 +321,8 @@ class JobsLogic {
     required String vehicle,
     required String pickupLocation,
     String? issueDescription,
+    double? latitude,
+    double? longitude,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('User is not logged in.');
@@ -331,6 +337,8 @@ class JobsLogic {
       'issue_description': issueDescription,
       'status': 'pending',
       'priority': 'High',
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
     }).select('id').single();
 
     final jobId = jobRes['id'];

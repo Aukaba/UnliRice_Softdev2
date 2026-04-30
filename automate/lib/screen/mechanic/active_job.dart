@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import '../../Logic/jobs/jobs_logic.dart';
 import 'homescreen.dart';
 import 'jobs.dart';
@@ -46,14 +48,48 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
     final location     = _field('pickup_location', 'Unknown Location');
     final issue        = _field('issue_description', 'No description provided.');
     final title        = _field('title', 'Emergency Request');
+    final jobMap = widget.jobData?['jobs'] as Map<String, dynamic>?;
+    final latStr = widget.jobData?['latitude']?.toString() ?? jobMap?['latitude']?.toString();
+    final lngStr = widget.jobData?['longitude']?.toString() ?? jobMap?['longitude']?.toString();
+    final lat = double.tryParse(latStr ?? '') ?? 10.2974;
+    final lng = double.tryParse(lngStr ?? '') ?? 123.8687;
+    final mapCenter = LatLng(lat, lng);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2F5F8),
       body: Stack(
         children: [
-          // ── Map Background Placeholder ──
+          // ── Map Background ──
           Positioned.fill(
-            child: Container(color: const Color(0xFFD9E2EC)),
+            child: FlutterMap(
+              options: MapOptions(
+                initialCenter: mapCenter,
+                initialZoom: 16.0,
+                interactionOptions: const InteractionOptions(
+                  flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                ),
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.automate',
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: mapCenter,
+                      width: 50,
+                      height: 50,
+                      child: const Icon(
+                        Icons.location_on,
+                        size: 50,
+                        color: Color(0xFFE51D1D),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
 
           // ── Red Top Header ──
