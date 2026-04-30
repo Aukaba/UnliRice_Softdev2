@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'homescreen.dart'; // adjust import paths as needed
+import 'jobs.dart';
+import '../messages/user_message_list.dart';
 import '../../Logic/jobs/jobs_logic.dart';
 import 'homescreen_checkrequest.dart';
 
@@ -15,6 +18,7 @@ class _ScheduledJob {
   final String price;
   final String tag; // 'TODAY', 'TOMORROW', 'MON 03·27-28', etc.
   final DateTime date;
+  final Map<String, dynamic> rawJob;
 
   const _ScheduledJob({
     required this.title,
@@ -26,6 +30,7 @@ class _ScheduledJob {
     required this.price,
     required this.tag,
     required this.date,
+    required this.rawJob,
   });
 }
 
@@ -62,7 +67,7 @@ class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
       
       return _ScheduledJob(
         title: j['title'] ?? 'Service Request',
-        name: 'User',
+        name: j['user_name'] ?? 'User',
         vehicle: j['vehicle'] ?? 'Vehicle',
         description: j['issue_description'] ?? 'No description',
         location: j['pickup_location'] ?? 'Unknown location',
@@ -70,6 +75,7 @@ class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
         price: 'Pending Estimate', 
         tag: tag,
         date: date,
+        rawJob: j,
       );
     }).toList();
   }
@@ -489,6 +495,27 @@ class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
           ],
         ),
       ),
+      bottomNavigationBar: _MechanicBottomNavigationBar(
+        currentIndex: 2,
+        onItemTapped: (index) {
+          if (index == 0) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const MechanicHomeScreen()),
+            );
+          } else if (index == 1) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const MechanicJobsScreen()),
+            );
+          } else if (index == 3) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const UserMessageListScreen()),
+            );
+          }
+        },
+      ),
     );
   }
 }
@@ -520,13 +547,7 @@ class _ScheduleJobCard extends StatelessWidget {
           MaterialPageRoute(
             builder: (_) => MechanicCheckRequestScreen(
               isAccepted: true,
-              jobData: {
-                'scheduled_date': job.date.toIso8601String(),
-                'title': job.title,
-                'vehicle': job.vehicle,
-                'issue_description': job.description,
-                'pickup_location': job.location,
-              },
+              jobData: job.rawJob,
             ),
           ),
         );
@@ -673,4 +694,98 @@ class _ScheduleJobCard extends StatelessWidget {
     ));
   }
 }
-
+
+// ─── Bottom nav (shared pattern) ─────────────────────────────────────────────
+
+class _MechanicBottomNavigationBar extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onItemTapped;
+
+  const _MechanicBottomNavigationBar(
+      {required this.currentIndex, required this.onItemTapped});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        color: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _NavItem(
+                icon: Icons.home_outlined,
+                label: 'Home',
+                active: currentIndex == 0,
+                onTap: () => onItemTapped(0)),
+            _NavItem(
+                icon: Icons.inventory_2_outlined,
+                label: 'Jobs',
+                active: currentIndex == 1,
+                onTap: () => onItemTapped(1)),
+            _NavItem(
+                icon: Icons.calendar_month_outlined,
+                label: 'Schedule',
+                active: currentIndex == 2,
+                onTap: () => onItemTapped(2)),
+            _NavItem(
+                icon: Icons.chat_bubble_outline,
+                label: 'Chat',
+                active: currentIndex == 3,
+                onTap: () => onItemTapped(3)),
+            _NavItem(
+                icon: Icons.person_outline,
+                label: 'Profile',
+                active: currentIndex == 4,
+                onTap: () => onItemTapped(4)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _NavItem(
+      {required this.icon,
+      required this.label,
+      this.active = false,
+      required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = active ? const Color(0xFFFFB703) : Colors.black54;
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: active ? const Color(0x33FFB703) : Colors.transparent,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, size: 22, color: color),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: GoogleFonts.inriaSans(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
