@@ -100,7 +100,6 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
         await JobsLogic().dispatchEmergency(
           title: _titleController.text,
           vehicle: _vehicleController.text,
-          vehicle: _vehicleController.text,
           plateNumber: _plateController.text.isEmpty ? null : _plateController.text,
           pickupLocation: _locationController.text,
           issueDescription: _descriptionController.text.isEmpty ? null : _descriptionController.text,
@@ -110,7 +109,6 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
       } else {
         await JobsLogic().createJob(
           title: _titleController.text,
-          vehicle: _vehicleController.text,
           vehicle: _vehicleController.text,
           plateNumber: _plateController.text.isEmpty ? null : _plateController.text,
           pickupLocation: _locationController.text,
@@ -370,10 +368,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                           ),
                         ),
                       ),
-                            ),
-                          ),
-                        ),
-                      ),
+
                       const SizedBox(height: 20),
                       Text(
                         "Plate Number (Optional)",
