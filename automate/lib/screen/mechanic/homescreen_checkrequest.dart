@@ -190,11 +190,11 @@ class _MechanicCheckRequestScreenState
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
-                                    const _LocationDistanceRow(),
+                                    _LocationDistanceRow(jobData: widget.jobData),
                                     const SizedBox(height: 20),
-                                    const _ClientInformationCard(),
+                                    _ClientInformationCard(jobData: widget.jobData),
                                     const SizedBox(height: 16),
-                                    const _IssueCard(),
+                                    _IssueCard(jobData: widget.jobData),
                                     const SizedBox(height: 24),
                                     _AcceptJobButton(
                                       isAccepted: widget.isAccepted,
@@ -301,7 +301,8 @@ class _DragHandleRow extends StatelessWidget {
 }
 
 class _LocationDistanceRow extends StatelessWidget {
-  const _LocationDistanceRow();
+  final Map<String, dynamic>? jobData;
+  const _LocationDistanceRow({this.jobData});
 
   @override
   Widget build(BuildContext context) {
@@ -315,7 +316,7 @@ class _LocationDistanceRow extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Tisa, Cebu City',
+                  jobData?['pickup_location'] ?? 'Unknown Location',
                   style: GoogleFonts.inriaSans(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -347,7 +348,8 @@ class _LocationDistanceRow extends StatelessWidget {
 }
 
 class _ClientInformationCard extends StatelessWidget {
-  const _ClientInformationCard();
+  final Map<String, dynamic>? jobData;
+  const _ClientInformationCard({this.jobData});
 
   @override
   Widget build(BuildContext context) {
@@ -376,13 +378,13 @@ class _ClientInformationCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          _InfoRow(label: 'Name', value: 'Aaron Barnaija'),
+          _InfoRow(label: 'Name', value: jobData?['user_name'] ?? 'Unknown Client'),
           const SizedBox(height: 12),
-          _InfoRow(label: 'Vehicle', value: 'Toyota Vios'),
+          _InfoRow(label: 'Vehicle', value: jobData?['vehicle'] ?? 'N/A'),
           const SizedBox(height: 12),
-          _InfoRow(label: 'Plate', value: 'GLE 704'),
+          _InfoRow(label: 'Plate', value: jobData?['plate_number'] ?? 'N/A'), // Will show N/A if not saved in DB
           const SizedBox(height: 12),
-          _InfoRow(label: 'Phone', value: '+63 912 345 6789'),
+          _InfoRow(label: 'Phone', value: jobData?['phone_number'] ?? 'N/A'), // Will show N/A if not saved in DB
         ],
       ),
     );
@@ -427,7 +429,8 @@ class _InfoRow extends StatelessWidget {
 }
 
 class _IssueCard extends StatelessWidget {
-  const _IssueCard();
+  final Map<String, dynamic>? jobData;
+  const _IssueCard({this.jobData});
 
   @override
   Widget build(BuildContext context) {
@@ -457,7 +460,7 @@ class _IssueCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Engine won\u2019t start curh, am stuck in the middle of the road',
+            jobData?['issue_description'] ?? 'No description provided',
             style: GoogleFonts.inriaSans(
               fontSize: 14,
               fontWeight: FontWeight.w500,
@@ -499,12 +502,12 @@ class _AcceptJobButton extends StatelessWidget {
         final parsed = DateTime.tryParse(rawDate)?.toLocal();
         if (parsed != null) {
           final jobDay = DateTime(parsed.year, parsed.month, parsed.day);
-          if (jobDay != today) {
+          if (jobDay.isAfter(today)) {
             showDialog(
               context: context,
               builder: (ctx) => AlertDialog(
                 title: Text('Error', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
-                content: Text('This job is not scheduled for today. You cannot start it yet.',
+                content: Text('This job is scheduled for a future date. You cannot start it yet.',
                     style: GoogleFonts.inriaSans()),
                 actions: [
                   TextButton(

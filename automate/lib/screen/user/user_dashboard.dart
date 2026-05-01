@@ -21,6 +21,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
   
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _vehicleController = TextEditingController();
+  final TextEditingController _plateController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   DateTime? _selectedDate;
@@ -42,6 +43,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
     _debounce?.cancel();
     _titleController.dispose();
     _vehicleController.dispose();
+    _plateController.dispose();
     _locationController.dispose();
     _descriptionController.dispose();
     super.dispose();
@@ -97,6 +99,8 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
         await JobsLogic().dispatchEmergency(
           title: _titleController.text,
           vehicle: _vehicleController.text,
+          vehicle: _vehicleController.text,
+          plateNumber: _plateController.text.isEmpty ? null : _plateController.text,
           pickupLocation: _locationController.text,
           issueDescription: _descriptionController.text.isEmpty ? null : _descriptionController.text,
           latitude: _selectedLocation.latitude,
@@ -106,6 +110,8 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
         await JobsLogic().createJob(
           title: _titleController.text,
           vehicle: _vehicleController.text,
+          vehicle: _vehicleController.text,
+          plateNumber: _plateController.text.isEmpty ? null : _plateController.text,
           pickupLocation: _locationController.text,
           serviceType: 'scheduled',
           scheduledDate: _selectedDate ?? DateTime.now(),
@@ -127,7 +133,9 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
           // Reset fields
           _titleController.clear();
           _locationController.clear();
+          _locationController.clear();
           _vehicleController.clear();
+          _plateController.clear();
           _descriptionController.clear();
           setState(() {
             _selectedDate = null;
@@ -339,6 +347,42 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                           controller: _vehicleController,
                           decoration: InputDecoration(
                             hintText: "e.g., Toyota Vios",
+                            hintStyle: GoogleFonts.montserrat(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                              color: Colors.black54,
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 16,
+                            ),
+                          ),
+                        ),
+                      ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Text(
+                        "Plate Number (Optional)",
+                        style: GoogleFonts.montserrat(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w400,
+                          color: Colors.black87,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFEFEF),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: TextField(
+                          controller: _plateController,
+                          decoration: InputDecoration(
+                            hintText: "e.g., ABC 1234",
                             hintStyle: GoogleFonts.montserrat(
                               fontSize: 14,
                               fontWeight: FontWeight.w400,
