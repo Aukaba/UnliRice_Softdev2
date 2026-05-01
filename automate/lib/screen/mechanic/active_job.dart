@@ -41,14 +41,18 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final jobMap = widget.jobData?['jobs'] as Map<String, dynamic>?;
+    final serviceType  = _field('service_type', jobMap?['service_type']?.toString() ?? 'emergency');
+    final isScheduled  = serviceType.toLowerCase() == 'scheduled';
+    final headerColor  = isScheduled ? const Color(0xFFFFB703) : const Color(0xFFE51D1D);
+
     final clientName   = widget.jobData?['user_name']  as String? ?? 'Client';
     final vehicle      = _field('vehicle', 'Unknown Vehicle');
     final plate        = _field('plate_number', 'N/A');
     final phone        = _field('phone', 'N/A');
     final location     = _field('pickup_location', 'Unknown Location');
     final issue        = _field('issue_description', 'No description provided.');
-    final title        = _field('title', 'Emergency Request');
-    final jobMap = widget.jobData?['jobs'] as Map<String, dynamic>?;
+    final title        = _field('title', isScheduled ? 'Scheduled Request' : 'Emergency Request');
     final latStr = widget.jobData?['latitude']?.toString() ?? jobMap?['latitude']?.toString();
     final lngStr = widget.jobData?['longitude']?.toString() ?? jobMap?['longitude']?.toString();
     final lat = double.tryParse(latStr ?? '') ?? 10.2974;
@@ -80,10 +84,10 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                       point: mapCenter,
                       width: 50,
                       height: 50,
-                      child: const Icon(
+                      child: Icon(
                         Icons.location_on,
                         size: 50,
-                        color: Color(0xFFE51D1D),
+                        color: headerColor,
                       ),
                     ),
                   ],
@@ -99,9 +103,9 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
             right: 0,
             child: Container(
               padding: const EdgeInsets.only(top: 50, left: 24, right: 24, bottom: 20),
-              decoration: const BoxDecoration(
-                color: Color(0xFFE51D1D),
-                borderRadius: BorderRadius.only(
+              decoration: BoxDecoration(
+                color: headerColor,
+                borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(20),
                   bottomRight: Radius.circular(20),
                 ),
@@ -152,12 +156,14 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
             ),
           ),
 
-          // ── Bottom Sheet Content ──
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
+          // ── Draggable Bottom Sheet Content ──
+          Positioned.fill(
+            child: DraggableScrollableSheet(
+              initialChildSize: 0.5,
+              minChildSize: 0.15,
+              maxChildSize: 0.9,
+              builder: (context, scrollController) {
+                return Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
@@ -170,7 +176,8 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
               ),
               child: ClipRRect(
                 borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                child: SingleChildScrollView(
+                    child: SingleChildScrollView(
+                      controller: scrollController,
                   padding: const EdgeInsets.only(
                       left: 20, right: 20, bottom: 20, top: 10),
                   child: Column(
@@ -238,8 +245,8 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                       _InfoRow(label: 'Phone', value: phone),
                       const SizedBox(height: 28),
 
-                      // Emergency Issue
-                      Text('Emergency Issue',
+                      // Issue
+                      Text(isScheduled ? 'Issue' : 'Emergency Issue',
                           style: GoogleFonts.montserrat(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
@@ -337,9 +344,10 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                   ),
                 ),
               ),
-            ),
-          ),
-        ],
+            );
+          }),
+        ),
+      ],
       ),
       bottomNavigationBar: _MechanicBottomNavigationBar(
         currentIndex: 0,
