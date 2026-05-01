@@ -118,8 +118,8 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                   _selectedDate!.year, 
                   _selectedDate!.month, 
                   _selectedDate!.day, 
-                  _selectedTime?.hour ?? DateTime.now().hour, 
-                  _selectedTime?.minute ?? DateTime.now().minute,
+                  _selectedTime?.hour ?? 0, 
+                  _selectedTime?.minute ?? 0,
                 ) 
               : DateTime.now(),
           issueDescription: _descriptionController.text.isEmpty ? null : _descriptionController.text,
@@ -139,7 +139,6 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
         } else {
           // Reset fields
           _titleController.clear();
-          _locationController.clear();
           _locationController.clear();
           _vehicleController.clear();
           _plateController.clear();
