@@ -18,9 +18,11 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
   
   final TextEditingController _titleController = TextEditingController();
   final TextEditingController _vehicleController = TextEditingController();
+  final TextEditingController _plateController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   DateTime? _selectedDate;
+  TimeOfDay? _selectedTime;
   bool _isLoading = false;
 
   final MapController _mapController = MapController();
@@ -30,6 +32,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
   void dispose() {
     _titleController.dispose();
     _vehicleController.dispose();
+    _plateController.dispose();
     _locationController.dispose();
     _descriptionController.dispose();
     super.dispose();
@@ -48,6 +51,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
         await JobsLogic().dispatchEmergency(
           title: _titleController.text,
           vehicle: _vehicleController.text,
+          plateNumber: _plateController.text.isEmpty ? null : _plateController.text,
           pickupLocation: _locationController.text,
           issueDescription: _descriptionController.text.isEmpty ? null : _descriptionController.text,
           latitude: _selectedLocation.latitude,
@@ -57,9 +61,18 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
         await JobsLogic().createJob(
           title: _titleController.text,
           vehicle: _vehicleController.text,
+          plateNumber: _plateController.text.isEmpty ? null : _plateController.text,
           pickupLocation: _locationController.text,
           serviceType: 'scheduled',
-          scheduledDate: _selectedDate ?? DateTime.now(),
+          scheduledDate: _selectedDate != null 
+              ? DateTime(
+                  _selectedDate!.year, 
+                  _selectedDate!.month, 
+                  _selectedDate!.day, 
+                  _selectedTime?.hour ?? 0, 
+                  _selectedTime?.minute ?? 0,
+                ) 
+              : DateTime.now(),
           issueDescription: _descriptionController.text.isEmpty ? null : _descriptionController.text,
           latitude: _selectedLocation.latitude,
           longitude: _selectedLocation.longitude,
@@ -79,9 +92,11 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
           _titleController.clear();
           _locationController.clear();
           _vehicleController.clear();
+          _plateController.clear();
           _descriptionController.clear();
           setState(() {
             _selectedDate = null;
+            _selectedTime = null;
           });
 
           showDialog(
