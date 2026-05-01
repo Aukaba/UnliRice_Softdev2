@@ -41,6 +41,8 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
   IconData? _nextTurnIcon;
   String _totalDistanceText = 'Distance unavailable';
 
+  String _phoneNumber = 'Loading...';
+
   // Helpers to safely pull strings from jobData
   String _field(String key, String fallback) =>
       (widget.jobData?[key]?.toString().isNotEmpty == true)
@@ -59,7 +61,42 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
         debugPrint('[ActiveJob] setJobInProgress error: $e');
       });
     }
+    _fetchPhoneNumber();
     _startLocationTracking();
+  }
+
+  Future<void> _fetchPhoneNumber() async {
+    final passedPhone = _field('phone_number', _field('phone', ''));
+    if (passedPhone.isNotEmpty) {
+      if (mounted) setState(() => _phoneNumber = passedPhone);
+      return;
+    }
+
+    final jobMap = widget.jobData?['jobs'] as Map<String, dynamic>?;
+    final userId =
+        widget.jobData?['user_id']?.toString() ??
+        jobMap?['user_id']?.toString();
+
+    if (userId != null) {
+      try {
+        final res = await _supabase
+            .from('user')
+            .select('phone_number')
+            .eq('uid', userId)
+            .maybeSingle();
+        if (res != null && res['phone_number'] != null) {
+          if (mounted)
+            setState(() => _phoneNumber = res['phone_number'].toString());
+        } else {
+          if (mounted) setState(() => _phoneNumber = 'N/A');
+        }
+      } catch (e) {
+        debugPrint('[ActiveJob] Error fetching phone: $e');
+        if (mounted) setState(() => _phoneNumber = 'N/A');
+      }
+    } else {
+      if (mounted) setState(() => _phoneNumber = 'N/A');
+    }
   }
 
   @override
@@ -289,7 +326,6 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
     final clientName = widget.jobData?['user_name'] as String? ?? 'Client';
     final vehicle = _field('vehicle', 'Unknown Vehicle');
     final plate = _field('plate_number', 'N/A');
-    final phone = _field('phone', 'N/A');
     final location = _field('pickup_location', 'Unknown Location');
     final issue = _field('issue_description', 'No description provided.');
     final title = _field(
@@ -634,7 +670,7 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                           const SizedBox(height: 10),
                           _InfoRow(label: 'Plate', value: plate),
                           const SizedBox(height: 10),
-                          _InfoRow(label: 'Phone', value: phone),
+                          _InfoRow(label: 'Phone', value: _phoneNumber),
                           const SizedBox(height: 28),
 
                           // Issue
