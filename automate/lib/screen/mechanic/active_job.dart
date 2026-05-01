@@ -14,6 +14,11 @@ import 'schedule.dart';
 import '../messages/user_message_list.dart';
 import 'profile.dart';
 
+const String kOsrmRoutingBaseUrl = String.fromEnvironment(
+  'OSRM_ROUTING_BASE_URL',
+  defaultValue: 'https://router.project-osrm.org',
+);
+
 class MechanicActiveJobScreen extends StatefulWidget {
   final Map<String, dynamic>? jobData;
 
@@ -29,7 +34,8 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
 
   LatLng? _mechanicLatLng;
   List<LatLng> _routePoints = [];
-  bool _routeLoading = true;
+  bool _routeLoading = false;
+  bool _isFetchingRoute = false;
   Timer? _locationTimer;
 
   // Helpers to safely pull strings from jobData
@@ -91,6 +97,10 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
   }
 
   Future<void> _loadRoute() async {
+    if (_isFetchingRoute) return;
+    _isFetchingRoute = true;
+    if (mounted) setState(() => _routeLoading = true);
+
     final jobMap = widget.jobData?['jobs'] as Map<String, dynamic>?;
     final latStr = widget.jobData?['latitude']?.toString() ?? jobMap?['latitude']?.toString();
     final lngStr = widget.jobData?['longitude']?.toString() ?? jobMap?['longitude']?.toString();
@@ -139,7 +149,7 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
     // 2. Fetch OSRM route
     try {
       final url = Uri.parse(
-        'http://router.project-osrm.org/route/v1/driving/'
+        '$kOsrmRoutingBaseUrl/route/v1/driving/'
         '${mechLatLng.longitude},${mechLatLng.latitude};'
         '${jobLatLng.longitude},${jobLatLng.latitude}'
         '?geometries=geojson&overview=full',
@@ -171,9 +181,10 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
       }
     } catch (e) {
       debugPrint('[ActiveJob] OSRM route error: $e');
+    } finally {
+      _isFetchingRoute = false;
+      if (mounted) setState(() => _routeLoading = false);
     }
-
-    if (mounted) setState(() => _routeLoading = false);
   }
 
   @override
