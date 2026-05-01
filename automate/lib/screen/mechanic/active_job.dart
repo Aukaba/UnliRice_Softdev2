@@ -31,7 +31,7 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
 
   LatLng? _mechanicLatLng;
   List<LatLng> _routePoints = [];
-  bool _routeLoading = false;
+  bool _isFirstCameraFit = true;
   bool _isFetchingRoute = false;
   Timer? _locationTimer;
 
@@ -96,7 +96,6 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
   Future<void> _loadRoute() async {
     if (_isFetchingRoute) return;
     _isFetchingRoute = true;
-    if (mounted) setState(() => _routeLoading = true);
 
     final jobMap = widget.jobData?['jobs'] as Map<String, dynamic>?;
     final latStr = widget.jobData?['latitude']?.toString() ?? jobMap?['latitude']?.toString();
@@ -161,8 +160,9 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
               .toList();
           if (mounted) {
             setState(() => _routePoints = points);
-            // Fit camera to show both markers
-            if (points.isNotEmpty) {
+            // Fit camera to show both markers ONLY on the first load
+            if (points.isNotEmpty && _isFirstCameraFit) {
+              _isFirstCameraFit = false;
               final bounds = LatLngBounds.fromPoints([mechLatLng, jobLatLng, ...points]);
               WidgetsBinding.instance.addPostFrameCallback((_) {
                 _mapController.fitCamera(
@@ -180,7 +180,6 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
       debugPrint('[ActiveJob] OSRM route error: $e');
     } finally {
       _isFetchingRoute = false;
-      if (mounted) setState(() => _routeLoading = false);
     }
   }
 
@@ -268,26 +267,6 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                     ),
                   ],
                 ),
-                // Loading indicator overlay
-                if (_routeLoading)
-                  const Positioned.fill(
-                    child: Center(
-                      child: Card(
-                        child: Padding(
-                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              SizedBox(width: 16, height: 16,
-                                child: CircularProgressIndicator(strokeWidth: 2)),
-                              SizedBox(width: 10),
-                              Text('Finding route...'),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
               ],
             ),
           ),
@@ -422,16 +401,23 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                             ]),
                           ),
                           const SizedBox(width: 10),
-                          Row(children: [
-                            const Icon(Icons.directions_car_outlined,
-                                size: 18, color: Colors.black87),
-                            const SizedBox(width: 6),
-                            Text('Distance unavailable',
-                                style: GoogleFonts.inriaSans(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600,
-                                    color: Colors.black87)),
-                          ]),
+                          Flexible(
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.end,
+                              children: [
+                              const Icon(Icons.directions_car_outlined,
+                                  size: 18, color: Colors.black87),
+                              const SizedBox(width: 6),
+                              Flexible(
+                                child: Text('Distance unavailable',
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.inriaSans(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: Colors.black87)),
+                              ),
+                            ]),
+                          ),
                         ],
                       ),
                       const SizedBox(height: 24),
@@ -509,6 +495,7 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                                 color: Colors.white,
                                 size: 18),
                             label: Text('Chat $clientName',
+                                overflow: TextOverflow.ellipsis,
                                 style: GoogleFonts.montserrat(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w700,
@@ -1055,17 +1042,23 @@ class _MechanicJobCompleteScreenState extends State<MechanicJobCompleteScreen> {
                                 fontSize: 13,
                                 fontWeight: FontWeight.w600,
                                 color: Colors.black54)),
-                        Row(
-                          children: [
-                            Text(_bookingId,
-                                style: GoogleFonts.montserrat(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: Colors.black)),
-                            const SizedBox(width: 6),
-                            const Icon(Icons.copy_rounded,
-                                size: 16, color: Colors.black45),
-                          ],
+                        Flexible(
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Flexible(
+                                child: Text(_bookingId,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: GoogleFonts.montserrat(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.black)),
+                              ),
+                              const SizedBox(width: 6),
+                              const Icon(Icons.copy_rounded,
+                                  size: 16, color: Colors.black45),
+                            ],
+                          ),
                         ),
                       ],
                     ),
