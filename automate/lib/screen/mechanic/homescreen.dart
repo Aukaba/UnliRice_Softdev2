@@ -31,10 +31,12 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
   Future<void> _checkActiveJob() async {
     final activeJob = await JobsLogic().getMechanicActiveJob();
     if (activeJob != null && mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => MechanicActiveJobScreen(jobData: activeJob)),
-      );
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => MechanicActiveJobScreen(jobData: activeJob)),
+        );
+      });
     }
   }
 
