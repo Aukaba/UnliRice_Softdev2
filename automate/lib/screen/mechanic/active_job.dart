@@ -345,32 +345,35 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
           ),
 
           // ── Draggable Bottom Sheet Content ──
-          Positioned.fill(
-            child: DraggableScrollableSheet(
-              initialChildSize: 0.5,
-              minChildSize: 0.15,
-              maxChildSize: 0.9,
-              builder: (context, scrollController) {
-                return Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-                boxShadow: [
-                  BoxShadow(
-                      color: Color(0x14000000),
-                      blurRadius: 24,
-                      offset: Offset(0, -6))
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                    child: SingleChildScrollView(
-                      controller: scrollController,
-                  padding: const EdgeInsets.only(
-                      left: 20, right: 20, bottom: 20, top: 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
+          DraggableScrollableSheet(
+            initialChildSize: 0.5,
+            minChildSize: 0.12,
+            maxChildSize: 0.9,
+            expand: true,
+            snap: true,
+            snapSizes: const [0.12, 0.5, 0.9],
+            builder: (context, scrollController) {
+              return Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Color(0x14000000),
+                        blurRadius: 24,
+                        offset: Offset(0, -6))
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                  child: SingleChildScrollView(
+                    controller: scrollController,
+                    padding: const EdgeInsets.only(
+                        left: 20, right: 20, bottom: 20, top: 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
                       Center(
                         child: Container(
                           width: 40,
@@ -533,10 +536,10 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                 ),
               ),
             );
-          }),
+              },
+            ),
+          ],
         ),
-      ],
-      ),
       bottomNavigationBar: _MechanicBottomNavigationBar(
         currentIndex: 0,
         onItemTapped: (index) {
