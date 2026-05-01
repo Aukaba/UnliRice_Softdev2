@@ -1,14 +1,20 @@
+import 'dart:async';
+import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../Logic/jobs/jobs_logic.dart';
 import 'homescreen.dart';
-import 'jobs.dart';
-import 'schedule.dart';
-import '../messages/user_message_list.dart';
-import 'profile.dart';
+
+const String kOsrmRoutingBaseUrl = String.fromEnvironment(
+  'OSRM_ROUTING_BASE_URL',
+  defaultValue: 'https://router.project-osrm.org',
+);
 
 class MechanicActiveJobScreen extends StatefulWidget {
   final Map<String, dynamic>? jobData;
@@ -20,6 +26,15 @@ class MechanicActiveJobScreen extends StatefulWidget {
 }
 
 class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
+  final _supabase = Supabase.instance.client;
+  final MapController _mapController = MapController();
+
+  LatLng? _mechanicLatLng;
+  List<LatLng> _routePoints = [];
+  bool _routeLoading = false;
+  bool _isFetchingRoute = false;
+  Timer? _locationTimer;
+
   // Helpers to safely pull strings from jobData
   String _field(String key, String fallback) =>
       (widget.jobData?[key]?.toString().isNotEmpty == true)
@@ -37,23 +52,158 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
         debugPrint('[ActiveJob] setJobInProgress error: $e');
       });
     }
+    _startLocationTracking();
+  }
+
+  @override
+  void dispose() {
+    _locationTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Gets real GPS, saves to DB, then fetches the OSRM route.
+  Future<void> _startLocationTracking() async {
+    await _loadRoute(); // immediate first run
+    // Then refresh every 15 seconds
+    _locationTimer = Timer.periodic(const Duration(seconds: 15), (_) => _loadRoute());
+  }
+
+  Future<LatLng?> _getRealLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return null;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return null;
+      }
+      if (permission == LocationPermission.deniedForever) return null;
+
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 8),
+        ),
+      );
+      return LatLng(pos.latitude, pos.longitude);
+    } catch (e) {
+      debugPrint('[ActiveJob] GPS error: $e');
+      return null;
+    }
+  }
+
+  Future<void> _loadRoute() async {
+    if (_isFetchingRoute) return;
+    _isFetchingRoute = true;
+    if (mounted) setState(() => _routeLoading = true);
+
+    final jobMap = widget.jobData?['jobs'] as Map<String, dynamic>?;
+    final latStr = widget.jobData?['latitude']?.toString() ?? jobMap?['latitude']?.toString();
+    final lngStr = widget.jobData?['longitude']?.toString() ?? jobMap?['longitude']?.toString();
+    final jobLat = double.tryParse(latStr ?? '') ?? 10.2974;
+    final jobLng = double.tryParse(lngStr ?? '') ?? 123.8687;
+    final jobLatLng = LatLng(jobLat, jobLng);
+
+    // 1. Get real GPS location from device
+    LatLng mechLatLng = const LatLng(10.3180, 123.9006); // fallback: Cebu City
+    final gpsLatLng = await _getRealLocation();
+    if (gpsLatLng != null) {
+      mechLatLng = gpsLatLng;
+      // Save to mechanic table so other screens can read it
+      try {
+        final uid = _supabase.auth.currentUser?.id;
+        if (uid != null) {
+          await _supabase.from('mechanic').update({
+            'latitude': gpsLatLng.latitude,
+            'longitude': gpsLatLng.longitude,
+          }).eq('uid', uid);
+        }
+      } catch (e) {
+        debugPrint('[ActiveJob] mechanic location save error: $e');
+      }
+    } else {
+      // Fallback: try reading last-known from DB
+      try {
+        final uid = _supabase.auth.currentUser?.id;
+        if (uid != null) {
+          final res = await _supabase
+              .from('mechanic')
+              .select('latitude, longitude')
+              .eq('uid', uid)
+              .maybeSingle();
+          final mLat = double.tryParse(res?['latitude']?.toString() ?? '');
+          final mLng = double.tryParse(res?['longitude']?.toString() ?? '');
+          if (mLat != null && mLng != null) mechLatLng = LatLng(mLat, mLng);
+        }
+      } catch (e) {
+        debugPrint('[ActiveJob] mechanic location fetch error: $e');
+      }
+    }
+
+    if (mounted) setState(() => _mechanicLatLng = mechLatLng);
+
+    // 2. Fetch OSRM route
+    try {
+      final url = Uri.parse(
+        '$kOsrmRoutingBaseUrl/route/v1/driving/'
+        '${mechLatLng.longitude},${mechLatLng.latitude};'
+        '${jobLatLng.longitude},${jobLatLng.latitude}'
+        '?geometries=geojson&overview=full',
+      );
+      final response = await http.get(url).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final coords = data['routes']?[0]?['geometry']?['coordinates'] as List?;
+        if (coords != null) {
+          final points = coords
+              .map((c) => LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble()))
+              .toList();
+          if (mounted) {
+            setState(() => _routePoints = points);
+            // Fit camera to show both markers
+            if (points.isNotEmpty) {
+              final bounds = LatLngBounds.fromPoints([mechLatLng, jobLatLng, ...points]);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _mapController.fitCamera(
+                  CameraFit.bounds(
+                    bounds: bounds,
+                    padding: const EdgeInsets.fromLTRB(40, 150, 40, 300),
+                  ),
+                );
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[ActiveJob] OSRM route error: $e');
+    } finally {
+      _isFetchingRoute = false;
+      if (mounted) setState(() => _routeLoading = false);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final jobMap = widget.jobData?['jobs'] as Map<String, dynamic>?;
+    final serviceType  = _field('service_type', jobMap?['service_type']?.toString() ?? 'emergency');
+    final isScheduled  = serviceType.toLowerCase() == 'scheduled';
+    final headerColor  = isScheduled ? const Color(0xFFFFB703) : const Color(0xFFE51D1D);
+
     final clientName   = widget.jobData?['user_name']  as String? ?? 'Client';
     final vehicle      = _field('vehicle', 'Unknown Vehicle');
     final plate        = _field('plate_number', 'N/A');
     final phone        = _field('phone', 'N/A');
     final location     = _field('pickup_location', 'Unknown Location');
     final issue        = _field('issue_description', 'No description provided.');
-    final title        = _field('title', 'Emergency Request');
-    final jobMap = widget.jobData?['jobs'] as Map<String, dynamic>?;
+    final title        = _field('title', isScheduled ? 'Scheduled Request' : 'Emergency Request');
     final latStr = widget.jobData?['latitude']?.toString() ?? jobMap?['latitude']?.toString();
     final lngStr = widget.jobData?['longitude']?.toString() ?? jobMap?['longitude']?.toString();
     final lat = double.tryParse(latStr ?? '') ?? 10.2974;
     final lng = double.tryParse(lngStr ?? '') ?? 123.8687;
     final mapCenter = LatLng(lat, lng);
+    final mechLatLng = _mechanicLatLng ?? const LatLng(10.3180, 123.9006);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2F5F8),
@@ -62,6 +212,7 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
           // ── Map Background ──
           Positioned.fill(
             child: FlutterMap(
+              mapController: _mapController,
               options: MapOptions(
                 initialCenter: mapCenter,
                 initialZoom: 16.0,
@@ -74,20 +225,69 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   userAgentPackageName: 'com.example.automate',
                 ),
+                // Route polyline
+                if (_routePoints.isNotEmpty)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: _routePoints,
+                        strokeWidth: 5.0,
+                        color: const Color(0xFF1A73E8),
+                      ),
+                    ],
+                  ),
                 MarkerLayer(
                   markers: [
+                    // Job location pin
                     Marker(
                       point: mapCenter,
                       width: 50,
                       height: 50,
-                      child: const Icon(
+                      child: Icon(
                         Icons.location_on,
                         size: 50,
-                        color: Color(0xFFE51D1D),
+                        color: headerColor,
+                      ),
+                    ),
+                    // Mechanic location pin
+                    Marker(
+                      point: mechLatLng,
+                      width: 44,
+                      height: 44,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A73E8),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                          boxShadow: const [
+                            BoxShadow(color: Color(0x551A73E8), blurRadius: 8)
+                          ],
+                        ),
+                        child: const Icon(Icons.engineering, color: Colors.white, size: 24),
                       ),
                     ),
                   ],
                 ),
+                // Loading indicator overlay
+                if (_routeLoading)
+                  const Positioned.fill(
+                    child: Center(
+                      child: Card(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(width: 16, height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2)),
+                              SizedBox(width: 10),
+                              Text('Finding route...'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -99,9 +299,9 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
             right: 0,
             child: Container(
               padding: const EdgeInsets.only(top: 50, left: 24, right: 24, bottom: 20),
-              decoration: const BoxDecoration(
-                color: Color(0xFFE51D1D),
-                borderRadius: BorderRadius.only(
+              decoration: BoxDecoration(
+                color: headerColor,
+                borderRadius: const BorderRadius.only(
                   bottomLeft: Radius.circular(20),
                   bottomRight: Radius.circular(20),
                 ),
@@ -152,30 +352,44 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
             ),
           ),
 
-          // ── Bottom Sheet Content ──
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Container(
-              decoration: const BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-                boxShadow: [
-                  BoxShadow(
-                      color: Color(0x14000000),
-                      blurRadius: 24,
-                      offset: Offset(0, -6))
-                ],
-              ),
-              child: ClipRRect(
-                borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.only(
-                      left: 20, right: 20, bottom: 20, top: 10),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
+          // ── Draggable Bottom Sheet Content ──
+          DraggableScrollableSheet(
+            initialChildSize: 0.5,
+            minChildSize: 0.06,
+            maxChildSize: 0.9,
+            expand: true,
+            snap: true,
+            snapSizes: const [0.06, 0.5, 0.9],
+            builder: (context, scrollController) {
+              return Container(
+                width: double.infinity,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+                  boxShadow: [
+                    BoxShadow(
+                        color: Color(0x14000000),
+                        blurRadius: 24,
+                        offset: Offset(0, -6))
+                  ],
+                ),
+                child: ClipRRect(
+                  borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+                  child: ScrollConfiguration(
+                    behavior: ScrollConfiguration.of(context).copyWith(
+                      dragDevices: {
+                        PointerDeviceKind.touch,
+                        PointerDeviceKind.mouse,
+                      },
+                    ),
+                    child: SingleChildScrollView(
+                    controller: scrollController,
+                    physics: const ClampingScrollPhysics(),
+                    padding: const EdgeInsets.only(
+                        left: 20, right: 20, bottom: 20, top: 10),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
                       Center(
                         child: Container(
                           width: 40,
@@ -238,8 +452,8 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                       _InfoRow(label: 'Phone', value: phone),
                       const SizedBox(height: 28),
 
-                      // Emergency Issue
-                      Text('Emergency Issue',
+                      // Issue
+                      Text(isScheduled ? 'Issue' : 'Emergency Issue',
                           style: GoogleFonts.montserrat(
                               fontSize: 16,
                               fontWeight: FontWeight.w800,
@@ -334,37 +548,15 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                         ),
                       ]),
                     ],
-                  ),
-                ),
-              ),
+                  ), // Column
+                ), // SingleChildScrollView
+                ), // ScrollConfiguration
+              ), // ClipRRect
+            ); // Container
+              },
             ),
-          ),
-        ],
-      ),
-      bottomNavigationBar: _MechanicBottomNavigationBar(
-        currentIndex: 0,
-        onItemTapped: (index) {
-          if (index == 0) {
-            Navigator.pushReplacement(context,
-                MaterialPageRoute(builder: (_) => const MechanicHomeScreen()));
-          } else if (index == 1) {
-            Navigator.pushReplacement(context,
-                MaterialPageRoute(builder: (_) => const MechanicJobsScreen()));
-          } else if (index == 2) {
-            Navigator.pushReplacement(context,
-                MaterialPageRoute(
-                    builder: (_) => const MechanicScheduleScreen()));
-          } else if (index == 3) {
-            Navigator.pushReplacement(context,
-                MaterialPageRoute(
-                    builder: (_) => const UserMessageListScreen()));
-          } else if (index == 4) {
-            Navigator.pushReplacement(context,
-                MaterialPageRoute(
-                    builder: (_) => const MechanicProfileScreen()));
-          }
-        },
-      ),
+          ],
+        ),
     );
   }
 }
@@ -710,97 +902,6 @@ class _DiagnosisDialogState extends State<_DiagnosisDialog> {
 }
 
 
-// ── Bottom nav ──────────────────────────────────────────────────────────────
-
-class _MechanicBottomNavigationBar extends StatelessWidget {
-  final int currentIndex;
-  final ValueChanged<int> onItemTapped;
-
-  const _MechanicBottomNavigationBar(
-      {required this.currentIndex, required this.onItemTapped});
-
-  @override
-  Widget build(BuildContext context) {
-    return SafeArea(
-      top: false,
-      child: Container(
-        color: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _NavItem(
-                icon: Icons.home_outlined,
-                label: 'Home',
-                active: currentIndex == 0,
-                onTap: () => onItemTapped(0)),
-            _NavItem(
-                icon: Icons.inventory_2_outlined,
-                label: 'Jobs',
-                active: currentIndex == 1,
-                onTap: () => onItemTapped(1)),
-            _NavItem(
-                icon: Icons.calendar_month_outlined,
-                label: 'Schedule',
-                active: currentIndex == 2,
-                onTap: () => onItemTapped(2)),
-            _NavItem(
-                icon: Icons.chat_bubble_outline,
-                label: 'Chat',
-                active: currentIndex == 3,
-                onTap: () => onItemTapped(3)),
-            _NavItem(
-                icon: Icons.person_outline,
-                label: 'Profile',
-                active: currentIndex == 4,
-                onTap: () => onItemTapped(4)),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _NavItem extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final bool active;
-  final VoidCallback onTap;
-
-  const _NavItem(
-      {required this.icon,
-      required this.label,
-      this.active = false,
-      required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final color = active ? const Color(0xFFFFB703) : Colors.black54;
-    return GestureDetector(
-      onTap: onTap,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              color: active ? const Color(0x33FFB703) : Colors.transparent,
-              borderRadius: BorderRadius.circular(14),
-            ),
-            child: Icon(icon, size: 22, color: color),
-          ),
-          const SizedBox(height: 6),
-          Text(label,
-              style: GoogleFonts.inriaSans(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w600,
-                  color: color)),
-        ],
-      ),
-    );
-  }
-}
 
 // ── Job Complete Screen ───────────────────────────────────────────────────────
 
@@ -1156,31 +1257,6 @@ class _CompleteCard extends StatelessWidget {
         ],
       ),
       child: child,
-    );
-  }
-}
-
-class _ReceiptRow extends StatelessWidget {
-  final String label;
-  final String value;
-  const _ReceiptRow(this.label, this.value);
-
-  @override
-  Widget build(BuildContext context) {
-    return RichText(
-      text: TextSpan(
-        style: GoogleFonts.inriaSans(fontSize: 13, color: Colors.black54),
-        children: [
-          TextSpan(text: '$label: '),
-          TextSpan(
-            text: value,
-            style: GoogleFonts.inriaSans(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: Colors.black87),
-          ),
-        ],
-      ),
     );
   }
 }
