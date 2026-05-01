@@ -50,7 +50,7 @@ class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
 
   List<_ScheduledJob> _mapJobs(List<Map<String, dynamic>> rawJobs) {
     return rawJobs.map((j) {
-      final date = DateTime.tryParse(j['scheduled_date'] ?? j['created_at']) ?? DateTime.now();
+      final date = (DateTime.tryParse(j['scheduled_date'] ?? j['created_at']) ?? DateTime.now()).toLocal();
       
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);

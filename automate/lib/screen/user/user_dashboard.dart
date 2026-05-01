@@ -25,6 +25,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
   final TextEditingController _locationController = TextEditingController();
   final TextEditingController _descriptionController = TextEditingController();
   DateTime? _selectedDate;
+  TimeOfDay? _selectedTime;
   bool _isLoading = false;
 
   final MapController _mapController = MapController();
@@ -114,7 +115,15 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
           plateNumber: _plateController.text.isEmpty ? null : _plateController.text,
           pickupLocation: _locationController.text,
           serviceType: 'scheduled',
-          scheduledDate: _selectedDate ?? DateTime.now(),
+          scheduledDate: _selectedDate != null 
+              ? DateTime(
+                  _selectedDate!.year, 
+                  _selectedDate!.month, 
+                  _selectedDate!.day, 
+                  _selectedTime?.hour ?? DateTime.now().hour, 
+                  _selectedTime?.minute ?? DateTime.now().minute,
+                ) 
+              : DateTime.now(),
           issueDescription: _descriptionController.text.isEmpty ? null : _descriptionController.text,
           latitude: _selectedLocation.latitude,
           longitude: _selectedLocation.longitude,
@@ -139,6 +148,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
           _descriptionController.clear();
           setState(() {
             _selectedDate = null;
+            _selectedTime = null;
           });
 
           showDialog(
@@ -527,6 +537,39 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                           onDateSelected: (date) {
                             _selectedDate = date;
                           },
+                        ),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Text(
+                              "Select the time",
+                              style: GoogleFonts.montserrat(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const Spacer(),
+                            TextButton.icon(
+                              onPressed: () async {
+                                final time = await showTimePicker(
+                                  context: context,
+                                  initialTime: _selectedTime ?? TimeOfDay.now(),
+                                );
+                                if (time != null && mounted) {
+                                  setState(() => _selectedTime = time);
+                                }
+                              },
+                              icon: const Icon(Icons.access_time, color: Color(0xFF19456B)),
+                              label: Text(
+                                _selectedTime?.format(context) ?? "Select Time",
+                                style: GoogleFonts.montserrat(
+                                  fontWeight: FontWeight.w600,
+                                  color: const Color(0xFF19456B),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 20),
                       ],
