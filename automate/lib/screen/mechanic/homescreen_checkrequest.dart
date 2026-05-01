@@ -480,8 +480,16 @@ class _AcceptJobButton extends StatelessWidget {
     this.jobData,
   });
 
-  void _onPressed(BuildContext context) {
+  Future<void> _onPressed(BuildContext context) async {
     if (isAccepted) {
+      final activeJob = await JobsLogic().getMechanicActiveJob();
+      if (activeJob != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You already have an active job in progress.')),
+        );
+        return;
+      }
+
       // Validate day — normalize parsed (UTC) date to local before comparing
       final rawDate = jobData?['scheduled_date'] ?? jobData?['created_at'];
       final now = DateTime.now();

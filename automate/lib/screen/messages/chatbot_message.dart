@@ -1,27 +1,11 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../Logic/ollama_integrations/services/ollama_service.dart';
 import '../../widgets/chatbot/chat_bubble.dart';
 
-// ── ChatMessage model ────────────────────────────────────────────────────────
-class ChatMessage {
-  final String message;
-  final String time;
-  final bool isMe;
-  final bool isError;
-  final File? imageFile;
-
-  ChatMessage({
-    required this.message,
-    required this.time,
-    required this.isMe,
-    this.isError = false,
-    this.imageFile,
-  });
-}
+import '../../Logic/ollama_integrations/model/chat_message.dart';
 
 // ── Screen ───────────────────────────────────────────────────────────────────
 class MechMateChatScreen extends StatefulWidget {
@@ -126,7 +110,6 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
     final text = _msgController.text.trim();
     final hasText = text.isNotEmpty;
     final userMessageText = hasText ? text : "[Image sent for analysis]";
-    final imageToSend = _selectedImage!;
 
     setState(() {
       _messages.add(
@@ -303,9 +286,7 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
             isLoading: _isLoading,
             hasSelectedImage: _selectedImage != null,
             onCameraTap: _showImageSourceDialog,
-            onSendTap: _selectedImage != null
-                ? _sendMessageWithImage
-                : _sendTextMessage,
+            onSendTap: _handleSendMessage,
           ),
         ],
       ),

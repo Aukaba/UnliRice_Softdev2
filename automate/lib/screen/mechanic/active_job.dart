@@ -1108,6 +1108,12 @@ class _MechanicJobCompleteScreenState extends State<MechanicJobCompleteScreen> {
                       elevation: 0,
                     ),
                     onPressed: () {
+                      final jobId = _jobId;
+                      if (jobId != null) {
+                        JobsLogic().setJobCompleted(jobId).catchError((e) {
+                          debugPrint('Error setting job to completed: $e');
+                        });
+                      }
                       Navigator.pushAndRemoveUntil(
                         context,
                         MaterialPageRoute(
