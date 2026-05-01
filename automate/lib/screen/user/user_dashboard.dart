@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:async';
+import 'package:http/http.dart' as http;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_map/flutter_map.dart';
@@ -26,14 +29,59 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
   final MapController _mapController = MapController();
   final DraggableScrollableController _sheetController = DraggableScrollableController();
   LatLng _selectedLocation = const LatLng(10.2974, 123.8687); // Default to CIT-U, Cebu
+  Timer? _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _locationController.text = "Cebu Institute of Technology - University";
+  }
 
   @override
   void dispose() {
+    _debounce?.cancel();
     _titleController.dispose();
     _vehicleController.dispose();
     _locationController.dispose();
     _descriptionController.dispose();
     super.dispose();
+  }
+
+  Future<void> _fetchAddress(LatLng position) async {
+    if (!mounted) return;
+    setState(() => _locationController.text = "Locating...");
+
+    final url = Uri.parse(
+        'https://nominatim.openstreetmap.org/reverse?format=json&lat=${position.latitude}&lon=${position.longitude}&zoom=18&addressdetails=1');
+    try {
+      final response = await http.get(url, headers: {'User-Agent': 'com.example.automate'});
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data != null && data['display_name'] != null) {
+          final address = data['display_name'] as String;
+          final lat = double.tryParse(data['lat'].toString());
+          final lon = double.tryParse(data['lon'].toString());
+          if (mounted) {
+            setState(() {
+              // Get a shorter address if possible by splitting commas, or just use full
+              final parts = address.split(', ');
+              _locationController.text = parts.take(3).join(', '); // Use first 3 parts (e.g. Landmark, Street, City)
+              
+              // Snap to the landmark's exact coordinates if available
+              if (lat != null && lon != null) {
+                _selectedLocation = LatLng(lat, lon);
+                _mapController.move(_selectedLocation, _mapController.camera.zoom);
+              }
+            });
+          }
+        } else {
+          if (mounted) setState(() => _locationController.text = "Unknown Location");
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching address: $e');
+      if (mounted) setState(() => _locationController.text = "Could not fetch address");
+    }
   }
 
   void _submitJobRequest() async {
@@ -136,6 +184,10 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                   if (hasGesture && position.center != null) {
                     setState(() {
                       _selectedLocation = position.center!;
+                    });
+                    if (_debounce?.isActive ?? false) _debounce!.cancel();
+                    _debounce = Timer(const Duration(milliseconds: 800), () {
+                      _fetchAddress(position.center!);
                     });
                   }
                 },
