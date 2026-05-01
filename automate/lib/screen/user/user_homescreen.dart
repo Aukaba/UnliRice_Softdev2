@@ -260,29 +260,6 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
             child: StreamBuilder<Map<String, dynamic>?>(
               stream: JobsLogic().getUserActiveJob(),
               builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(
-                    child: Padding(
-                      padding: EdgeInsets.all(8.0),
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    ),
-                  );
-                }
-                if (snapshot.hasError) {
-                  return Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.redAccent.withValues(alpha: 0.9),
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: Text(
-                      'Could not load job status.',
-                      style: GoogleFonts.inriaSans(color: Colors.white, fontSize: 12),
-                      textAlign: TextAlign.center,
-                    ),
-                  );
-                }
-
                 final job = snapshot.data;
                 if (job == null) return const SizedBox.shrink();
 
