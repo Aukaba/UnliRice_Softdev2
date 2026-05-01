@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../Logic/ollama_integrations/services/ollama_service.dart';
 import '../../widgets/chatbot/chat_bubble.dart';
+import '../../widgets/chatbot/image_preview.dart';
+import '../../widgets/chatbot/chat_input_bar.dart';
 
 import '../../Logic/ollama_integrations/model/chat_message.dart';
 
