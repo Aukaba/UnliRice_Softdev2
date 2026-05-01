@@ -93,7 +93,7 @@ class JobsLogic {
       'plate_number': plateNumber,
       'pickup_location': pickupLocation,
       'service_type': serviceType,
-      'scheduled_date': scheduledDate?.toIso8601String(),
+      'scheduled_date': scheduledDate?.toUtc().toIso8601String(),
       'issue_description': issueDescription,
       'status': 'pending',
       'priority': serviceType == 'emergency' ? 'High' : 'Medium',
