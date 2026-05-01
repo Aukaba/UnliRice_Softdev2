@@ -35,6 +35,11 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
   bool _isFetchingRoute = false;
   Timer? _locationTimer;
 
+  // Turn-by-turn state
+  String? _nextInstruction;
+  IconData? _nextTurnIcon;
+  String _totalDistanceText = 'Distance unavailable';
+
   // Helpers to safely pull strings from jobData
   String _field(String key, String fallback) =>
       (widget.jobData?[key]?.toString().isNotEmpty == true)
@@ -148,30 +153,95 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
         '$kOsrmRoutingBaseUrl/route/v1/driving/'
         '${mechLatLng.longitude},${mechLatLng.latitude};'
         '${jobLatLng.longitude},${jobLatLng.latitude}'
-        '?geometries=geojson&overview=full',
+        '?geometries=geojson&overview=full&steps=true',
       );
       final response = await http.get(url).timeout(const Duration(seconds: 10));
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);
-        final coords = data['routes']?[0]?['geometry']?['coordinates'] as List?;
-        if (coords != null) {
-          final points = coords
-              .map((c) => LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble()))
-              .toList();
-          if (mounted) {
-            setState(() => _routePoints = points);
-            // Fit camera to show both markers ONLY on the first load
-            if (points.isNotEmpty && _isFirstCameraFit) {
-              _isFirstCameraFit = false;
-              final bounds = LatLngBounds.fromPoints([mechLatLng, jobLatLng, ...points]);
-              WidgetsBinding.instance.addPostFrameCallback((_) {
-                _mapController.fitCamera(
-                  CameraFit.bounds(
-                    bounds: bounds,
-                    padding: const EdgeInsets.fromLTRB(40, 150, 40, 300),
-                  ),
-                );
+        final routes = data['routes'] as List?;
+        if (routes != null && routes.isNotEmpty) {
+          final route = routes[0];
+          
+          // Total distance
+          final distanceMeters = route['distance'] as num?;
+          String distText = 'Distance unavailable';
+          if (distanceMeters != null) {
+            if (distanceMeters >= 1000) {
+              distText = '${(distanceMeters / 1000).toStringAsFixed(1)} km';
+            } else {
+              distText = '${distanceMeters.toStringAsFixed(0)} m';
+            }
+          }
+
+          // Turn-by-turn
+          String? nextInst;
+          IconData? turnIcon;
+          final legs = route['legs'] as List?;
+          if (legs != null && legs.isNotEmpty) {
+            final steps = legs[0]['steps'] as List?;
+            if (steps != null && steps.length > 1) {
+              // steps[0] is usually "depart". steps[1] is the first actual maneuver.
+              final nextStep = steps[1];
+              final maneuver = nextStep['maneuver'] as Map<String, dynamic>?;
+              final modifier = maneuver?['modifier'] as String?;
+              final type = maneuver?['type'] as String?;
+              final stepDistance = nextStep['distance'] as num?;
+              
+              if (modifier != null && stepDistance != null) {
+                String distStr = stepDistance >= 1000 
+                  ? '${(stepDistance / 1000).toStringAsFixed(1)} km' 
+                  : '${stepDistance.toStringAsFixed(0)} m';
+                
+                nextInst = 'Turn $modifier in $distStr';
+                
+                if (modifier.contains('left')) {
+                  turnIcon = Icons.turn_left;
+                } else if (modifier.contains('right')) {
+                  turnIcon = Icons.turn_right;
+                } else if (modifier.contains('straight')) {
+                  turnIcon = Icons.straight;
+                } else if (modifier.contains('uturn')) {
+                  turnIcon = Icons.u_turn_left;
+                } else {
+                  turnIcon = Icons.navigation;
+                }
+                
+                if (type == 'arrive') {
+                  nextInst = 'Arrive in $distStr';
+                  turnIcon = Icons.flag;
+                }
+              }
+            } else if (steps != null && steps.length == 1) {
+               nextInst = 'Arriving shortly';
+               turnIcon = Icons.flag;
+            }
+          }
+
+          final coords = route['geometry']?['coordinates'] as List?;
+          if (coords != null) {
+            final points = coords
+                .map((c) => LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble()))
+                .toList();
+            if (mounted) {
+              setState(() {
+                _routePoints = points;
+                _totalDistanceText = distText;
+                _nextInstruction = nextInst;
+                _nextTurnIcon = turnIcon;
               });
+              // Fit camera to show both markers ONLY on the first load
+              if (points.isNotEmpty && _isFirstCameraFit) {
+                _isFirstCameraFit = false;
+                final bounds = LatLngBounds.fromPoints([mechLatLng, jobLatLng, ...points]);
+                WidgetsBinding.instance.addPostFrameCallback((_) {
+                  _mapController.fitCamera(
+                    CameraFit.bounds(
+                      bounds: bounds,
+                      padding: const EdgeInsets.fromLTRB(40, 150, 40, 300),
+                    ),
+                  );
+                });
+              }
             }
           }
         }
@@ -331,6 +401,38 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
             ),
           ),
 
+          // ── Turn-by-Turn Overlay ──
+          if (_nextInstruction != null)
+            Positioned(
+              top: 140, // Below the red header
+              left: 20,
+              right: 20,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                decoration: BoxDecoration(
+                  color: Colors.black87,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: const [BoxShadow(color: Colors.black26, blurRadius: 10, offset: Offset(0, 4))],
+                ),
+                child: Row(
+                  children: [
+                    Icon(_nextTurnIcon ?? Icons.navigation, color: Colors.white, size: 28),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        _nextInstruction!,
+                        style: GoogleFonts.montserrat(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
           // ── Draggable Bottom Sheet Content ──
           DraggableScrollableSheet(
             initialChildSize: 0.5,
@@ -409,7 +511,7 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                                   size: 18, color: Colors.black87),
                               const SizedBox(width: 6),
                               Flexible(
-                                child: Text('Distance unavailable',
+                                child: Text(_totalDistanceText,
                                     overflow: TextOverflow.ellipsis,
                                     style: GoogleFonts.inriaSans(
                                         fontSize: 13,
