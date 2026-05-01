@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:geolocator/geolocator.dart';
@@ -358,11 +359,11 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
           // ── Draggable Bottom Sheet Content ──
           DraggableScrollableSheet(
             initialChildSize: 0.5,
-            minChildSize: 0.12,
+            minChildSize: 0.06,
             maxChildSize: 0.9,
             expand: true,
             snap: true,
-            snapSizes: const [0.12, 0.5, 0.9],
+            snapSizes: const [0.06, 0.5, 0.9],
             builder: (context, scrollController) {
               return Container(
                 width: double.infinity,
@@ -378,8 +379,16 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                 ),
                 child: ClipRRect(
                   borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                  child: SingleChildScrollView(
+                  child: ScrollConfiguration(
+                    behavior: ScrollConfiguration.of(context).copyWith(
+                      dragDevices: {
+                        PointerDeviceKind.touch,
+                        PointerDeviceKind.mouse,
+                      },
+                    ),
+                    child: SingleChildScrollView(
                     controller: scrollController,
+                    physics: const ClampingScrollPhysics(),
                     padding: const EdgeInsets.only(
                         left: 20, right: 20, bottom: 20, top: 10),
                     child: Column(
@@ -543,10 +552,11 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                         ),
                       ]),
                     ],
-                  ),
-                ),
-              ),
-            );
+                  ), // Column
+                ), // SingleChildScrollView
+                ), // ScrollConfiguration
+              ), // ClipRRect
+            ); // Container
               },
             ),
           ],
