@@ -1,5 +1,9 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
@@ -20,6 +24,14 @@ class MechanicActiveJobScreen extends StatefulWidget {
 }
 
 class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
+  final _supabase = Supabase.instance.client;
+  final MapController _mapController = MapController();
+
+  LatLng? _mechanicLatLng;
+  List<LatLng> _routePoints = [];
+  bool _routeLoading = true;
+  Timer? _locationTimer;
+
   // Helpers to safely pull strings from jobData
   String _field(String key, String fallback) =>
       (widget.jobData?[key]?.toString().isNotEmpty == true)
@@ -37,6 +49,131 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
         debugPrint('[ActiveJob] setJobInProgress error: $e');
       });
     }
+    _startLocationTracking();
+  }
+
+  @override
+  void dispose() {
+    _locationTimer?.cancel();
+    super.dispose();
+  }
+
+  /// Gets real GPS, saves to DB, then fetches the OSRM route.
+  Future<void> _startLocationTracking() async {
+    await _loadRoute(); // immediate first run
+    // Then refresh every 15 seconds
+    _locationTimer = Timer.periodic(const Duration(seconds: 15), (_) => _loadRoute());
+  }
+
+  Future<LatLng?> _getRealLocation() async {
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (!serviceEnabled) return null;
+
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) return null;
+      }
+      if (permission == LocationPermission.deniedForever) return null;
+
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.high,
+          timeLimit: Duration(seconds: 8),
+        ),
+      );
+      return LatLng(pos.latitude, pos.longitude);
+    } catch (e) {
+      debugPrint('[ActiveJob] GPS error: $e');
+      return null;
+    }
+  }
+
+  Future<void> _loadRoute() async {
+    final jobMap = widget.jobData?['jobs'] as Map<String, dynamic>?;
+    final latStr = widget.jobData?['latitude']?.toString() ?? jobMap?['latitude']?.toString();
+    final lngStr = widget.jobData?['longitude']?.toString() ?? jobMap?['longitude']?.toString();
+    final jobLat = double.tryParse(latStr ?? '') ?? 10.2974;
+    final jobLng = double.tryParse(lngStr ?? '') ?? 123.8687;
+    final jobLatLng = LatLng(jobLat, jobLng);
+
+    // 1. Get real GPS location from device
+    LatLng mechLatLng = const LatLng(10.3180, 123.9006); // fallback: Cebu City
+    final gpsLatLng = await _getRealLocation();
+    if (gpsLatLng != null) {
+      mechLatLng = gpsLatLng;
+      // Save to mechanic table so other screens can read it
+      try {
+        final uid = _supabase.auth.currentUser?.id;
+        if (uid != null) {
+          await _supabase.from('mechanic').update({
+            'latitude': gpsLatLng.latitude,
+            'longitude': gpsLatLng.longitude,
+          }).eq('uid', uid);
+        }
+      } catch (e) {
+        debugPrint('[ActiveJob] mechanic location save error: $e');
+      }
+    } else {
+      // Fallback: try reading last-known from DB
+      try {
+        final uid = _supabase.auth.currentUser?.id;
+        if (uid != null) {
+          final res = await _supabase
+              .from('mechanic')
+              .select('latitude, longitude')
+              .eq('uid', uid)
+              .maybeSingle();
+          final mLat = double.tryParse(res?['latitude']?.toString() ?? '');
+          final mLng = double.tryParse(res?['longitude']?.toString() ?? '');
+          if (mLat != null && mLng != null) mechLatLng = LatLng(mLat, mLng);
+        }
+      } catch (e) {
+        debugPrint('[ActiveJob] mechanic location fetch error: $e');
+      }
+    }
+
+    if (mounted) setState(() => _mechanicLatLng = mechLatLng);
+
+    // 2. Fetch OSRM route
+    try {
+      final url = Uri.parse(
+        'http://router.project-osrm.org/route/v1/driving/'
+        '${mechLatLng.longitude},${mechLatLng.latitude};'
+        '${jobLatLng.longitude},${jobLatLng.latitude}'
+        '?geometries=geojson&overview=full',
+      );
+      final response = await http.get(url).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final coords = data['routes']?[0]?['geometry']?['coordinates'] as List?;
+        if (coords != null) {
+          final points = coords
+              .map((c) => LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble()))
+              .toList();
+          if (mounted) {
+            setState(() => _routePoints = points);
+            // Fit camera to show both markers
+            if (points.isNotEmpty) {
+              final bounds = LatLngBounds.fromPoints([mechLatLng, jobLatLng, ...points]);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _mapController.fitCamera(
+                  CameraFit.bounds(
+                    bounds: bounds,
+                    padding: const EdgeInsets.fromLTRB(40, 150, 40, 300),
+                  ),
+                );
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[ActiveJob] OSRM route error: $e');
+    }
+
+    if (mounted) setState(() => _routeLoading = false);
   }
 
   @override
@@ -58,6 +195,7 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
     final lat = double.tryParse(latStr ?? '') ?? 10.2974;
     final lng = double.tryParse(lngStr ?? '') ?? 123.8687;
     final mapCenter = LatLng(lat, lng);
+    final mechLatLng = _mechanicLatLng ?? const LatLng(10.3180, 123.9006);
 
     return Scaffold(
       backgroundColor: const Color(0xFFF2F5F8),
@@ -66,6 +204,7 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
           // ── Map Background ──
           Positioned.fill(
             child: FlutterMap(
+              mapController: _mapController,
               options: MapOptions(
                 initialCenter: mapCenter,
                 initialZoom: 16.0,
@@ -78,8 +217,20 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                   urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
                   userAgentPackageName: 'com.example.automate',
                 ),
+                // Route polyline
+                if (_routePoints.isNotEmpty)
+                  PolylineLayer(
+                    polylines: [
+                      Polyline(
+                        points: _routePoints,
+                        strokeWidth: 5.0,
+                        color: const Color(0xFF1A73E8),
+                      ),
+                    ],
+                  ),
                 MarkerLayer(
                   markers: [
+                    // Job location pin
                     Marker(
                       point: mapCenter,
                       width: 50,
@@ -90,8 +241,45 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                         color: headerColor,
                       ),
                     ),
+                    // Mechanic location pin
+                    Marker(
+                      point: mechLatLng,
+                      width: 44,
+                      height: 44,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A73E8),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                          boxShadow: const [
+                            BoxShadow(color: Color(0x551A73E8), blurRadius: 8)
+                          ],
+                        ),
+                        child: const Icon(Icons.engineering, color: Colors.white, size: 24),
+                      ),
+                    ),
                   ],
                 ),
+                // Loading indicator overlay
+                if (_routeLoading)
+                  const Positioned.fill(
+                    child: Center(
+                      child: Card(
+                        child: Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              SizedBox(width: 16, height: 16,
+                                child: CircularProgressIndicator(strokeWidth: 2)),
+                              SizedBox(width: 10),
+                              Text('Finding route...'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
               ],
             ),
           ),
@@ -1164,31 +1352,6 @@ class _CompleteCard extends StatelessWidget {
         ],
       ),
       child: child,
-    );
-  }
-}
-
-class _ReceiptRow extends StatelessWidget {
-  final String label;
-  final String value;
-  const _ReceiptRow(this.label, this.value);
-
-  @override
-  Widget build(BuildContext context) {
-    return RichText(
-      text: TextSpan(
-        style: GoogleFonts.inriaSans(fontSize: 13, color: Colors.black54),
-        children: [
-          TextSpan(text: '$label: '),
-          TextSpan(
-            text: value,
-            style: GoogleFonts.inriaSans(
-                fontSize: 13,
-                fontWeight: FontWeight.w700,
-                color: Colors.black87),
-          ),
-        ],
-      ),
     );
   }
 }
