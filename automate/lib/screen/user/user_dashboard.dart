@@ -113,13 +113,13 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
           pickupLocation: _locationController.text,
           serviceType: 'scheduled',
           scheduledDate: _selectedDate != null
-              ? DateTime(
+              ? DateTime.utc(
                   _selectedDate!.year,
                   _selectedDate!.month,
                   _selectedDate!.day,
                   _selectedTime?.hour ?? 0,
                   _selectedTime?.minute ?? 0,
-                )
+                ).subtract(const Duration(hours: 8)) // Ensure it is interpreted as UTC+8 (PST)
               : DateTime.now(),
           issueDescription: _descriptionController.text.isEmpty
               ? null
@@ -545,6 +545,50 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                               onDateSelected: (date) {
                                 _selectedDate = date;
                               },
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              "Select the time",
+                              style: GoogleFonts.montserrat(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w400,
+                                color: Colors.black87,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            GestureDetector(
+                              onTap: () async {
+                                final picked = await showTimePicker(
+                                  context: context,
+                                  initialTime: _selectedTime ?? TimeOfDay.now(),
+                                );
+                                if (picked != null) {
+                                  setState(() => _selectedTime = picked);
+                                }
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEFEFEF),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Text(
+                                      _selectedTime != null 
+                                          ? _selectedTime!.format(context)
+                                          : "Choose a time",
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w400,
+                                        color: _selectedTime != null ? Colors.black87 : Colors.black54,
+                                      ),
+                                    ),
+                                    const Icon(Icons.access_time, color: Colors.black54),
+                                  ],
+                                ),
+                              ),
                             ),
                             const SizedBox(height: 20),
                           ],
