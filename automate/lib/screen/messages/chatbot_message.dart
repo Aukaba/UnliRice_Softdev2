@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import 'package:image_picker/image_picker.dart';
 import '../../Logic/ollama_integrations/services/ollama_service.dart';
 import '../../widgets/chatbot/chat_bubble.dart';
@@ -111,7 +110,6 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
     final text = _msgController.text.trim();
     final hasText = text.isNotEmpty;
     final userMessageText = hasText ? text : "[Image sent for analysis]";
-    final imageToSend = _selectedImage!;
 
     setState(() {
       _messages.add(

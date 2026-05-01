@@ -249,8 +249,10 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                 },
               ),
             ),
-          ),
-          // Floating Active Job Card
+          ],
+        ),
+      ),
+      // Floating Active Job Card
           Positioned(
             left: 16,
             right: 16,
