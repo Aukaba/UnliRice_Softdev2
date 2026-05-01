@@ -76,6 +76,8 @@ class JobsLogic {
     required String serviceType,
     DateTime? scheduledDate,
     String? issueDescription,
+    double? latitude,
+    double? longitude,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('User is not logged in.');
@@ -90,6 +92,8 @@ class JobsLogic {
       'issue_description': issueDescription,
       'status': 'pending',
       'priority': serviceType == 'emergency' ? 'High' : 'Medium',
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
     });
   }
 
@@ -317,6 +321,8 @@ class JobsLogic {
     required String vehicle,
     required String pickupLocation,
     String? issueDescription,
+    double? latitude,
+    double? longitude,
   }) async {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('User is not logged in.');
@@ -331,6 +337,8 @@ class JobsLogic {
       'issue_description': issueDescription,
       'status': 'pending',
       'priority': 'High',
+      if (latitude != null) 'latitude': latitude,
+      if (longitude != null) 'longitude': longitude,
     }).select('id').single();
 
     final jobId = jobRes['id'];
@@ -411,5 +419,101 @@ class JobsLogic {
     if (accept) {
       await acceptJob(jobId);
     }
+  }
+
+  // ─── Mark a job as in-progress (mechanic started it) ─────────────────────────
+  Future<void> setJobInProgress(String jobId) async {
+    await _supabase
+        .from('jobs')
+        .update({'status': 'in_progress'})
+        .eq('id', jobId);
+  }
+
+  // ─── Mark a job as completed ──────────────────────────────────────────────────
+  Future<void> setJobCompleted(String jobId) async {
+    await _supabase
+        .from('jobs')
+        .update({'status': 'completed'})
+        .eq('id', jobId);
+  }
+
+  // ─── Get the current mechanic's active in-progress job (for app-open redirect) ─
+  Future<Map<String, dynamic>?> getMechanicActiveJob() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return null;
+    try {
+      final res = await _supabase
+          .from('jobs')
+          .select()
+          .eq('mechanic_id', user.id)
+          .eq('status', 'in_progress')
+          .maybeSingle();
+      if (res == null) return null;
+      final job = Map<String, dynamic>.from(res);
+      // Enrich with user name
+      final uId = job['user_id'] as String?;
+      if (uId != null) {
+        final name = await _lookupName(uId);
+        if (name != null) job['user_name'] = name;
+      }
+      return job;
+    } catch (e) {
+      debugPrint('[JobsLogic] getMechanicActiveJob error: $e');
+      return null;
+    }
+  }
+
+  // ─── Stream the user's active in-progress job (for floating card) ────────────
+  Stream<Map<String, dynamic>?> getUserActiveJob() {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return const Stream.empty();
+
+    late StreamController<Map<String, dynamic>?> controller;
+    Timer? timer;
+
+    Future<void> poll() async {
+      try {
+        final res = await _supabase
+            .from('jobs')
+            .select()
+            .eq('user_id', user.id)
+            .eq('status', 'in_progress')
+            .maybeSingle();
+
+        Map<String, dynamic>? job;
+        if (res != null) {
+          job = Map<String, dynamic>.from(res);
+          // Enrich with mechanic name
+          final mId = job['mechanic_id'] as String?;
+          if (mId != null) {
+            try {
+              final mRes = await _supabase
+                  .from('mechanic')
+                  .select('first_name, last_name')
+                  .eq('uid', mId)
+                  .maybeSingle();
+              if (mRes != null) {
+                final first = mRes['first_name'] ?? '';
+                final last = mRes['last_name'] ?? '';
+                job['mechanic_name'] = '$first $last'.trim();
+              }
+            } catch (_) {}
+          }
+        }
+        if (!controller.isClosed) controller.add(job);
+      } catch (e) {
+        debugPrint('[JobsLogic] getUserActiveJob poll error: $e');
+      }
+    }
+
+    controller = StreamController<Map<String, dynamic>?>(
+      onListen: () {
+        poll();
+        timer = Timer.periodic(_pollInterval, (_) => poll());
+      },
+      onCancel: () => timer?.cancel(),
+    );
+
+    return controller.stream;
   }
 }
