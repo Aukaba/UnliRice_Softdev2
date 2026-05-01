@@ -148,7 +148,7 @@ class JobsLogic {
           .from('jobs')
           .select()
           .eq('mechanic_id', user.id)
-          .eq('status', 'accepted')
+          .inFilter('status', ['accepted', 'in_progress'])
           .order('created_at', ascending: false);
 
       debugPrint('[JobsLogic] getMechanicScheduledJobs: ${res.length} rows');

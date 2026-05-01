@@ -6,22 +6,7 @@ import 'package:image_picker/image_picker.dart';
 import '../../Logic/ollama_integrations/services/ollama_service.dart';
 import '../../widgets/chatbot/chat_bubble.dart';
 
-// ── ChatMessage model ────────────────────────────────────────────────────────
-class ChatMessage {
-  final String message;
-  final String time;
-  final bool isMe;
-  final bool isError;
-  final File? imageFile;
-
-  ChatMessage({
-    required this.message,
-    required this.time,
-    required this.isMe,
-    this.isError = false,
-    this.imageFile,
-  });
-}
+import '../../Logic/ollama_integrations/model/chat_message.dart';
 
 // ── Screen ───────────────────────────────────────────────────────────────────
 class MechMateChatScreen extends StatefulWidget {
@@ -303,9 +288,7 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
             isLoading: _isLoading,
             hasSelectedImage: _selectedImage != null,
             onCameraTap: _showImageSourceDialog,
-            onSendTap: _selectedImage != null
-                ? _sendMessageWithImage
-                : _sendTextMessage,
+            onSendTap: _handleSendMessage,
           ),
         ],
       ),

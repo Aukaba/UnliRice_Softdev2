@@ -8,6 +8,7 @@ import 'jobs.dart';
 import 'schedule.dart';
 import '../messages/user_message_list.dart';
 import 'profile.dart';
+import 'active_job.dart';
 
 class MechanicHomeScreen extends StatefulWidget {
   const MechanicHomeScreen({super.key});
@@ -24,6 +25,17 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
   void initState() {
     super.initState();
     _listenForEmergencyDispatches();
+    _checkActiveJob();
+  }
+
+  Future<void> _checkActiveJob() async {
+    final activeJob = await JobsLogic().getMechanicActiveJob();
+    if (activeJob != null && mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => MechanicActiveJobScreen(jobData: activeJob)),
+      );
+    }
   }
 
   void _listenForEmergencyDispatches() {
