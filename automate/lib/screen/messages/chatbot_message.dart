@@ -6,7 +6,6 @@ import '../../Logic/ollama_integrations/services/ollama_service.dart';
 import '../../widgets/chatbot/chat_bubble.dart';
 import '../../widgets/chatbot/image_preview.dart';
 import '../../widgets/chatbot/chat_input_bar.dart';
-
 import '../../Logic/ollama_integrations/model/chat_message.dart';
 
 // ── Screen ───────────────────────────────────────────────────────────────────
@@ -106,61 +105,64 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
     setState(() => _selectedImage = null);
   }
 
-  Future<void> _sendMessageWithImage() async {
-    if (_selectedImage == null) return;
+Future<void> _sendMessageWithImage() async {
+  if (_selectedImage == null) return;
 
-    final text = _msgController.text.trim();
-    final hasText = text.isNotEmpty;
-    final userMessageText = hasText ? text : "[Image sent for analysis]";
+  final text = _msgController.text.trim();
+  final hasText = text.isNotEmpty;
+  final userMessageText = hasText ? text : "[Image sent for analysis]";
+  
+  // ✅ Read the image bytes and convert to base64 String (NOT a List)
+  final bytes = await _selectedImage!.readAsBytes();
+  final base64String = base64Encode(bytes);  // This is a String
+  
+  // Prepare prompt
+  final prompt = hasText
+      ? text
+      : "Look at this vehicle image. What visible issues or potential problems can you identify? List 3 possibilities.";
 
+  // Save the image reference for display
+  final imageForDisplay = _selectedImage;
+
+  // Add user message to UI
+  setState(() {
+    _messages.add(
+      ChatMessage(
+        message: userMessageText,
+        time: _getCurrentTime(),
+        isMe: true,
+        imageFile: imageForDisplay,
+      ),
+    );
+    _isLoading = true;
+  });
+
+  _msgController.clear();
+  
+  // Clear the selected image preview
+  setState(() {
+    _selectedImage = null;
+  });
+
+  // ✅ Send the String (base64String), NOT a List
+  final botResponse = await _ollamaService.sendMessage(
+    text: prompt,
+    imageBase64: base64String,  // This is a String
+  );
+
+  if (mounted) {
     setState(() {
       _messages.add(
         ChatMessage(
-          message: userMessageText,
+          message: botResponse,
           time: _getCurrentTime(),
-          isMe: true,
-          imageFile: _selectedImage,
+          isMe: false,
         ),
       );
-      _isLoading = true;
-      _selectedImage = null;
+      _isLoading = false;
     });
-
-    _msgController.clear();
-
-    // Prepare image
-    final bytes = await _selectedImage!.readAsBytes();
-    final base64String = base64Encode(bytes);
-
-    // Prepare prompt
-    final prompt = hasText
-        ? text
-        : "Look at this vehicle image. What visible issues or potential problems can you identify? List 3 possibilities.";
-
-    // Clear selected image
-    setState(() {
-      _selectedImage = null;
-    });
-
-    // Send to AI
-    final botResponse = await _ollamaService.sendMessage(
-      text: prompt,
-      imageBase64: base64String,
-    );
-
-    if (mounted) {
-      setState(() {
-        _messages.add(
-          ChatMessage(
-            message: botResponse,
-            time: _getCurrentTime(),
-            isMe: false,
-          ),
-        );
-        _isLoading = false;
-      });
-    }
   }
+}
 
   Future<void> _sendTextMessage() async {
     if (_msgController.text.trim().isEmpty) return;
@@ -194,13 +196,21 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
     }
   }
 
-  void _handleSendMessage() {
-    if (_selectedImage != null) {
-      _sendMessageWithImage();
-    } else {
-      _sendTextMessage();
-    }
+void _handleSendMessage() {
+  final hasText = _msgController.text.trim().isNotEmpty;
+  final hasImage = _selectedImage != null;
+  
+  if (!hasText && !hasImage) {
+    // Nothing to send
+    return;
   }
+  
+  if (hasImage) {
+    _sendMessageWithImage();
+  } else if (hasText) {
+    _sendTextMessage();
+  }
+}
 
   void _clearConversation() {
     setState(() {

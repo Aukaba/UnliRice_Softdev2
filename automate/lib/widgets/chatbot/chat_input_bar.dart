@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-class ChatInputBar extends StatelessWidget {
+class ChatInputBar extends StatefulWidget {
   final TextEditingController controller;
   final bool isLoading;
   final bool hasSelectedImage;
@@ -18,9 +18,50 @@ class ChatInputBar extends StatelessWidget {
   });
   
   @override
+  State<ChatInputBar> createState() => _ChatInputBarState();
+}
+
+class _ChatInputBarState extends State<ChatInputBar> {
+  bool _hasText = false;
+  
+  @override
+  void initState() {
+    super.initState();
+    // Listen to text changes
+    widget.controller.addListener(_onTextChanged);
+    _hasText = widget.controller.text.trim().isNotEmpty;
+  }
+  
+  @override
+  void dispose() {
+    // Remove listener to avoid memory leaks
+    widget.controller.removeListener(_onTextChanged);
+    super.dispose();
+  }
+  
+  @override
+  void didUpdateWidget(ChatInputBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // If controller changed, update listeners
+    if (oldWidget.controller != widget.controller) {
+      oldWidget.controller.removeListener(_onTextChanged);
+      widget.controller.addListener(_onTextChanged);
+      _hasText = widget.controller.text.trim().isNotEmpty;
+    }
+  }
+  
+  void _onTextChanged() {
+    final hasText = widget.controller.text.trim().isNotEmpty;
+    if (_hasText != hasText) {
+      setState(() {
+        _hasText = hasText;
+      });
+    }
+  }
+  
+  @override
   Widget build(BuildContext context) {
-    final hasText = controller.text.isNotEmpty;
-    final isSendEnabled = hasSelectedImage || hasText;
+    final isSendEnabled = widget.hasSelectedImage || _hasText;
     
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
@@ -31,10 +72,10 @@ class ChatInputBar extends StatelessWidget {
       child: Row(
         children: [
           IconButton(
-            onPressed: isLoading ? null : onCameraTap,
+            onPressed: widget.isLoading ? null : widget.onCameraTap,
             icon: Icon(
               Icons.camera_alt,
-              color: isLoading ? Colors.grey : const Color(0xFF19456B),
+              color: widget.isLoading ? Colors.grey : const Color(0xFF19456B),
             ),
           ),
           Expanded(
@@ -46,10 +87,10 @@ class ChatInputBar extends StatelessWidget {
               ),
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
               child: TextField(
-                controller: controller,
-                enabled: !isLoading,
+                controller: widget.controller,
+                enabled: !widget.isLoading,
                 decoration: InputDecoration(
-                  hintText: hasSelectedImage 
+                  hintText: widget.hasSelectedImage 
                       ? "Add a description (optional)..." 
                       : "Ask MechMate...",
                   hintStyle: GoogleFonts.montserrat(
@@ -65,11 +106,11 @@ class ChatInputBar extends StatelessWidget {
           ),
           const SizedBox(width: 10),
           GestureDetector(
-            onTap: isLoading ? null : (isSendEnabled ? onSendTap : null),
+            onTap: (widget.isLoading || !isSendEnabled) ? null : widget.onSendTap,
             child: Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: isLoading 
+                color: widget.isLoading 
                     ? Colors.grey 
                     : (isSendEnabled ? const Color(0xFF19456B) : Colors.grey.shade400),
                 shape: BoxShape.circle,
