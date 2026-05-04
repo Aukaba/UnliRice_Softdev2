@@ -2,12 +2,14 @@ import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
-import '../../Logic/ollama_integrations/model/chat_message.dart';
 import '../../Logic/ollama_integrations/services/ollama_service.dart';
 import '../../widgets/chatbot/chat_bubble.dart';
-import '../../widgets/chatbot/chat_input_bar.dart';
 import '../../widgets/chatbot/image_preview.dart';
+import '../../widgets/chatbot/chat_input_bar.dart';
 
+import '../../Logic/ollama_integrations/model/chat_message.dart';
+
+// ── Screen ───────────────────────────────────────────────────────────────────
 class MechMateChatScreen extends StatefulWidget {
   const MechMateChatScreen({super.key});
 
@@ -19,42 +21,43 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
   final TextEditingController _msgController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
   final List<ChatMessage> _messages = [];
-  
+
   late final OllamaService _ollamaService;
-  
+
   bool _isLoading = false;
   File? _selectedImage;
-  
+
   @override
   void initState() {
     super.initState();
-    
-    // Initialize Ollama service
+
     _ollamaService = OllamaService(
       ollamaUrl: "https://supposedly-abdicative-ben.ngrok-free.dev/api/chat",
       modelName: "llama3.2-vision",
     );
-    
-    // Add welcome message
-    const welcomeMessage = "Hello! I'm MechMate, your AI assistant. I can analyze vehicle photos. Take a picture or describe your issue!";
-    
-    _messages.add(ChatMessage(
-      message: welcomeMessage,
-      time: _getCurrentTime(),
-      isMe: false,
-    ));
-    
+
+    const welcomeMessage =
+        "Hello! I'm MechMate, your AI assistant. I can analyze vehicle photos. Take a picture or describe your issue!";
+
+    _messages.add(
+      ChatMessage(
+        message: welcomeMessage,
+        time: _getCurrentTime(),
+        isMe: false,
+      ),
+    );
+
     _ollamaService.addWelcomeMessage(welcomeMessage);
   }
-  
+
   String _getCurrentTime() {
     final now = DateTime.now();
-    final hour = now.hour % 12;
+    final hour = now.hour % 12 == 0 ? 12 : now.hour % 12;
     final minute = now.minute.toString().padLeft(2, '0');
     final ampm = now.hour >= 12 ? 'PM' : 'AM';
     return "$hour:$minute $ampm";
   }
-  
+
   void _showImageSourceDialog() {
     showModalBottomSheet(
       context: context,
@@ -86,7 +89,7 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
       ),
     );
   }
-  
+
   Future<void> _pickImage(ImageSource source) async {
     final XFile? photo = await _picker.pickImage(
       source: source,
@@ -94,124 +97,138 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
       maxHeight: 800,
       imageQuality: 80,
     );
-    
     if (photo != null) {
-      setState(() {
-        _selectedImage = File(photo.path);
-      });
+      setState(() => _selectedImage = File(photo.path));
     }
   }
-  
+
   void _removeSelectedImage() {
-    setState(() {
-      _selectedImage = null;
-    });
+    setState(() => _selectedImage = null);
   }
-  
+
   Future<void> _sendMessageWithImage() async {
     if (_selectedImage == null) return;
-    
+
     final text = _msgController.text.trim();
     final hasText = text.isNotEmpty;
     final userMessageText = hasText ? text : "[Image sent for analysis]";
-    
-    // Add user message with image to UI
+
     setState(() {
-      _messages.add(ChatMessage(
-        message: userMessageText,
-        time: _getCurrentTime(),
-        isMe: true,
-        imageFile: _selectedImage,
-      ));
+      _messages.add(
+        ChatMessage(
+          message: userMessageText,
+          time: _getCurrentTime(),
+          isMe: true,
+          imageFile: _selectedImage,
+        ),
+      );
       _isLoading = true;
+      _selectedImage = null;
     });
-    
+
     _msgController.clear();
-    
+
     // Prepare image
     final bytes = await _selectedImage!.readAsBytes();
     final base64String = base64Encode(bytes);
-    
+
     // Prepare prompt
-    final prompt = hasText 
-        ? text 
+    final prompt = hasText
+        ? text
         : "Look at this vehicle image. What visible issues or potential problems can you identify? List 3 possibilities.";
-    
+
     // Clear selected image
     setState(() {
       _selectedImage = null;
     });
-    
+
     // Send to AI
     final botResponse = await _ollamaService.sendMessage(
       text: prompt,
       imageBase64: base64String,
     );
-    
-    // Add bot response to UI
-    setState(() {
-      _messages.add(ChatMessage(
-        message: botResponse,
-        time: _getCurrentTime(),
-        isMe: false,
-      ));
-      _isLoading = false;
-    });
+
+    if (mounted) {
+      setState(() {
+        _messages.add(
+          ChatMessage(
+            message: botResponse,
+            time: _getCurrentTime(),
+            isMe: false,
+          ),
+        );
+        _isLoading = false;
+      });
+    }
   }
-  
+
   Future<void> _sendTextMessage() async {
     if (_msgController.text.trim().isEmpty) return;
-    
+
     final text = _msgController.text.trim();
-    
-    // Add user message to UI
+    if (text.isEmpty) return;
+
     setState(() {
-      _messages.add(ChatMessage(
-        message: text,
-        time: _getCurrentTime(),
-        isMe: true,
-      ));
+      _messages.add(
+        ChatMessage(message: text, time: _getCurrentTime(), isMe: true),
+      );
       _isLoading = true;
     });
-    
+
     _msgController.clear();
-    
+
     // Send to AI
     final botResponse = await _ollamaService.sendMessage(text: text);
-    
-    // Add bot response to UI
-    setState(() {
-      _messages.add(ChatMessage(
-        message: botResponse,
-        time: _getCurrentTime(),
-        isMe: false,
-      ));
-      _isLoading = false;
-    });
+
+    if (mounted) {
+      setState(() {
+        _messages.add(
+          ChatMessage(
+            message: botResponse,
+            time: _getCurrentTime(),
+            isMe: false,
+          ),
+        );
+        _isLoading = false;
+      });
+    }
   }
-  
+
+  void _handleSendMessage() {
+    if (_selectedImage != null) {
+      _sendMessageWithImage();
+    } else {
+      _sendTextMessage();
+    }
+  }
+
   void _clearConversation() {
     setState(() {
       _ollamaService.clearConversation();
       _messages.clear();
-      
-      // Add fresh welcome message
-      const welcomeMessage = "Hello! I'm MechMate, your AI assistant. I can analyze vehicle photos. How can I help with your vehicle today?";
-      
-      _messages.add(ChatMessage(
-        message: welcomeMessage,
-        time: _getCurrentTime(),
-        isMe: false,
-      ));
-      
+      _selectedImage = null;
+
+      const welcomeMessage =
+          "Hello! I'm MechMate, your AI assistant. How can I help with your vehicle today?";
+
+      _messages.add(
+        ChatMessage(
+          message: welcomeMessage,
+          time: _getCurrentTime(),
+          isMe: false,
+        ),
+      );
+
       _ollamaService.addWelcomeMessage(welcomeMessage);
     });
-    
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Conversation cleared!")),
-    );
+
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text("Conversation cleared!")));
   }
-  
+
+  // ── Build ──────────────────────────────────────────────────────────────────
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -219,7 +236,12 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
       appBar: AppBar(
         backgroundColor: const Color(0xFFB3D9F2),
         elevation: 0,
-        title: const Text("MechMate"),
+        title: Row(
+          children: const [
+            Text("MechMate "),
+            Text("✦", style: TextStyle(fontSize: 14, color: Colors.blueAccent)),
+          ],
+        ),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
@@ -230,7 +252,6 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
       ),
       body: Column(
         children: [
-          // Main Chat Body
           Expanded(
             child: ListView.builder(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
@@ -246,28 +267,28 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
               },
             ),
           ),
-          
+
           // Image Preview
           if (_selectedImage != null)
             ImagePreview(
               imageFile: _selectedImage!,
               onRemove: _removeSelectedImage,
             ),
-          
+
           // Loading indicator
           if (_isLoading)
             const LinearProgressIndicator(
               backgroundColor: Colors.grey,
               valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF19456B)),
             ),
-          
+
           // Input Bar
           ChatInputBar(
             controller: _msgController,
             isLoading: _isLoading,
             hasSelectedImage: _selectedImage != null,
             onCameraTap: _showImageSourceDialog,
-            onSendTap: _selectedImage != null ? _sendMessageWithImage : _sendTextMessage,
+            onSendTap: _handleSendMessage,
           ),
         ],
       ),

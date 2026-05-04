@@ -62,10 +62,12 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        child: Column(
-          children: [
-            // Header Section
+      body: Stack(
+        children: [
+          SingleChildScrollView(
+            child: Column(
+              children: [
+                // Header Section
             _buildHeader(),
             
             // Main Body Section
@@ -249,6 +251,83 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
             ),
           ],
         ),
+      ),
+      // Floating Active Job Card
+          Positioned(
+            left: 16,
+            right: 16,
+            bottom: 24,
+            child: StreamBuilder<Map<String, dynamic>?>(
+              stream: JobsLogic().getUserActiveJob(),
+              builder: (context, snapshot) {
+                final job = snapshot.data;
+                if (job == null) return const SizedBox.shrink();
+
+                final mechanicName = job['mechanic_name'] ?? 'Mechanic';
+                final title = job['title'] ?? 'Service Request';
+
+                return GestureDetector(
+                  onTap: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const UserActivityScreen()),
+                    );
+                  },
+                  child: Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF24A159),
+                      borderRadius: BorderRadius.circular(16),
+                      boxShadow: const [
+                        BoxShadow(
+                          color: Colors.black26,
+                          blurRadius: 10,
+                          offset: Offset(0, 4),
+                        ),
+                      ],
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.all(10),
+                          decoration: BoxDecoration(
+                            color: Colors.white.withOpacity(0.2),
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.build_circle, color: Colors.white, size: 28),
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Job in Progress',
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.white,
+                                ),
+                              ),
+                              Text(
+                                '$mechanicName is working on "$title"',
+                                style: GoogleFonts.inriaSans(
+                                  fontSize: 13,
+                                  color: Colors.white.withOpacity(0.9),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        const Icon(Icons.chevron_right, color: Colors.white),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 import 'user_successful_booking.dart';
 
 class UserDashboardMatchScreen extends StatefulWidget {
@@ -24,112 +26,40 @@ class _UserDashboardMatchScreenState extends State<UserDashboardMatchScreen> {
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // 1. Map Background Placeholder
-          // (In a real app, this would be a GoogleMap widget, here we simulate the UI)
+          // 1. Map Background 
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             height: MediaQuery.of(context).size.height * 0.65,
-            child: Container(
-              color: const Color(0xFFE4F0F5), // Light gray-blue simulating map tone
-              child: Stack(
-                children: [
-                  // Dummy map lines and details mimicking the reference image
-                  Positioned(
-                    top: 100,
-                    left: 20,
-                    right: -100,
-                    child: Container(
-                      height: 12,
-                      color: Colors.white.withOpacity(0.8),
-                      transform: Matrix4.rotationZ(-0.35),
-                    ),
-                  ),
-                  Positioned(
-                    top: 250,
-                    left: -50,
-                    right: 150,
-                    child: Container(
-                      height: 16,
-                      color: Colors.white.withOpacity(0.8),
-                      transform: Matrix4.rotationZ(0.2),
-                    ),
-                  ),
-                  Positioned(
-                    top: 180,
-                    right: 80,
-                    child: Transform(
-                      transform: Matrix4.rotationZ(0.2),
-                      child: Text(
-                        "Arrabal River",
-                        style: GoogleFonts.montserrat(
-                          color: Colors.blue.shade300,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 300,
-                    left: 20,
-                    child: Text(
-                      "University\nof Cebu...\nMaritime\nEducation...",
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.montserrat(
-                        color: Colors.grey.shade600,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                  // Dummy map pins (Start & End)
-                  Positioned(
-                    top: 200,
-                    left: MediaQuery.of(context).size.width * 0.4,
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 20,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFF19456B), width: 3),
-                            color: Colors.white,
-                          ),
-                        ),
-                        Container(
-                          width: 3,
-                          height: 30,
-                          color: const Color(0xFF19456B),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Positioned(
-                    top: 340,
-                    left: MediaQuery.of(context).size.width * 0.5,
-                    child: Container(
-                      width: 14,
-                      height: 14,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Color(0xFF005BAC), // Solid blue dot
-                      ),
-                      child: Center(
-                        child: Container(
-                          width: 6,
-                          height: 6,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+            child: FlutterMap(
+              options: const MapOptions(
+                initialCenter: LatLng(10.2974, 123.8687), // Default to CIT-U, Cebu
+                initialZoom: 16.0,
+                interactionOptions: InteractionOptions(
+                  flags: InteractiveFlag.all & ~InteractiveFlag.rotate,
+                ),
               ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.automate',
+                ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: const LatLng(10.2974, 123.8687),
+                      width: 50,
+                      height: 50,
+                      child: const Icon(
+                        Icons.location_on,
+                        size: 50,
+                        color: Color(0xFFE51D1D),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
 

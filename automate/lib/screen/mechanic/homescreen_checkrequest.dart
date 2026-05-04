@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'homescreen.dart';
+import 'jobs.dart';
+import 'schedule.dart';
+import '../messages/user_message_list.dart';
+import 'profile.dart';
 import 'active_job.dart';
 import '../../Logic/jobs/jobs_logic.dart';
 
@@ -106,7 +111,14 @@ class _MechanicCheckRequestScreenState
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: GestureDetector(
-                      onTap: () => Navigator.pop(context),
+                      onTap: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const MechanicHomeScreen(),
+                          ),
+                        );
+                      },
                       child: Container(
                         width: 44,
                         height: 44,
@@ -178,11 +190,11 @@ class _MechanicCheckRequestScreenState
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
-                                    const _LocationDistanceRow(),
+                                    _LocationDistanceRow(jobData: widget.jobData),
                                     const SizedBox(height: 20),
-                                    const _ClientInformationCard(),
+                                    _ClientInformationCard(jobData: widget.jobData),
                                     const SizedBox(height: 16),
-                                    const _IssueCard(),
+                                    _IssueCard(jobData: widget.jobData),
                                     const SizedBox(height: 24),
                                     _AcceptJobButton(
                                       isAccepted: widget.isAccepted,
@@ -202,6 +214,42 @@ class _MechanicCheckRequestScreenState
             ),
           ],
         ),
+      ),
+      bottomNavigationBar: _MechanicBottomNavigationBar(
+        currentIndex: 0,
+        onItemTapped: (index) {
+          if (index == 0) {
+            Navigator.pop(context);
+          } else if (index == 1) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const MechanicJobsScreen(),
+              ),
+            );
+          } else if (index == 2) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MechanicScheduleScreen(),
+              ),
+            );
+          } else if (index == 3) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => const UserMessageListScreen(),
+              ),
+            );
+          } else if (index == 4) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => MechanicProfileScreen(),
+              ),
+            );
+          }
+        },
       ),
     );
   }
@@ -253,7 +301,8 @@ class _DragHandleRow extends StatelessWidget {
 }
 
 class _LocationDistanceRow extends StatelessWidget {
-  const _LocationDistanceRow();
+  final Map<String, dynamic>? jobData;
+  const _LocationDistanceRow({this.jobData});
 
   @override
   Widget build(BuildContext context) {
@@ -267,7 +316,7 @@ class _LocationDistanceRow extends StatelessWidget {
               const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Tisa, Cebu City',
+                  jobData?['pickup_location'] ?? 'Unknown Location',
                   style: GoogleFonts.inriaSans(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -299,7 +348,8 @@ class _LocationDistanceRow extends StatelessWidget {
 }
 
 class _ClientInformationCard extends StatelessWidget {
-  const _ClientInformationCard();
+  final Map<String, dynamic>? jobData;
+  const _ClientInformationCard({this.jobData});
 
   @override
   Widget build(BuildContext context) {
@@ -328,13 +378,13 @@ class _ClientInformationCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          _InfoRow(label: 'Name', value: 'Aaron Barnaija'),
+          _InfoRow(label: 'Name', value: jobData?['user_name'] ?? 'Unknown Client'),
           const SizedBox(height: 12),
-          _InfoRow(label: 'Vehicle', value: 'Toyota Vios'),
+          _InfoRow(label: 'Vehicle', value: jobData?['vehicle'] ?? 'N/A'),
           const SizedBox(height: 12),
-          _InfoRow(label: 'Plate', value: 'GLE 704'),
+          _InfoRow(label: 'Plate', value: jobData?['plate_number'] ?? 'N/A'), // Will show N/A if not saved in DB
           const SizedBox(height: 12),
-          _InfoRow(label: 'Phone', value: '+63 912 345 6789'),
+          _InfoRow(label: 'Phone', value: jobData?['phone_number'] ?? 'N/A'), // Will show N/A if not saved in DB
         ],
       ),
     );
@@ -379,7 +429,8 @@ class _InfoRow extends StatelessWidget {
 }
 
 class _IssueCard extends StatelessWidget {
-  const _IssueCard();
+  final Map<String, dynamic>? jobData;
+  const _IssueCard({this.jobData});
 
   @override
   Widget build(BuildContext context) {
@@ -409,7 +460,7 @@ class _IssueCard extends StatelessWidget {
           ),
           const SizedBox(height: 12),
           Text(
-            'Engine won\u2019t start curh, am stuck in the middle of the road',
+            jobData?['issue_description'] ?? 'No description provided',
             style: GoogleFonts.inriaSans(
               fontSize: 14,
               fontWeight: FontWeight.w500,
@@ -432,8 +483,16 @@ class _AcceptJobButton extends StatelessWidget {
     this.jobData,
   });
 
-  void _onPressed(BuildContext context) {
+  Future<void> _onPressed(BuildContext context) async {
     if (isAccepted) {
+      final activeJob = await JobsLogic().getMechanicActiveJob();
+      if (activeJob != null && context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('You already have an active job in progress.')),
+        );
+        return;
+      }
+
       // Validate day — normalize parsed (UTC) date to local before comparing
       final rawDate = jobData?['scheduled_date'] ?? jobData?['created_at'];
       final now = DateTime.now();
@@ -443,12 +502,12 @@ class _AcceptJobButton extends StatelessWidget {
         final parsed = DateTime.tryParse(rawDate)?.toLocal();
         if (parsed != null) {
           final jobDay = DateTime(parsed.year, parsed.month, parsed.day);
-          if (jobDay != today) {
+          if (jobDay.isAfter(today)) {
             showDialog(
               context: context,
               builder: (ctx) => AlertDialog(
                 title: Text('Error', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
-                content: Text('This job is not scheduled for today. You cannot start it yet.',
+                content: Text('This job is scheduled for a future date. You cannot start it yet.',
                     style: GoogleFonts.inriaSans()),
                 actions: [
                   TextButton(
@@ -506,4 +565,71 @@ class _AcceptJobButton extends StatelessWidget {
     );
   }
 }
-
+
+class _MechanicBottomNavigationBar extends StatelessWidget {
+  final int currentIndex;
+  final ValueChanged<int> onItemTapped;
+
+  const _MechanicBottomNavigationBar({required this.currentIndex, required this.onItemTapped});
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      top: false,
+      child: Container(
+        color: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 12),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceAround,
+          children: [
+            _NavItem(icon: Icons.home_outlined, label: 'Home', active: currentIndex == 0, onTap: () => onItemTapped(0)),
+            _NavItem(icon: Icons.inventory_2_outlined, label: 'Jobs', active: currentIndex == 1, onTap: () => onItemTapped(1)),
+            _NavItem(icon: Icons.calendar_month_outlined, label: 'Schedule', active: currentIndex == 2, onTap: () => onItemTapped(2)),
+            _NavItem(icon: Icons.chat_bubble_outline, label: 'Chat', active: currentIndex == 3, onTap: () => onItemTapped(3)),
+            _NavItem(icon: Icons.person_outline, label: 'Profile', active: currentIndex == 4, onTap: () => onItemTapped(4)),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool active;
+  final VoidCallback onTap;
+
+  const _NavItem({required this.icon, required this.label, this.active = false, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    final color = active ? const Color(0xFFFFB703) : Colors.black54;
+    return GestureDetector(
+      onTap: onTap,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: BoxDecoration(
+              color: active ? const Color(0xFFFFF8E1) : Colors.transparent,
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: Icon(icon, size: 22, color: color),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: GoogleFonts.inriaSans(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}

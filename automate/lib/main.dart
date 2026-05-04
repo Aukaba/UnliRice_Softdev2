@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screen/authentication/login_screen.dart';
+import 'config/env.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Supabase.initialize(
-    url: 'https://jxskizvytjtemgzvlinx.supabase.co',
-    anonKey: 'sb_publishable__YvreK82mKOa1VRL4hzeBA_DCFV6Z5h',
+    url: Env.supabaseUrl,
+    anonKey: Env.supabaseAnonKey,
   );
   runApp(const MyApp());
 }
@@ -34,7 +35,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Only set offline if the app is completely detached/closed. If we set offline on 'inactive' 
+    // Only set offline if the app is completely detached/closed. If we set offline on 'inactive'
     // or 'paused', testing locally by switching windows or running in the background will force them offline!
     if (state == AppLifecycleState.detached) {
       _setOffline();
