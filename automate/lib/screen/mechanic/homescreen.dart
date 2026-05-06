@@ -6,7 +6,7 @@ import '../../Logic/jobs/jobs_logic.dart';
 import 'homescreen_checkrequest.dart';
 import 'jobs.dart';
 import 'schedule.dart';
-import '../messages/user_message_list.dart';
+import 'chat.dart';
 import 'profile.dart';
 import 'active_job.dart';
 
@@ -152,7 +152,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
           } else if (index == 3) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => const UserMessageListScreen()),
+              MaterialPageRoute(builder: (_) => const MechanicChatScreen()),
             );
           } else if (index == 4) {
             Navigator.push(
@@ -1213,4 +1213,4 @@ class _EmergencyAlertDialogState extends State<_EmergencyAlertDialog> {
       ),
     );
   }
-}
+}

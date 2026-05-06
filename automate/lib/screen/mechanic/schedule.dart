@@ -2,9 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'homescreen.dart'; // adjust import paths as needed
 import 'jobs.dart';
-import '../messages/user_message_list.dart';
+import 'profile.dart';
+import 'chat.dart';
 import '../../Logic/jobs/jobs_logic.dart';
-import 'homescreen_checkrequest.dart';
+
+
 
 // ─── Data model ───────────────────────────────────────────────────────────────
 
@@ -18,7 +20,6 @@ class _ScheduledJob {
   final String price;
   final String tag; // 'TODAY', 'TOMORROW', 'MON 03·27-28', etc.
   final DateTime date;
-  final Map<String, dynamic> rawJob;
 
   const _ScheduledJob({
     required this.title,
@@ -30,7 +31,6 @@ class _ScheduledJob {
     required this.price,
     required this.tag,
     required this.date,
-    required this.rawJob,
   });
 }
 
@@ -46,11 +46,10 @@ class MechanicScheduleScreen extends StatefulWidget {
 class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
   DateTime _focusedMonth = DateTime.now();
   late DateTime _selectedDay;
-  late final Stream<List<Map<String, dynamic>>> _scheduleStream;
 
   List<_ScheduledJob> _mapJobs(List<Map<String, dynamic>> rawJobs) {
     return rawJobs.map((j) {
-      final date = (DateTime.tryParse(j['scheduled_date'] ?? j['created_at']) ?? DateTime.now()).toLocal();
+      final date = DateTime.tryParse(j['scheduled_date'] ?? j['created_at']) ?? DateTime.now();
       
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
@@ -67,7 +66,7 @@ class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
       
       return _ScheduledJob(
         title: j['title'] ?? 'Service Request',
-        name: j['user_name'] ?? 'User',
+        name: 'User',
         vehicle: j['vehicle'] ?? 'Vehicle',
         description: j['issue_description'] ?? 'No description',
         location: j['pickup_location'] ?? 'Unknown location',
@@ -75,7 +74,6 @@ class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
         price: 'Pending Estimate', 
         tag: tag,
         date: date,
-        rawJob: j,
       );
     }).toList();
   }
@@ -94,7 +92,6 @@ class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
     final now = DateTime.now();
     _focusedMonth = DateTime(now.year, now.month);
     _selectedDay = DateTime(now.year, now.month, now.day);
-    _scheduleStream = JobsLogic().getMechanicScheduledJobs();
   }
 
   void _prevMonth() =>
@@ -193,304 +190,298 @@ class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
             // ── Content ──
             Column(
               children: [
-            // ── Header ──
-            Container(
-              margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
-              decoration: BoxDecoration(
-                color: const Color(0xFFFFB703),
-                borderRadius: BorderRadius.circular(32),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    width: 46,
-                    height: 46,
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Icon(Icons.calendar_month_rounded,
-                        color: Color(0xFFFFB703), size: 22),
-                  ),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Text(
-                      'Schedule',
-                      style: GoogleFonts.montserrat(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w800,
-                        color: Colors.black,
-                      ),
-                    ),
-                  ),
-                  Container(
-                    width: 44,
-                    height: 44,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    child: const Icon(Icons.notifications_none,
-                        color: Colors.black87),
-                  ),
-                ],
-              ),
-            ),
+                // ── Scrollable body ──
+                Expanded(
+                  child: StreamBuilder<List<Map<String, dynamic>>>(
+                    stream: JobsLogic().getMechanicScheduledJobs(),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      
+                      final allJobs = _mapJobs(snapshot.data ?? []);
+                      final selectedDayJobs = _getJobsForSelectedDay(allJobs);
+                      final datesWithJobSet = _getDatesWithJobs(allJobs);
 
-            // ── Scrollable body ──
-            Expanded(
-              child: StreamBuilder<List<Map<String, dynamic>>>(
-                stream: _scheduleStream,
-                builder: (context, snapshot) {
-                  // Show spinner only on very first load (no data yet)
-                  if (snapshot.connectionState == ConnectionState.waiting &&
-                      snapshot.data == null) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  
-                  final allJobs = _mapJobs(snapshot.data ?? []);
-                  final selectedDayJobs = _getJobsForSelectedDay(allJobs);
-                  final datesWithJobSet = _getDatesWithJobs(allJobs);
-
-                  return SingleChildScrollView(
-                    padding: const EdgeInsets.only(bottom: 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 16),
-
-                        // ── Calendar card ──
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 16),
-                          padding: const EdgeInsets.all(20),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(28),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x0F000000),
-                                blurRadius: 18,
-                                offset: Offset(0, 8),
+                      return SingleChildScrollView(
+                        padding: const EdgeInsets.only(bottom: 24),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Yellow header — now scrolls with content, no top gap
+                            Container(
+                              padding: const EdgeInsets.all(20),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFFFB703),
+                                borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
                               ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              // Month nav
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              child: Row(
                                 children: [
-                                  GestureDetector(
-                                    onTap: _prevMonth,
-                                    child: Container(
-                                      width: 36,
-                                      height: 36,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFFFB703),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: const Icon(Icons.chevron_left_rounded,
-                                          color: Colors.black, size: 22),
-                                    ),
-                                  ),
-                                  Text(
-                                    _monthLabel(),
-                                    style: GoogleFonts.montserrat(
-                                      fontSize: 16,
-                                      fontWeight: FontWeight.w700,
+                                  Container(
+                                    width: 46,
+                                    height: 46,
+                                    decoration: BoxDecoration(
                                       color: Colors.black,
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: const Icon(Icons.calendar_month_rounded,
+                                        color: Color(0xFFFFB703), size: 22),
+                                  ),
+                                  const SizedBox(width: 14),
+                                  Expanded(
+                                    child: Text(
+                                      'Schedule',
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w800,
+                                        color: Colors.black,
+                                      ),
                                     ),
                                   ),
-                                  GestureDetector(
-                                    onTap: _nextMonth,
-                                    child: Container(
-                                      width: 36,
-                                      height: 36,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFFFB703),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: const Icon(Icons.chevron_right_rounded,
-                                          color: Colors.black, size: 22),
+                                  Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(16),
                                     ),
+                                    child: const Icon(Icons.notifications_none,
+                                        color: Colors.black87),
                                   ),
                                 ],
                               ),
-                              const SizedBox(height: 16),
-
-                              // Day-of-week headers
-                              Row(
-                                children: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
-                                    .map((d) => Expanded(
-                                          child: Center(
-                                            child: Text(
-                                              d,
-                                              style: GoogleFonts.inriaSans(
-                                                fontSize: 12,
-                                                fontWeight: FontWeight.w700,
-                                                color: Colors.black38,
-                                              ),
-                                            ),
-                                          ),
-                                        ))
-                                    .toList(),
-                              ),
-                              const SizedBox(height: 8),
-
-                              // Day cells grid
-                              GridView.builder(
-                                shrinkWrap: true,
-                                physics: const NeverScrollableScrollPhysics(),
-                                itemCount: calDays.length,
-                                gridDelegate:
-                                    const SliverGridDelegateWithFixedCrossAxisCount(
-                                  crossAxisCount: 7,
-                                  childAspectRatio: 0.85,
-                                  mainAxisSpacing: 4,
-                                ),
-                                itemBuilder: (context, index) {
-                                  final day = calDays[index];
-                                  if (day == null) return const SizedBox();
-                                  final date = DateTime(
-                                      _focusedMonth.year, _focusedMonth.month, day);
-                                  final isSelected =
-                                      _dateKey(date) == _dateKey(_selectedDay);
-                                  final hasJob =
-                                      datesWithJobSet.contains(_dateKey(date));
-                                  final isToday = _dateKey(date) ==
-                                      _dateKey(DateTime.now());
-
-                                  return GestureDetector(
-                                    onTap: () =>
-                                        setState(() => _selectedDay = date),
-                                    child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        AnimatedContainer(
-                                          duration:
-                                              const Duration(milliseconds: 180),
-                                          width: 34,
-                                          height: 34,
-                                          decoration: BoxDecoration(
-                                            color: isSelected
-                                                ? const Color(0xFFFFB703)
-                                                : isToday
-                                                    ? const Color(0xFFFFF3CD)
-                                                    : Colors.transparent,
-                                            borderRadius:
-                                                BorderRadius.circular(10),
-                                          ),
-                                          child: Center(
-                                            child: Text(
-                                              '$day',
-                                              style: GoogleFonts.inriaSans(
-                                                fontSize: 14,
-                                                fontWeight: isSelected || isToday
-                                                    ? FontWeight.w700
-                                                    : FontWeight.w500,
-                                                color: isSelected
-                                                    ? Colors.black
-                                                    : Colors.black87,
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(height: 3),
-                                        AnimatedOpacity(
-                                          opacity: hasJob ? 1.0 : 0.0,
-                                          duration:
-                                              const Duration(milliseconds: 200),
-                                          child: Container(
-                                            width: 5,
-                                            height: 5,
-                                            decoration: BoxDecoration(
-                                              color: isSelected
-                                                  ? Colors.black54
-                                                  : const Color(0xFFFFB703),
-                                              shape: BoxShape.circle,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // ── Selected day section ──
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            _selectedDayLabel(),
-                            style: GoogleFonts.montserrat(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black,
                             ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-
-                        if (selectedDayJobs.isEmpty)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(
-                                  vertical: 28, horizontal: 20),
+                            // ── Calendar card ──
+                            Container(
+                              margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+                              padding: const EdgeInsets.all(20),
                               decoration: BoxDecoration(
                                 color: Colors.white,
-                                borderRadius: BorderRadius.circular(24),
-                              ),
-                              child: Center(
-                                child: Text(
-                                  'No jobs scheduled for this day',
-                                  style: GoogleFonts.inriaSans(
-                                    fontSize: 14,
-                                    color: Colors.black38,
-                                    fontWeight: FontWeight.w500,
+                                borderRadius: BorderRadius.circular(28),
+                                boxShadow: const [
+                                  BoxShadow(
+                                    color: Color(0x0F000000),
+                                    blurRadius: 18,
+                                    offset: Offset(0, 8),
                                   ),
+                                ],
+                              ),
+                              child: Column(
+                                children: [
+                                  // Month nav
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      GestureDetector(
+                                        onTap: _prevMonth,
+                                        child: Container(
+                                          width: 36,
+                                          height: 36,
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFFFB703),
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: const Icon(Icons.chevron_left_rounded,
+                                              color: Colors.black, size: 22),
+                                        ),
+                                      ),
+                                      Text(
+                                        _monthLabel(),
+                                        style: GoogleFonts.montserrat(
+                                          fontSize: 16,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                      GestureDetector(
+                                        onTap: _nextMonth,
+                                        child: Container(
+                                          width: 36,
+                                          height: 36,
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFFFB703),
+                                            borderRadius: BorderRadius.circular(12),
+                                          ),
+                                          child: const Icon(Icons.chevron_right_rounded,
+                                              color: Colors.black, size: 22),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+
+                                  // Day-of-week headers
+                                  Row(
+                                    children: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+                                        .map((d) => Expanded(
+                                              child: Center(
+                                                child: Text(
+                                                  d,
+                                                  style: GoogleFonts.inriaSans(
+                                                    fontSize: 12,
+                                                    fontWeight: FontWeight.w700,
+                                                    color: Colors.black38,
+                                                  ),
+                                                ),
+                                              ),
+                                            ))
+                                        .toList(),
+                                  ),
+                                  const SizedBox(height: 8),
+
+                                  // Day cells grid
+                                  GridView.builder(
+                                    shrinkWrap: true,
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    itemCount: calDays.length,
+                                    gridDelegate:
+                                        const SliverGridDelegateWithFixedCrossAxisCount(
+                                      crossAxisCount: 7,
+                                      childAspectRatio: 0.85,
+                                      mainAxisSpacing: 4,
+                                    ),
+                                    itemBuilder: (context, index) {
+                                      final day = calDays[index];
+                                      if (day == null) return const SizedBox();
+                                      final date = DateTime(
+                                          _focusedMonth.year, _focusedMonth.month, day);
+                                      final isSelected =
+                                          _dateKey(date) == _dateKey(_selectedDay);
+                                      final hasJob =
+                                          datesWithJobSet.contains(_dateKey(date));
+                                      final isToday = _dateKey(date) ==
+                                          _dateKey(DateTime.now());
+
+                                      return GestureDetector(
+                                        onTap: () =>
+                                            setState(() => _selectedDay = date),
+                                        child: Column(
+                                          mainAxisAlignment: MainAxisAlignment.center,
+                                          children: [
+                                            AnimatedContainer(
+                                              duration:
+                                                  const Duration(milliseconds: 180),
+                                              width: 34,
+                                              height: 34,
+                                              decoration: BoxDecoration(
+                                                color: isSelected
+                                                    ? const Color(0xFFFFB703)
+                                                    : isToday
+                                                        ? const Color(0xFFFFF3CD)
+                                                        : Colors.transparent,
+                                                borderRadius:
+                                                    BorderRadius.circular(10),
+                                              ),
+                                              child: Center(
+                                                child: Text(
+                                                  '$day',
+                                                  style: GoogleFonts.inriaSans(
+                                                    fontSize: 14,
+                                                    fontWeight: isSelected || isToday
+                                                        ? FontWeight.w700
+                                                        : FontWeight.w500,
+                                                    color: isSelected
+                                                        ? Colors.black
+                                                        : Colors.black87,
+                                                  ),
+                                                ),
+                                              ),
+                                            ),
+                                            const SizedBox(height: 3),
+                                            AnimatedOpacity(
+                                              opacity: hasJob ? 1.0 : 0.0,
+                                              duration:
+                                                  const Duration(milliseconds: 200),
+                                              child: Container(
+                                                width: 5,
+                                                height: 5,
+                                                decoration: BoxDecoration(
+                                                  color: isSelected
+                                                      ? Colors.black54
+                                                      : const Color(0xFFFFB703),
+                                                  shape: BoxShape.circle,
+                                                ),
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                ],
+                              ),
+                            ),
+
+                            const SizedBox(height: 24),
+
+                            // ── Selected day section ──
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Text(
+                                _selectedDayLabel(),
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.black,
                                 ),
                               ),
                             ),
-                          )
-                        else
-                          ...selectedDayJobs.map((job) => Padding(
-                                padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                                child: _ScheduleJobCard(job: job),
-                              )),
+                            const SizedBox(height: 14),
 
-                        const SizedBox(height: 24),
+                            if (selectedDayJobs.isEmpty)
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 16),
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      vertical: 28, horizontal: 20),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(24),
+                                  ),
+                                  child: Center(
+                                    child: Text(
+                                      'No jobs scheduled for this day',
+                                      style: GoogleFonts.inriaSans(
+                                        fontSize: 14,
+                                        color: Colors.black38,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              )
+                            else
+                              ...selectedDayJobs.map((job) => Padding(
+                                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                                    child: _ScheduleJobCard(job: job),
+                                  )),
 
-                        // ── All scheduled jobs ──
-                        Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 16),
-                          child: Text(
-                            'All Scheduled Jobs',
-                            style: GoogleFonts.montserrat(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black,
+                            const SizedBox(height: 24),
+
+                            // ── All scheduled jobs ──
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              child: Text(
+                                'All Scheduled Jobs',
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.black,
+                                ),
+                              ),
                             ),
-                          ),
+                            const SizedBox(height: 14),
+                            ...allJobs.map((job) => Padding(
+                                  padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                                  child: _ScheduleJobCard(job: job),
+                                )),
+                          ],
                         ),
-                        const SizedBox(height: 14),
-                        ...allJobs.map((job) => Padding(
-                              padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                              child: _ScheduleJobCard(job: job),
-                            )),
-                      ],
-                    ),
-                  );
-                }
-              ),
-            ),
-          ],
+                      );
+                    }
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -511,7 +502,12 @@ class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
           } else if (index == 3) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => const UserMessageListScreen()),
+              MaterialPageRoute(builder: (_) => const MechanicChatScreen()),
+            );
+          } else if (index == 4) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const MechanicProfileScreen()),
             );
           }
         },
@@ -540,31 +536,19 @@ class _ScheduleJobCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (_) => MechanicCheckRequestScreen(
-              isAccepted: true,
-              jobData: job.rawJob,
-            ),
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F000000),
+            blurRadius: 18,
+            offset: Offset(0, 8),
           ),
-        );
-      },
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(28),
-          boxShadow: const [
-            BoxShadow(
-              color: Color(0x0F000000),
-              blurRadius: 18,
-              offset: Offset(0, 8),
-            ),
-          ],
-        ),
+        ],
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -691,7 +675,7 @@ class _ScheduleJobCard extends StatelessWidget {
           ),
         ],
       ),
-    ));
+    );
   }
 }
 
