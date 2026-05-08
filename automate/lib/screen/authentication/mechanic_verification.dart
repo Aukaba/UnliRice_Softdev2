@@ -96,9 +96,17 @@ class _VerificationScreenState extends State<VerificationScreen> {
         'created_at': DateTime.now().toIso8601String(),
       });
 
-if (mounted) {
-  widget.onSuccess();
-}
+setState(() {
+  _isSuccess = true;
+  _isSubmitting = false;
+});
+
+// After 2 seconds, call onSuccess
+Future.delayed(const Duration(seconds: 2), () {
+  if (mounted) {
+    widget.onSuccess();
+  }
+});
     } catch (e) {
       setState(() {
         _errorMessage = 'Verification failed: ${e.toString()}';
@@ -151,6 +159,27 @@ if (mounted) {
 
   @override
   Widget build(BuildContext context) {
+      if (_isSuccess) {
+    return PopScope(
+      canPop: false,
+      child: Container(
+        color: Colors.white,
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            const Icon(Icons.check_circle, size: 80, color: Color(0xFF2F8A48)),
+            const SizedBox(height: 24),
+            const Text("Submitted Successfully!", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 12),
+            const Text("Redirecting...", style: TextStyle(color: Colors.grey)),
+            const SizedBox(height: 24),
+            const CircularProgressIndicator(color: Color(0xFFFFB703)),
+          ],
+        ),
+      ),
+    );
+  }
     return PopScope(
       canPop: false,
       child: Container(

@@ -34,53 +34,57 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
     _checkActiveJob();
   }
 
-  void _checkStatus() async {
-    try {
-      final uid = Supabase.instance.client.auth.currentUser?.id;
-      debugPrint("Checking status for UID: $uid");
+void _checkStatus() async {
+  try {
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    debugPrint("Checking status for UID: $uid");
 
-      if (uid != null) {
-        final mechanicRes = await Supabase.instance.client
-            .from('mechanic')
-            .select('uid, verified')
-            .eq('uid', uid)
+    if (uid != null) {
+      final mechanicRes = await Supabase.instance.client
+          .from('mechanic')
+          .select('uid, verified')
+          .eq('uid', uid)
+          .maybeSingle();
+
+      debugPrint("Mechanic record: $mechanicRes");
+
+      if (mechanicRes != null && mounted) {
+        if (mechanicRes['verified'] == true) {
+          debugPrint("Already verified - no overlay");
+          setState(() => _showVerification = false);
+          return;
+        }
+
+        // Check verification status
+        final verificationRes = await Supabase.instance.client
+            .from('mechanic_verification')
+            .select('status')
+            .eq('mechanic_id', mechanicRes['uid'])
             .maybeSingle();
 
-        debugPrint("Mechanic record: $mechanicRes");
+        debugPrint("Verification record: $verificationRes");
 
-        if (mechanicRes != null && mounted) {
-          if (mechanicRes['verified'] == true) {
-            debugPrint("Already verified - no overlay");
-            setState(() => _showVerification = false);
-            return;
-          }
-
-          // Check verification status
-          final verificationRes = await Supabase.instance.client
-              .from('mechanic_verification')
-              .select('status')
-              .eq('mechanic_id', mechanicRes['uid'])
-              .maybeSingle();
-
-          debugPrint("Verification record: $verificationRes");
-
-          if (mounted) {
-            setState(() {
-              if (verificationRes == null) {
-                // No submission - show upload form
-                _showVerification = true;
-                _verificationStatus = 'none'; // ✅ Add this
-              } else {
-
-              }
-            });
-          }
+        if (mounted) {
+          setState(() {
+            if (verificationRes == null) {
+              // No submission - show upload form
+              _showVerification = true;
+              _verificationStatus = 'none';
+            } else {
+              // ✅ ADD THIS - Handle existing verification record
+              final status = verificationRes['status'] as String?;
+              _verificationStatus = status ?? 'pending';
+              _showVerification = status != 'approved';  // Hide only if approved
+              debugPrint("Status: $_verificationStatus, Show: $_showVerification");
+            }
+          });
         }
       }
-    } catch (e) {
-      debugPrint("Verification check failed: $e");
     }
+  } catch (e) {
+    debugPrint("Verification check failed: $e");
   }
+}
 
   Future<void> _checkActiveJob() async {
     final activeJob = await JobsLogic().getMechanicActiveJob();
