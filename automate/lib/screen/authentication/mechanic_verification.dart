@@ -5,8 +5,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 class VerificationScreen extends StatefulWidget {
   final VoidCallback onSuccess;
+  final bool isRejected;
 
-  const VerificationScreen({super.key, required this.onSuccess});
+  const VerificationScreen({
+    super.key,
+    required this.onSuccess,
+    this.isRejected = false, // ✅ Default to false
+  });
 
   @override
   State<VerificationScreen> createState() => _VerificationScreenState();
@@ -15,6 +20,7 @@ class VerificationScreen extends StatefulWidget {
 class _VerificationScreenState extends State<VerificationScreen> {
   File? _selectedImage;
   bool _isSubmitting = false;
+  bool _isSuccess = false;
   String? _errorMessage;
   final ImagePicker _picker = ImagePicker();
 
@@ -25,7 +31,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
         imageQuality: 80,
         maxWidth: 1200,
       );
-      
+
       if (image != null) {
         setState(() {
           _selectedImage = File(image.path);
@@ -59,17 +65,18 @@ class _VerificationScreenState extends State<VerificationScreen> {
       // 1. Get the mechanic ID from the mechanic table
       final mechanicData = await Supabase.instance.client
           .from('mechanic')
-          .select('id')
+          .select('uid')
           .eq('uid', user.id)
           .single();
 
       final mechanicId = mechanicData['id'];
 
       // 2. Upload image to Supabase Storage
-      final fileName = 'valid_ids/${mechanicId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
-      
+      final fileName =
+          'valid_ids/${mechanicId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+
       await Supabase.instance.client.storage
-          .from('verification-documents')
+          .from('mechanic_verification_images')
           .upload(
             fileName,
             _selectedImage!,
@@ -89,9 +96,10 @@ class _VerificationScreenState extends State<VerificationScreen> {
         'created_at': DateTime.now().toIso8601String(),
       });
 
-      if (mounted) {
-        widget.onSuccess(); // Unlock the screen
-      }
+      setState(() {
+        _isSuccess = true;
+        _isSubmitting = false;
+      });
     } catch (e) {
       setState(() {
         _errorMessage = 'Verification failed: ${e.toString()}';
@@ -154,6 +162,28 @@ class _VerificationScreenState extends State<VerificationScreen> {
             mainAxisAlignment: MainAxisAlignment.center,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
+              if (widget.isRejected)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.shade200),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.error_outline, color: Colors.red),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Your previous submission was rejected. Please upload a clearer photo.',
+                          style: TextStyle(color: Colors.red, fontSize: 13),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
               const Icon(
                 Icons.verified_user,
                 size: 80,
@@ -162,19 +192,13 @@ class _VerificationScreenState extends State<VerificationScreen> {
               const SizedBox(height: 16),
               const Text(
                 "Mechanic Verification",
-                style: TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 8),
               const Text(
                 "Please upload a clear photo of your valid ID for verification",
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
+                style: TextStyle(fontSize: 14, color: Colors.grey),
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 24),
@@ -200,10 +224,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                           child: Stack(
                             fit: StackFit.expand,
                             children: [
-                              Image.file(
-                                _selectedImage!,
-                                fit: BoxFit.cover,
-                              ),
+                              Image.file(_selectedImage!, fit: BoxFit.cover),
                               if (!_isSubmitting)
                                 Positioned(
                                   top: 8,
@@ -281,10 +302,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
                   padding: const EdgeInsets.only(top: 12),
                   child: Text(
                     _errorMessage!,
-                    style: const TextStyle(
-                      color: Colors.red,
-                      fontSize: 13,
-                    ),
+                    style: const TextStyle(color: Colors.red, fontSize: 13),
                     textAlign: TextAlign.center,
                   ),
                 ),
@@ -359,10 +377,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
               const Text(
                 '⏱ Verification may take 24-48 hours',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey,
-                ),
+                style: TextStyle(fontSize: 12, color: Colors.grey),
                 textAlign: TextAlign.center,
               ),
             ],

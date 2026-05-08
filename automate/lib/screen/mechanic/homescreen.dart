@@ -20,6 +20,8 @@ class MechanicHomeScreen extends StatefulWidget {
 
 class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
   bool _showVerification = false;
+  String _verificationStatus =
+      'none'; // ✅ Add: 'none', 'pending', 'approved', 'rejected'
   bool _isLoadingStatus = true;
   StreamSubscription? _dispatchSub;
   bool _isDialogShowing = false;
@@ -35,19 +37,47 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
   void _checkStatus() async {
     try {
       final uid = Supabase.instance.client.auth.currentUser?.id;
+      debugPrint("Checking status for UID: $uid");
+
       if (uid != null) {
-        // Query the 'is_verified' column from your mechanic table
-        final res = await Supabase.instance.client
+        final mechanicRes = await Supabase.instance.client
             .from('mechanic')
-            .select('verified')
+            .select('uid, verified')
             .eq('uid', uid)
             .maybeSingle();
 
-        if (res != null && mounted) {
-          setState(() {
-            // If is_verified is false, we show the verification overlay
-            _showVerification = !(res['verified'] ?? false);
-          });
+        debugPrint("Mechanic record: $mechanicRes");
+
+        if (mechanicRes != null && mounted) {
+          if (mechanicRes['verified'] == true) {
+            debugPrint("Already verified - no overlay");
+            setState(() => _showVerification = false);
+            return;
+          }
+
+          // Check verification status
+          final verificationRes = await Supabase.instance.client
+              .from('mechanic_verification')
+              .select('status')
+              .eq('mechanic_id', mechanicRes['uid'])
+              .maybeSingle();
+
+          debugPrint("Verification record: $verificationRes");
+
+          if (mounted) {
+            setState(() {
+              if (verificationRes == null) {
+                // No submission - show upload form
+                _showVerification = true;
+                _verificationStatus = 'none'; // ✅ Add this
+              } else {
+                final status = verificationRes['status'] as String?;
+                _verificationStatus = status ?? 'pending'; // ✅ Add this
+                // Show overlay for pending/rejected, hide for approved
+                _showVerification = status != 'approved';
+              }
+            });
+          }
         }
       }
     } catch (e) {
@@ -93,92 +123,121 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
     super.dispose();
   }
 
-    Widget _buildBlob(double size, int color) {
+  Widget _buildBlob(double size, int color) {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: Color(color),
-        shape: BoxShape.circle,
-      ),
+      decoration: BoxDecoration(color: Color(color), shape: BoxShape.circle),
     );
   }
-  
+
   @override
   Widget build(BuildContext context) {
-  // ── STEP 1: Wrap everything in a Stack ──
-  return Stack(
-    children: [
-      // LAYER 1: Your complete Dashboard
-      Scaffold(
-        backgroundColor: const Color(0xFFF2F5F8),
-        body: SafeArea(
-          child: Stack(
-            children: [
-              // Decorative amber blobs
-              Positioned(right: -70, top: 120, child: _buildBlob(240, 0x26FFB703)),
-              Positioned(left: -80, bottom: 160, child: _buildBlob(280, 0x1FFFB703)),
-              Positioned(right: -40, bottom: 60, child: _buildBlob(160, 0x33FFB703)),
+    // ── STEP 1: Wrap everything in a Stack ──
+    return Stack(
+      children: [
+        // LAYER 1: Your complete Dashboard
+        Scaffold(
+          backgroundColor: const Color(0xFFF2F5F8),
+          body: SafeArea(
+            child: Stack(
+              children: [
+                // Decorative amber blobs
+                Positioned(
+                  right: -70,
+                  top: 120,
+                  child: _buildBlob(240, 0x26FFB703),
+                ),
+                Positioned(
+                  left: -80,
+                  bottom: 160,
+                  child: _buildBlob(280, 0x1FFFB703),
+                ),
+                Positioned(
+                  right: -40,
+                  bottom: 60,
+                  child: _buildBlob(160, 0x33FFB703),
+                ),
 
-              // Scrollable content
-              Column(
-                children: [
-                  Expanded(
-                    child: SingleChildScrollView(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          const SizedBox(height: 16),
-                          const _HeaderSection(),
-                          const SizedBox(height: 16),
-                          const _StatsSection(),
-                          const SizedBox(height: 24),
-                          const _ScheduleSection(),
-                          const SizedBox(height: 24),
-                          const _IncomingRequestsSection(),
-                          const SizedBox(height: 24),
-                          const _PerformanceSection(),
-                          const SizedBox(height: 90),
-                        ],
+                // Scrollable content
+                Column(
+                  children: [
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const SizedBox(height: 16),
+                            const _HeaderSection(),
+                            const SizedBox(height: 16),
+                            const _StatsSection(),
+                            const SizedBox(height: 24),
+                            const _ScheduleSection(),
+                            const SizedBox(height: 24),
+                            const _IncomingRequestsSection(),
+                            const SizedBox(height: 24),
+                            const _PerformanceSection(),
+                            const SizedBox(height: 90),
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
-              ),
-            ],
+                  ],
+                ),
+              ],
+            ),
+          ),
+          bottomNavigationBar: _MechanicBottomNavigationBar(
+            currentIndex: 0,
+            onItemTapped: (index) {
+              // Your navigation logic...
+              if (index == 1)
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const MechanicJobsScreen()),
+                );
+              // ... etc
+            },
           ),
         ),
-        bottomNavigationBar: _MechanicBottomNavigationBar(
-          currentIndex: 0,
-          onItemTapped: (index) {
-            // Your navigation logic...
-            if (index == 1) Navigator.push(context, MaterialPageRoute(builder: (_) => const MechanicJobsScreen()));
-            // ... etc
-          },
-        ),
-      ),
 
-       // LAYER 2: The Full-Screen "Lock" Overlay
-      if (_showVerification)
-        Positioned.fill(
-          child: PopScope(
-            canPop: false,
-            child: Container(
+        // LAYER 2: Verification Overlay
+        if (_showVerification)
+          Positioned.fill(
+            child: Material(
               color: Colors.black.withOpacity(0.75),
-              child: Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 24),
-                  child: Card(
-                    elevation: 12,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(28),
-                      child: SizedBox(
-                        height: 500,
-                        child: VerificationScreen(
-                          onSuccess: () {
-                            setState(() => _showVerification = false);
-                          },
+              child: PopScope(
+                canPop: false,
+                child: Center(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                    child: Card(
+                      elevation: 12,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(28),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(28),
+                        child: SizedBox(
+                          height: 500,
+                          child:
+                              _verificationStatus == 'none' ||
+                                  _verificationStatus == 'rejected'
+                              ? VerificationScreen(
+                                  onSuccess: () {
+                                    setState(
+                                      () => _verificationStatus = 'pending',
+                                    );
+                                  },
+                                  isRejected:
+                                      _verificationStatus ==
+                                      'rejected', // Show rejection message
+                                )
+                              : _PendingVerificationScreen(
+                                  onBackToDashboard: () {
+                                    setState(() => _showVerification = false);
+                                  },
+                                ),
                         ),
                       ),
                     ),
@@ -187,19 +246,19 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
               ),
             ),
           ),
-        ),
-    ],
-  );
+      ],
+    );
   }
 }
-  class _HeaderSection extends StatefulWidget {
+
+class _HeaderSection extends StatefulWidget {
   const _HeaderSection();
 
   @override
   State<_HeaderSection> createState() => _HeaderSectionState();
-  }
+}
 
-  class _HeaderSectionState extends State<_HeaderSection> {
+class _HeaderSectionState extends State<_HeaderSection> {
   String _mechanicName = 'Loading...';
   bool _isOnline = false;
 
@@ -1163,6 +1222,169 @@ class _EmergencyAlertDialog extends StatefulWidget {
 
   @override
   State<_EmergencyAlertDialog> createState() => _EmergencyAlertDialogState();
+}
+class _PendingVerificationScreen extends StatelessWidget {
+  final VoidCallback onBackToDashboard;
+
+  const _PendingVerificationScreen({
+    required this.onBackToDashboard,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return PopScope(
+      canPop: false,
+      child: Container(
+        color: Colors.white,
+        padding: const EdgeInsets.all(32),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            // Animated pending icon
+            const Icon(
+              Icons.hourglass_bottom,
+              size: 80,
+              color: Color(0xFFFFB703),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              "Verification Pending",
+              style: TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              "Your valid ID has been submitted and is currently under review.",
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.grey,
+                height: 1.5,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 24),
+            // Status steps
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.upload_file, color: Color(0xFF2F8A48), size: 20),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "Submitted",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF2F8A48),
+                      ),
+                    ),
+                  ),
+                  Text("✓", style: TextStyle(color: Color(0xFF2F8A48), fontSize: 18)),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFFFB703).withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFFFB703).withOpacity(0.3)),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.pending, color: Color(0xFFFFB703), size: 20),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "Under review",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFFFFB703),
+                      ),
+                    ),
+                  ),
+                  SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Color(0xFFFFB703),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                children: [
+                  Icon(Icons.check_circle_outline, color: Colors.grey, size: 20),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      "Approved",
+                      style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w600,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 32),
+            const Text(
+              "⏱ This usually takes 24-48 hours",
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+              ),
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: ElevatedButton(
+                onPressed: onBackToDashboard,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.grey.shade200,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  elevation: 0,
+                ),
+                child: const Text(
+                  'Back to Dashboard',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _EmergencyAlertDialogState extends State<_EmergencyAlertDialog> {
