@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../Logic/jobs/jobs_logic.dart';
+import '../../screen/authentication/mechanic_verification.dart';
 import 'homescreen_checkrequest.dart';
 import 'jobs.dart';
 import 'schedule.dart';
@@ -18,14 +19,40 @@ class MechanicHomeScreen extends StatefulWidget {
 }
 
 class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
+  bool _showVerification = false;
+  bool _isLoadingStatus = true;
   StreamSubscription? _dispatchSub;
   bool _isDialogShowing = false;
 
   @override
   void initState() {
     super.initState();
+    _checkStatus();
     _listenForEmergencyDispatches();
     _checkActiveJob();
+  }
+
+  void _checkStatus() async {
+    try {
+      final uid = Supabase.instance.client.auth.currentUser?.id;
+      if (uid != null) {
+        // Query the 'is_verified' column from your mechanic table
+        final res = await Supabase.instance.client
+            .from('mechanic')
+            .select('verified')
+            .eq('uid', uid)
+            .maybeSingle();
+
+        if (res != null && mounted) {
+          setState(() {
+            // If is_verified is false, we show the verification overlay
+            _showVerification = !(res['verified'] ?? false);
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint("Verification check failed: $e");
+    }
   }
 
   Future<void> _checkActiveJob() async {
@@ -33,7 +60,9 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
     if (activeJob != null && mounted) {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => MechanicActiveJobScreen(jobData: activeJob)),
+        MaterialPageRoute(
+          builder: (_) => MechanicActiveJobScreen(jobData: activeJob),
+        ),
       );
     }
   }
@@ -64,116 +93,113 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
     super.dispose();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF2F5F8),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            // ── Decorative amber blobs ──
-            Positioned(
-              right: -70,
-              top: 120,
-              child: Container(
-                width: 240,
-                height: 240,
-                decoration: const BoxDecoration(
-                  color: Color(0x26FFB703),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            Positioned(
-              left: -80,
-              bottom: 160,
-              child: Container(
-                width: 280,
-                height: 280,
-                decoration: const BoxDecoration(
-                  color: Color(0x1FFFB703),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            Positioned(
-              right: -40,
-              bottom: 60,
-              child: Container(
-                width: 160,
-                height: 160,
-                decoration: const BoxDecoration(
-                  color: Color(0x33FFB703),
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            // ── Scrollable content ──
-            Column(
-              children: [
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 16),
-                        const _HeaderSection(),
-                        const SizedBox(height: 16),
-                        const _StatsSection(),
-                        const SizedBox(height: 24),
-                        const _ScheduleSection(),
-                        const SizedBox(height: 24),
-                        const _IncomingRequestsSection(),
-                        const SizedBox(height: 24),
-                        const _PerformanceSection(),
-                        const SizedBox(height: 90),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ],
-        ),
-      ),
-      bottomNavigationBar: _MechanicBottomNavigationBar(
-        currentIndex: 0,
-        onItemTapped: (index) {
-          if (index == 1) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MechanicJobsScreen()),
-            );
-          } else if (index == 2) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MechanicScheduleScreen()),
-            );
-          } else if (index == 3) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MechanicChatScreen()),
-            );
-          } else if (index == 4) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const MechanicProfileScreen()),
-            );
-          }
-        },
+    Widget _buildBlob(double size, int color) {
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Color(color),
+        shape: BoxShape.circle,
       ),
     );
   }
-}
+  
+  @override
+  Widget build(BuildContext context) {
+  // ── STEP 1: Wrap everything in a Stack ──
+  return Stack(
+    children: [
+      // LAYER 1: Your complete Dashboard
+      Scaffold(
+        backgroundColor: const Color(0xFFF2F5F8),
+        body: SafeArea(
+          child: Stack(
+            children: [
+              // Decorative amber blobs
+              Positioned(right: -70, top: 120, child: _buildBlob(240, 0x26FFB703)),
+              Positioned(left: -80, bottom: 160, child: _buildBlob(280, 0x1FFFB703)),
+              Positioned(right: -40, bottom: 60, child: _buildBlob(160, 0x33FFB703)),
 
-class _HeaderSection extends StatefulWidget {
+              // Scrollable content
+              Column(
+                children: [
+                  Expanded(
+                    child: SingleChildScrollView(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const SizedBox(height: 16),
+                          const _HeaderSection(),
+                          const SizedBox(height: 16),
+                          const _StatsSection(),
+                          const SizedBox(height: 24),
+                          const _ScheduleSection(),
+                          const SizedBox(height: 24),
+                          const _IncomingRequestsSection(),
+                          const SizedBox(height: 24),
+                          const _PerformanceSection(),
+                          const SizedBox(height: 90),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        bottomNavigationBar: _MechanicBottomNavigationBar(
+          currentIndex: 0,
+          onItemTapped: (index) {
+            // Your navigation logic...
+            if (index == 1) Navigator.push(context, MaterialPageRoute(builder: (_) => const MechanicJobsScreen()));
+            // ... etc
+          },
+        ),
+      ),
+
+       // LAYER 2: The Full-Screen "Lock" Overlay
+      if (_showVerification)
+        Positioned.fill(
+          child: PopScope(
+            canPop: false,
+            child: Container(
+              color: Colors.black.withOpacity(0.75),
+              child: Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Card(
+                    elevation: 12,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(28),
+                      child: SizedBox(
+                        height: 500,
+                        child: VerificationScreen(
+                          onSuccess: () {
+                            setState(() => _showVerification = false);
+                          },
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+    ],
+  );
+  }
+}
+  class _HeaderSection extends StatefulWidget {
   const _HeaderSection();
 
   @override
   State<_HeaderSection> createState() => _HeaderSectionState();
-}
+  }
 
-class _HeaderSectionState extends State<_HeaderSection> {
+  class _HeaderSectionState extends State<_HeaderSection> {
   String _mechanicName = 'Loading...';
   bool _isOnline = false;
 
@@ -258,7 +284,10 @@ class _HeaderSectionState extends State<_HeaderSection> {
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Icon(Icons.notifications_none, color: Colors.black87),
+                child: const Icon(
+                  Icons.notifications_none,
+                  color: Colors.black87,
+                ),
               ),
             ],
           ),
@@ -266,14 +295,23 @@ class _HeaderSectionState extends State<_HeaderSection> {
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.black,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   children: [
-                    Icon(Icons.circle, size: 10, color: _isOnline ? const Color(0xFF3FDF21) : const Color(0xFFD72B2B)),
+                    Icon(
+                      Icons.circle,
+                      size: 10,
+                      color: _isOnline
+                          ? const Color(0xFF3FDF21)
+                          : const Color(0xFFD72B2B),
+                    ),
                     const SizedBox(width: 8),
                     Text(
                       _isOnline ? 'You\u2019re online' : 'You\u2019re offline',
@@ -288,14 +326,21 @@ class _HeaderSectionState extends State<_HeaderSection> {
               ),
               const Spacer(),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Row(
                   children: [
-                    const Icon(Icons.location_pin, size: 16, color: Colors.black87),
+                    const Icon(
+                      Icons.location_pin,
+                      size: 16,
+                      color: Colors.black87,
+                    ),
                     const SizedBox(width: 6),
                     Text(
                       'Tisa, Cebu City',
@@ -326,11 +371,21 @@ class _StatsSection extends StatelessWidget {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Expanded(child: _StatCard(value: '₱4,500', label: 'TODAY', highlighted: true)),
+          Expanded(
+            child: _StatCard(
+              value: '₱4,500',
+              label: 'TODAY',
+              highlighted: true,
+            ),
+          ),
           SizedBox(width: 12),
-          Expanded(child: _StatCard(value: '₱23.8K', label: 'THIS WEEK')),
+          Expanded(
+            child: _StatCard(value: '₱23.8K', label: 'THIS WEEK'),
+          ),
           SizedBox(width: 12),
-          Expanded(child: _StatCard(value: '342', label: 'TOTAL JOBS')),
+          Expanded(
+            child: _StatCard(value: '342', label: 'TOTAL JOBS'),
+          ),
         ],
       ),
     );
@@ -342,7 +397,11 @@ class _StatCard extends StatelessWidget {
   final String label;
   final bool highlighted;
 
-  const _StatCard({required this.value, required this.label, this.highlighted = false});
+  const _StatCard({
+    required this.value,
+    required this.label,
+    this.highlighted = false,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -385,7 +444,6 @@ class _StatCard extends StatelessWidget {
   }
 }
 
-
 class _IncomingRequestsSection extends StatefulWidget {
   const _IncomingRequestsSection();
 
@@ -423,8 +481,7 @@ class _IncomingRequestsSectionState extends State<_IncomingRequestsSection> {
               GestureDetector(
                 onTap: () => Navigator.push(
                   context,
-                  MaterialPageRoute(
-                      builder: (_) => const MechanicJobsScreen()),
+                  MaterialPageRoute(builder: (_) => const MechanicJobsScreen()),
                 ),
                 child: Text(
                   'View all',
@@ -455,7 +512,9 @@ class _IncomingRequestsSectionState extends State<_IncomingRequestsSection> {
               if (top3.isEmpty) {
                 return Container(
                   padding: const EdgeInsets.symmetric(
-                      vertical: 32, horizontal: 16),
+                    vertical: 32,
+                    horizontal: 16,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(24),
@@ -469,8 +528,11 @@ class _IncomingRequestsSectionState extends State<_IncomingRequestsSection> {
                   ),
                   child: Column(
                     children: [
-                      const Icon(Icons.inbox_outlined,
-                          size: 40, color: Colors.black26),
+                      const Icon(
+                        Icons.inbox_outlined,
+                        size: 40,
+                        color: Colors.black26,
+                      ),
                       const SizedBox(height: 12),
                       Text(
                         'No incoming requests',
@@ -501,7 +563,6 @@ class _IncomingRequestsSectionState extends State<_IncomingRequestsSection> {
   }
 }
 
-
 class _RequestCard extends StatelessWidget {
   final String title;
   final String subtitle;
@@ -521,8 +582,7 @@ class _RequestCard extends StatelessWidget {
   static Widget fromJob(Map<String, dynamic> job, BuildContext context) {
     final title = (job['title'] as String?)?.isNotEmpty == true
         ? job['title'] as String
-        : (job['issue_description'] as String?)??
-              'Service Request';
+        : (job['issue_description'] as String?) ?? 'Service Request';
     final vehicle = job['vehicle'] as String? ?? 'Unknown vehicle';
     final location = job['pickup_location'] as String? ?? '';
     final subtitle = location.isNotEmpty ? '$vehicle • $location' : vehicle;
@@ -537,7 +597,8 @@ class _RequestCard extends StatelessWidget {
       onTap: () => Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (_) => MechanicCheckRequestScreen(jobData: job, isAccepted: false),
+          builder: (_) =>
+              MechanicCheckRequestScreen(jobData: job, isAccepted: false),
         ),
       ),
     );
@@ -590,38 +651,50 @@ class _RequestCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title,
-                          style: GoogleFonts.montserrat(
-                              fontSize: 15,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.black)),
+                      Text(
+                        title,
+                        style: GoogleFonts.montserrat(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.black,
+                        ),
+                      ),
                       const SizedBox(height: 4),
-                      Text(subtitle,
-                          style: GoogleFonts.inriaSans(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w500,
-                              color: Colors.black54),
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis),
+                      Text(
+                        subtitle,
+                        style: GoogleFonts.inriaSans(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.black54,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ],
                   ),
                 ),
                 const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 6,
+                  ),
                   decoration: BoxDecoration(
                     color: badge == 'Urgent'
                         ? const Color(0xFFFFE5E5)
                         : const Color(0xFFE8F7EA),
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Text(badge,
-                      style: GoogleFonts.inriaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w700,
-                          color: badge == 'Urgent'
-                              ? const Color(0xFFD72B2B)
-                              : const Color(0xFF2F8A48))),
+                  child: Text(
+                    badge,
+                    style: GoogleFonts.inriaSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: badge == 'Urgent'
+                          ? const Color(0xFFD72B2B)
+                          : const Color(0xFF2F8A48),
+                    ),
+                  ),
                 ),
               ],
             ),
@@ -629,16 +702,22 @@ class _RequestCard extends StatelessWidget {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(price,
-                    style: GoogleFonts.montserrat(
-                        fontSize: 14,
-                        fontWeight: FontWeight.w700,
-                        color: const Color(0xFF121212))),
-                Text('View details',
-                    style: GoogleFonts.inriaSans(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: const Color(0xFF121212))),
+                Text(
+                  price,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w700,
+                    color: const Color(0xFF121212),
+                  ),
+                ),
+                Text(
+                  'View details',
+                  style: GoogleFonts.inriaSans(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: const Color(0xFF121212),
+                  ),
+                ),
               ],
             ),
           ],
@@ -672,11 +751,14 @@ class _PerformanceSection extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Text('Your Performance',
-                style: GoogleFonts.montserrat(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: Colors.black)),
+            Text(
+              'Your Performance',
+              style: GoogleFonts.montserrat(
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: Colors.black,
+              ),
+            ),
             const SizedBox(height: 18),
             const Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -711,13 +793,23 @@ class _PerformanceMetric extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(value,
-            style: GoogleFonts.montserrat(
-                fontSize: 18, fontWeight: FontWeight.w700, color: Colors.black)),
+        Text(
+          value,
+          style: GoogleFonts.montserrat(
+            fontSize: 18,
+            fontWeight: FontWeight.w700,
+            color: Colors.black,
+          ),
+        ),
         const SizedBox(height: 6),
-        Text(label,
-            style: GoogleFonts.inriaSans(
-                fontSize: 12, fontWeight: FontWeight.w600, color: Colors.black54)),
+        Text(
+          label,
+          style: GoogleFonts.inriaSans(
+            fontSize: 12,
+            fontWeight: FontWeight.w600,
+            color: Colors.black54,
+          ),
+        ),
       ],
     );
   }
@@ -727,8 +819,10 @@ class _MechanicBottomNavigationBar extends StatelessWidget {
   final int currentIndex;
   final ValueChanged<int> onItemTapped;
 
-  const _MechanicBottomNavigationBar(
-      {required this.currentIndex, required this.onItemTapped});
+  const _MechanicBottomNavigationBar({
+    required this.currentIndex,
+    required this.onItemTapped,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -740,11 +834,36 @@ class _MechanicBottomNavigationBar extends StatelessWidget {
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
           children: [
-            _NavItem(icon: Icons.home_outlined, label: 'Home', active: currentIndex == 0, onTap: () => onItemTapped(0)),
-            _NavItem(icon: Icons.inventory_2_outlined, label: 'Jobs', active: currentIndex == 1, onTap: () => onItemTapped(1)),
-            _NavItem(icon: Icons.calendar_month_outlined, label: 'Schedule', active: currentIndex == 2, onTap: () => onItemTapped(2)),
-            _NavItem(icon: Icons.chat_bubble_outline, label: 'Chat', active: currentIndex == 3, onTap: () => onItemTapped(3)),
-            _NavItem(icon: Icons.person_outline, label: 'Profile', active: currentIndex == 4, onTap: () => onItemTapped(4)),
+            _NavItem(
+              icon: Icons.home_outlined,
+              label: 'Home',
+              active: currentIndex == 0,
+              onTap: () => onItemTapped(0),
+            ),
+            _NavItem(
+              icon: Icons.inventory_2_outlined,
+              label: 'Jobs',
+              active: currentIndex == 1,
+              onTap: () => onItemTapped(1),
+            ),
+            _NavItem(
+              icon: Icons.calendar_month_outlined,
+              label: 'Schedule',
+              active: currentIndex == 2,
+              onTap: () => onItemTapped(2),
+            ),
+            _NavItem(
+              icon: Icons.chat_bubble_outline,
+              label: 'Chat',
+              active: currentIndex == 3,
+              onTap: () => onItemTapped(3),
+            ),
+            _NavItem(
+              icon: Icons.person_outline,
+              label: 'Profile',
+              active: currentIndex == 4,
+              onTap: () => onItemTapped(4),
+            ),
           ],
         ),
       ),
@@ -758,8 +877,12 @@ class _NavItem extends StatelessWidget {
   final bool active;
   final VoidCallback onTap;
 
-  const _NavItem(
-      {required this.icon, required this.label, this.active = false, required this.onTap});
+  const _NavItem({
+    required this.icon,
+    required this.label,
+    this.active = false,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -779,9 +902,14 @@ class _NavItem extends StatelessWidget {
             child: Icon(icon, size: 22, color: color),
           ),
           const SizedBox(height: 6),
-          Text(label,
-              style: GoogleFonts.inriaSans(
-                  fontSize: 11, fontWeight: FontWeight.w600, color: color)),
+          Text(
+            label,
+            style: GoogleFonts.inriaSans(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: color,
+            ),
+          ),
         ],
       ),
     );
@@ -794,12 +922,16 @@ class _ScheduleSection extends StatelessWidget {
   String _mapStatus(String? rawStatus) {
     if (rawStatus == null || rawStatus.isEmpty) return 'Unknown';
     switch (rawStatus.toLowerCase()) {
-      case 'accepted': return 'Incoming';
+      case 'accepted':
+        return 'Incoming';
       case 'in-progress':
-      case 'ongoing': return 'Ongoing';
+      case 'ongoing':
+        return 'Ongoing';
       case 'completed':
-      case 'done': return 'Done';
-      default: return rawStatus[0].toUpperCase() + rawStatus.substring(1);
+      case 'done':
+        return 'Done';
+      default:
+        return rawStatus[0].toUpperCase() + rawStatus.substring(1);
     }
   }
 
@@ -822,8 +954,12 @@ class _ScheduleSection extends StatelessWidget {
               ),
               InkWell(
                 onTap: () {
-                   Navigator.push(context,
-                    MaterialPageRoute(builder: (_) => const MechanicScheduleScreen()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const MechanicScheduleScreen(),
+                    ),
+                  );
                 },
                 child: Text(
                   'View all',
@@ -859,9 +995,9 @@ class _ScheduleSection extends StatelessWidget {
                   ),
                 );
               }
-              
+
               final topJobs = jobs.take(3).toList();
-              
+
               return Column(
                 children: topJobs.map((job) {
                   final title = job['title'] ?? 'Service Request';
@@ -870,17 +1006,22 @@ class _ScheduleSection extends StatelessWidget {
                   if (rawDate != null) {
                     date = DateTime.tryParse(rawDate) ?? DateTime.now();
                   }
-                  
-                  final hourStr = date.hour > 12 ? date.hour - 12 : date.hour == 0 ? 12 : date.hour;
-                  final timeString = '$hourStr:${date.minute.toString().padLeft(2, '0')} ${date.hour >= 12 ? 'PM' : 'AM'}';
-                  
+
+                  final hourStr = date.hour > 12
+                      ? date.hour - 12
+                      : date.hour == 0
+                      ? 12
+                      : date.hour;
+                  final timeString =
+                      '$hourStr:${date.minute.toString().padLeft(2, '0')} ${date.hour >= 12 ? 'PM' : 'AM'}';
+
                   final now = DateTime.now();
                   final today = DateTime(now.year, now.month, now.day);
                   final jobDate = DateTime(date.year, date.month, date.day);
-                  
+
                   String displayTime = timeString;
                   if (jobDate != today) {
-                      displayTime = '${date.month}/${date.day} - $timeString';
+                    displayTime = '${date.month}/${date.day} - $timeString';
                   }
 
                   final statusRaw = job['status'] as String?;
@@ -893,8 +1034,12 @@ class _ScheduleSection extends StatelessWidget {
                       time: displayTime,
                       status: statusMapped,
                       onTap: () {
-                         Navigator.push(context,
-                          MaterialPageRoute(builder: (_) => const MechanicScheduleScreen()));
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const MechanicScheduleScreen(),
+                          ),
+                        );
                       },
                     ),
                   );
@@ -969,17 +1114,23 @@ class _ScheduleCard extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(title,
-                      style: GoogleFonts.montserrat(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black)),
+                  Text(
+                    title,
+                    style: GoogleFonts.montserrat(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
+                    ),
+                  ),
                   const SizedBox(height: 4),
-                  Text(time,
-                      style: GoogleFonts.inriaSans(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black54)),
+                  Text(
+                    time,
+                    style: GoogleFonts.inriaSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.black54,
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -989,11 +1140,14 @@ class _ScheduleCard extends StatelessWidget {
                 color: statusBgColor,
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Text(status,
-                  style: GoogleFonts.inriaSans(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w700,
-                      color: statusColor)),
+              child: Text(
+                status,
+                style: GoogleFonts.inriaSans(
+                  fontSize: 11,
+                  fontWeight: FontWeight.w700,
+                  color: statusColor,
+                ),
+              ),
             ),
           ],
         ),
@@ -1053,7 +1207,8 @@ class _EmergencyAlertDialogState extends State<_EmergencyAlertDialog> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (_) => MechanicCheckRequestScreen(jobData: job, isAccepted: true),
+              builder: (_) =>
+                  MechanicCheckRequestScreen(jobData: job, isAccepted: true),
             ),
           );
         }
@@ -1095,7 +1250,8 @@ class _EmergencyAlertDialogState extends State<_EmergencyAlertDialog> {
   @override
   Widget build(BuildContext context) {
     final job = widget.dispatch['jobs'] as Map<String, dynamic>? ?? {};
-    final title = job['title'] ?? job['issue_description'] ?? 'Emergency Service';
+    final title =
+        job['title'] ?? job['issue_description'] ?? 'Emergency Service';
     final vehicle = job['vehicle'] ?? 'Unknown Vehicle';
     final distance = 'Distance unavailable';
     final userName = job['user_name'] ?? 'A Client';
@@ -1156,7 +1312,11 @@ class _EmergencyAlertDialogState extends State<_EmergencyAlertDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.directions_car_outlined, size: 18, color: Colors.black87),
+                const Icon(
+                  Icons.directions_car_outlined,
+                  size: 18,
+                  color: Colors.black87,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   vehicle,
@@ -1167,7 +1327,11 @@ class _EmergencyAlertDialogState extends State<_EmergencyAlertDialog> {
                   ),
                 ),
                 const SizedBox(width: 16),
-                const Icon(Icons.location_on_outlined, size: 18, color: Colors.black87),
+                const Icon(
+                  Icons.location_on_outlined,
+                  size: 18,
+                  color: Colors.black87,
+                ),
                 const SizedBox(width: 4),
                 Text(
                   distance,
@@ -1196,7 +1360,10 @@ class _EmergencyAlertDialogState extends State<_EmergencyAlertDialog> {
                     ? const SizedBox(
                         height: 24,
                         width: 24,
-                        child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2),
+                        child: CircularProgressIndicator(
+                          color: Colors.white,
+                          strokeWidth: 2,
+                        ),
                       )
                     : Text(
                         'Continue... ($_countdown)',
