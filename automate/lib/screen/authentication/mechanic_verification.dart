@@ -69,7 +69,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
           .eq('uid', user.id)
           .single();
 
-      final mechanicId = mechanicData['id'];
+      final mechanicId = mechanicData['uid'];
 
       // 2. Upload image to Supabase Storage
       final fileName =
@@ -85,7 +85,7 @@ class _VerificationScreenState extends State<VerificationScreen> {
 
       // 3. Get the public URL of the uploaded image
       final imageUrl = Supabase.instance.client.storage
-          .from('verification-documents')
+          .from('mechanic_verification_images')
           .getPublicUrl(fileName);
 
       // 4. Insert into mechanic_verification table
@@ -96,10 +96,9 @@ class _VerificationScreenState extends State<VerificationScreen> {
         'created_at': DateTime.now().toIso8601String(),
       });
 
-      setState(() {
-        _isSuccess = true;
-        _isSubmitting = false;
-      });
+if (mounted) {
+  widget.onSuccess();
+}
     } catch (e) {
       setState(() {
         _errorMessage = 'Verification failed: ${e.toString()}';

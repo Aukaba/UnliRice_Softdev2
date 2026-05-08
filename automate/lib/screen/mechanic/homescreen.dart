@@ -71,10 +71,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                 _showVerification = true;
                 _verificationStatus = 'none'; // ✅ Add this
               } else {
-                final status = verificationRes['status'] as String?;
-                _verificationStatus = status ?? 'pending'; // ✅ Add this
-                // Show overlay for pending/rejected, hide for approved
-                _showVerification = status != 'approved';
+
               }
             });
           }
@@ -225,13 +222,13 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
                                   _verificationStatus == 'rejected'
                               ? VerificationScreen(
                                   onSuccess: () {
-                                    setState(
-                                      () => _verificationStatus = 'pending',
-                                    );
+                                    setState(() {
+                                      _verificationStatus =
+                                          'pending'; // ✅ Show pending screen
+                                      // Don't set _showVerification = false
+                                    });
                                   },
-                                  isRejected:
-                                      _verificationStatus ==
-                                      'rejected', // Show rejection message
+                                  isRejected: _verificationStatus == 'rejected',
                                 )
                               : _PendingVerificationScreen(
                                   onBackToDashboard: () {
@@ -1223,12 +1220,11 @@ class _EmergencyAlertDialog extends StatefulWidget {
   @override
   State<_EmergencyAlertDialog> createState() => _EmergencyAlertDialogState();
 }
+
 class _PendingVerificationScreen extends StatelessWidget {
   final VoidCallback onBackToDashboard;
 
-  const _PendingVerificationScreen({
-    required this.onBackToDashboard,
-  });
+  const _PendingVerificationScreen({required this.onBackToDashboard});
 
   @override
   Widget build(BuildContext context) {
@@ -1249,20 +1245,13 @@ class _PendingVerificationScreen extends StatelessWidget {
             const SizedBox(height: 24),
             const Text(
               "Verification Pending",
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
             const Text(
               "Your valid ID has been submitted and is currently under review.",
-              style: TextStyle(
-                fontSize: 14,
-                color: Colors.grey,
-                height: 1.5,
-              ),
+              style: TextStyle(fontSize: 14, color: Colors.grey, height: 1.5),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 24),
@@ -1287,7 +1276,10 @@ class _PendingVerificationScreen extends StatelessWidget {
                       ),
                     ),
                   ),
-                  Text("✓", style: TextStyle(color: Color(0xFF2F8A48), fontSize: 18)),
+                  Text(
+                    "✓",
+                    style: TextStyle(color: Color(0xFF2F8A48), fontSize: 18),
+                  ),
                 ],
               ),
             ),
@@ -1297,7 +1289,9 @@ class _PendingVerificationScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFFFFB703).withOpacity(0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFFFB703).withOpacity(0.3)),
+                border: Border.all(
+                  color: const Color(0xFFFFB703).withOpacity(0.3),
+                ),
               ),
               child: const Row(
                 children: [
@@ -1333,7 +1327,11 @@ class _PendingVerificationScreen extends StatelessWidget {
               ),
               child: const Row(
                 children: [
-                  Icon(Icons.check_circle_outline, color: Colors.grey, size: 20),
+                  Icon(
+                    Icons.check_circle_outline,
+                    color: Colors.grey,
+                    size: 20,
+                  ),
                   SizedBox(width: 12),
                   Expanded(
                     child: Text(
@@ -1351,10 +1349,7 @@ class _PendingVerificationScreen extends StatelessWidget {
             const SizedBox(height: 32),
             const Text(
               "⏱ This usually takes 24-48 hours",
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey,
-              ),
+              style: TextStyle(fontSize: 12, color: Colors.grey),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
@@ -1373,10 +1368,7 @@ class _PendingVerificationScreen extends StatelessWidget {
                 ),
                 child: const Text(
                   'Back to Dashboard',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                 ),
               ),
             ),
