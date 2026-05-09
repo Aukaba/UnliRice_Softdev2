@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AdminMechanicVerificationContent extends StatefulWidget {
   final void Function(int)? onSwitchTab;
@@ -11,49 +12,194 @@ class AdminMechanicVerificationContent extends StatefulWidget {
 
 class _AdminMechanicVerificationContentState
     extends State<AdminMechanicVerificationContent> {
-  // Dummy data — replace with Supabase later
-  // id kept as int to match Supabase default type
-  final List<Map<String, dynamic>> _pendingMechanics = [
-    {
-      'id': 1,
-      'name': 'Aaron Barnaija',
-      'email': 'AaronBarnaija@gmail.com',
-      'contact': '09123456789',
-    },
-    {
-      'id': 2,
-      'name': 'Vince Bernante',
-      'email': 'VinceBernante@gmail.com',
-      'contact': '09987654321',
-    },
-    {
-      'id': 3,
-      'name': 'Maria Santos',
-      'email': 'MariaSantos@gmail.com',
-      'contact': '09112345678',
-    },
-  ];
+  
+  List<Map<String, dynamic>> _pendingMechanics = [];
+  bool _isLoading = true;
 
-  void _removeCard(int mechanicId, String action) {
+  @override
+  void initState() {
+    super.initState();
+    _fetchPendingMechanics();
+  }
+
+  // Fetch pending verifications from Supabase
+  Future<void> _fetchPendingMechanics() async {
+    try {
+      setState(() => _isLoading = true);
+
+      // Get all pending verifications with mechanic details
+      final data = await Supabase.instance.client
+          .from('mechanic_verification')
+          .select('''
+            id,
+            status,
+            valid_id_image,
+            created_at,
+            mechanic_id,
+            mechanic:mechanic_id (
+              uid,
+              first_name,
+              last_name,
+              email,
+              phone_number
+            )
+          ''')
+          .eq('status', 'pending')
+          .order('created_at', ascending: false);
+
+      if (mounted) {
+        setState(() {
+          _pendingMechanics = (data as List<dynamic>? ?? []).map((item) {
+            final mechanic = item['mechanic'] as Map<String, dynamic>? ?? {};
+            return {
+              'verification_id': item['id'],
+              'mechanic_id': item['mechanic_id'],
+              'name': '${mechanic['first_name'] ?? ''} ${mechanic['last_name'] ?? ''}'.trim(),
+              'email': mechanic['email'] ?? 'No email',
+              'contact': mechanic['phone_number'] ?? 'No contact',
+              'valid_id_image': item['valid_id_image'] ?? '',
+            };
+          }).toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching pending mechanics: $e");
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  // Approve mechanic
+  Future<void> _approveMechanic(String mechanicId, int verificationId) async {
+    try {
+      // Update verification status to approved
+      await Supabase.instance.client
+          .from('mechanic_verification')
+          .update({'status': 'approved'})
+          .eq('id', verificationId);
+
+      // Update mechanic verified status to true
+      await Supabase.instance.client
+          .from('mechanic')
+          .update({'verified': true})
+          .eq('uid', mechanicId);
+
+      _removeCard(verificationId, 'approved');
+    } catch (e) {
+      debugPrint("Error approving mechanic: $e");
+      _showErrorSnackBar('Failed to approve mechanic');
+    }
+  }
+
+  // Reject mechanic
+  Future<void> _rejectMechanic(String mechanicId, int verificationId) async {
+    try {
+      // Update verification status to rejected
+      await Supabase.instance.client
+          .from('mechanic_verification')
+          .update({'status': 'rejected'})
+          .eq('id', verificationId);
+
+      // Keep mechanic verified as false (no change needed)
+      
+      _removeCard(verificationId, 'rejected');
+    } catch (e) {
+      debugPrint("Error rejecting mechanic: $e");
+      _showErrorSnackBar('Failed to reject mechanic');
+    }
+  }
+
+  void _removeCard(int verificationId, String action) {
     setState(() {
-      _pendingMechanics.removeWhere((m) => m['id'] == mechanicId);
+      _pendingMechanics.removeWhere((m) => m['verification_id'] == verificationId);
     });
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(
-          action == 'approved'
-              ? 'Mechanic approved successfully.'
-              : 'Mechanic rejected.',
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            action == 'approved'
+                ? 'Mechanic approved successfully.'
+                : 'Mechanic rejected.',
+          ),
+          backgroundColor: action == 'approved'
+              ? const Color(0xFF009227)
+              : const Color(0xFFBF2D2D),
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         ),
-        backgroundColor: action == 'approved'
-            ? const Color(0xFF009227)
-            : const Color(0xFFBF2D2D),
-        behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
+      );
+    }
   }
+
+  void _showErrorSnackBar(String message) {
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        ),
+      );
+    }
+  }
+void _showImageDialog(String imageUrl) {
+  if (imageUrl.isEmpty) {
+    _showErrorSnackBar('No image available');
+    return;
+  }
+
+  showDialog(
+    context: context,
+    builder: (context) => Dialog(
+      backgroundColor: Colors.transparent,
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Align(
+            alignment: Alignment.topRight,
+            child: IconButton(
+              icon: const Icon(Icons.close, color: Colors.white, size: 30),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(12),
+            child: InteractiveViewer(
+              maxScale: 5.0,
+              child: Image.network(
+                imageUrl,
+                fit: BoxFit.contain,
+                loadingBuilder: (context, child, loadingProgress) {
+                  if (loadingProgress == null) return child;
+                  return Container(
+                    height: 300,
+                    color: Colors.white,
+                    child: const Center(
+                      child: CircularProgressIndicator(color: Color(0xFF164D83)),
+                    ),
+                  );
+                },
+                errorBuilder: (context, error, stackTrace) {
+                  return Container(
+                    height: 200,
+                    color: Colors.white,
+                    child: const Center(
+                      child: Text('Failed to load image', style: TextStyle(color: Colors.red)),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -63,7 +209,7 @@ class _AdminMechanicVerificationContentState
         bottom: false,
         child: Stack(
           children: [
-            // Sidebar layers
+            // Sidebar layers (keep as is)
             Positioned(
               left: -28,
               top: 87,
@@ -72,9 +218,7 @@ class _AdminMechanicVerificationContentState
                 height: MediaQuery.of(context).size.height,
                 decoration: ShapeDecoration(
                   color: const Color(0x4C164D83),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(19),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(19)),
                 ),
               ),
             ),
@@ -86,9 +230,7 @@ class _AdminMechanicVerificationContentState
                 height: MediaQuery.of(context).size.height,
                 decoration: ShapeDecoration(
                   color: const Color(0x7F164D83),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(19),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(19)),
                 ),
               ),
             ),
@@ -100,9 +242,7 @@ class _AdminMechanicVerificationContentState
                 height: MediaQuery.of(context).size.height,
                 decoration: ShapeDecoration(
                   color: const Color(0xFF164D83),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(19),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(19)),
                 ),
               ),
             ),
@@ -110,7 +250,7 @@ class _AdminMechanicVerificationContentState
             // Main content
             Column(
               children: [
-                // Header
+                // Header (keep as is)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                   child: Row(
@@ -123,16 +263,14 @@ class _AdminMechanicVerificationContentState
                             image: NetworkImage("https://placehold.co/98x98"),
                             fit: BoxFit.cover,
                           ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(9999),
-                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9999)),
                         ),
                       ),
                       const SizedBox(width: 12),
-                      const Column(
+                      Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
+                          const Text(
                             'Mechanic Verification',
                             style: TextStyle(
                               color: Color(0xFF1A1A1A),
@@ -142,8 +280,8 @@ class _AdminMechanicVerificationContentState
                             ),
                           ),
                           Text(
-                            'Management System',
-                            style: TextStyle(
+                            '${_pendingMechanics.length} Pending',
+                            style: const TextStyle(
                               color: Color(0xFF666666),
                               fontSize: 12,
                               fontFamily: 'Inter',
@@ -153,10 +291,9 @@ class _AdminMechanicVerificationContentState
                         ],
                       ),
                       const Spacer(),
-                      const Icon(
-                        Icons.notifications_outlined,
-                        color: Color(0xFF19456B),
-                        size: 28,
+                      IconButton(
+                        icon: const Icon(Icons.refresh, color: Color(0xFF19456B), size: 28),
+                        onPressed: _fetchPendingMechanics,
                       ),
                     ],
                   ),
@@ -166,28 +303,32 @@ class _AdminMechanicVerificationContentState
 
                 // Cards list
                 Expanded(
-                  child: _pendingMechanics.isEmpty
-                      ? _buildEmptyState()
-                      : ListView.separated(
-                          padding: const EdgeInsets.fromLTRB(36, 0, 36, 24),
-                          itemCount: _pendingMechanics.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 16),
-                          itemBuilder: (context, index) {
-                            final mechanic = _pendingMechanics[index];
-                            return _MechanicCard(
-                              mechanic: mechanic,
-                              onApprove: () => _removeCard(
-                                mechanic['id'] as int,
-                                'approved',
-                              ),
-                              onReject: () => _removeCard(
-                                mechanic['id'] as int,
-                                'rejected',
-                              ),
-                            );
-                          },
-                        ),
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator(color: Color(0xFF164D83)))
+                      : _pendingMechanics.isEmpty
+                          ? _buildEmptyState()
+                          : ListView.separated(
+                              padding: const EdgeInsets.fromLTRB(36, 0, 36, 24),
+                              itemCount: _pendingMechanics.length,
+                              separatorBuilder: (_, __) => const SizedBox(height: 16),
+                              itemBuilder: (context, index) {
+                                final mechanic = _pendingMechanics[index];
+                                return _MechanicCard(
+                                  mechanic: mechanic,
+                                  onViewCertification: () => _showImageDialog(
+                                    mechanic['valid_id_image'] ?? '',
+                                  ),
+                                  onApprove: () => _approveMechanic(
+                                    mechanic['mechanic_id'] as String,
+                                    mechanic['verification_id'] as int,
+                                  ),
+                                  onReject: () => _rejectMechanic(
+                                    mechanic['mechanic_id'] as String,
+                                    mechanic['verification_id'] as int,
+                                  ),
+                                );
+                              },
+                            ),
                 ),
               ],
             ),
@@ -202,11 +343,7 @@ class _AdminMechanicVerificationContentState
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            Icons.check_circle_outline_rounded,
-            size: 64,
-            color: Colors.grey.shade300,
-          ),
+          Icon(Icons.check_circle_outline_rounded, size: 64, color: Colors.grey.shade300),
           const SizedBox(height: 12),
           Text(
             'No pending mechanics',
@@ -232,11 +369,13 @@ class _AdminMechanicVerificationContentState
 
 class _MechanicCard extends StatelessWidget {
   final Map<String, dynamic> mechanic;
+  final VoidCallback onViewCertification;
   final VoidCallback onApprove;
   final VoidCallback onReject;
 
   const _MechanicCard({
     required this.mechanic,
+    required this.onViewCertification,
     required this.onApprove,
     required this.onReject,
   });
@@ -333,25 +472,25 @@ class _MechanicCard extends StatelessWidget {
           ),
           const SizedBox(height: 10),
           Center(
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 31, vertical: 8),
-              decoration: ShapeDecoration(
-                color: const Color(0xFF203C63),
-                shape: RoundedRectangleBorder(
-                  side: BorderSide(
-                    width: 1,
-                    color: Colors.black.withOpacity(0.50),
+            child: GestureDetector(
+              onTap: onViewCertification,
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 31, vertical: 8),
+                decoration: ShapeDecoration(
+                  color: const Color(0xFF203C63),
+                  shape: RoundedRectangleBorder(
+                    side: BorderSide(color: Colors.black.withOpacity(0.50), width: 1),
+                    borderRadius: BorderRadius.circular(19),
                   ),
-                  borderRadius: BorderRadius.circular(19),
                 ),
-              ),
-              child: const Text(
-                'See Certification Here',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 14,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w500,
+                child: const Text(
+                  'See Certification Here',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontFamily: 'Inter',
+                    fontWeight: FontWeight.w500,
+                  ),
                 ),
               ),
             ),
@@ -376,13 +515,8 @@ class _MechanicCard extends StatelessWidget {
                   onPressed: onReject,
                   style: OutlinedButton.styleFrom(
                     padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: const BorderSide(
-                      color: Color(0xFFBF2D2D),
-                      width: 1.5,
-                    ),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(49),
-                    ),
+                    side: const BorderSide(color: Color(0xFFBF2D2D), width: 1.5),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(49)),
                   ),
                   child: const Text(
                     'Reject',
