@@ -3,7 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'homescreen.dart';
 import 'jobs.dart';
 import 'schedule.dart';
-import '../messages/user_message_list.dart';
+import 'chat.dart';
 import 'profile.dart';
 import 'active_job.dart';
 import '../../Logic/jobs/jobs_logic.dart';
@@ -238,7 +238,7 @@ class _MechanicCheckRequestScreenState
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => const UserMessageListScreen(),
+                builder: (_) => const MechanicChatScreen(),
               ),
             );
           } else if (index == 4) {
