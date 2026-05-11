@@ -72,44 +72,59 @@ class _AdminMechanicVerificationContentState
   }
 
   // Approve mechanic
-  Future<void> _approveMechanic(String mechanicId, int verificationId) async {
-    try {
-      // Update verification status to approved
-      await Supabase.instance.client
-          .from('mechanic_verification')
-          .update({'status': 'approved'})
-          .eq('id', verificationId);
+Future<void> _approveMechanic(String mechanicId, int verificationId) async {
+  try {
+    debugPrint("Approving mechanic: $mechanicId, verification: $verificationId");
+    
+    // Update verification status to approved
+    final verificationResult = await Supabase.instance.client
+        .from('mechanic_verification')
+        .update({'status': 'approved'})
+        .eq('id', verificationId)
+        .select();
+    
+    debugPrint("Verification update result: $verificationResult");
 
-      // Update mechanic verified status to true
-      await Supabase.instance.client
-          .from('mechanic')
-          .update({'verified': true})
-          .eq('uid', mechanicId);
+    // Update mechanic verified status to true
+    final mechanicResult = await Supabase.instance.client
+        .from('mechanic')
+        .update({'verified': true})
+        .eq('uid', mechanicId)
+        .select();
+    
+    debugPrint("Mechanic update result: $mechanicResult");
 
+    if (mounted) {
       _removeCard(verificationId, 'approved');
-    } catch (e) {
-      debugPrint("Error approving mechanic: $e");
-      _showErrorSnackBar('Failed to approve mechanic');
     }
+  } catch (e) {
+    debugPrint("Error approving mechanic: $e");
+    _showErrorSnackBar('Failed to approve mechanic: $e');
   }
+}
 
-  // Reject mechanic
-  Future<void> _rejectMechanic(String mechanicId, int verificationId) async {
-    try {
-      // Update verification status to rejected
-      await Supabase.instance.client
-          .from('mechanic_verification')
-          .update({'status': 'rejected'})
-          .eq('id', verificationId);
+// Reject mechanic
+Future<void> _rejectMechanic(String mechanicId, int verificationId) async {
+  try {
+    debugPrint("Rejecting mechanic: $mechanicId, verification: $verificationId");
+    
+    // Update verification status to rejected
+    final result = await Supabase.instance.client
+        .from('mechanic_verification')
+        .update({'status': 'rejected'})
+        .eq('id', verificationId)
+        .select();
+    
+    debugPrint("Reject result: $result");
 
-      // Keep mechanic verified as false (no change needed)
-      
+    if (mounted) {
       _removeCard(verificationId, 'rejected');
-    } catch (e) {
-      debugPrint("Error rejecting mechanic: $e");
-      _showErrorSnackBar('Failed to reject mechanic');
     }
+  } catch (e) {
+    debugPrint("Error rejecting mechanic: $e");
+    _showErrorSnackBar('Failed to reject mechanic: $e');
   }
+}
 
   void _removeCard(int verificationId, String action) {
     setState(() {
