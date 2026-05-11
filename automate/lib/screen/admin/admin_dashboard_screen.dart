@@ -143,7 +143,7 @@ class _DashboardTab extends StatefulWidget {
 }
 
 class _DashboardTabState extends State<_DashboardTab> {
-  static final _supabase = Supabase.instance.client;
+  final _supabase = Supabase.instance.client;
 
   bool _isLoading = true;
   String _adminName = 'Admin';
@@ -161,40 +161,68 @@ class _DashboardTabState extends State<_DashboardTab> {
   Future<void> _loadData() async {
     try {
       final uid = _supabase.auth.currentUser?.id;
+      
+      // Get admin name
       if (uid != null) {
-        final adminData = await _supabase
-            .from('admin')
-            .select('first_name')
-            .eq('uid', uid)
-            .single();
-        _adminName = adminData['first_name'] ?? 'Admin';
+        try {
+          final adminData = await _supabase
+              .from('admin')
+              .select('first_name')
+              .eq('uid', uid)
+              .maybeSingle();
+          if (adminData != null) {
+            _adminName = adminData['first_name'] ?? 'Admin';
+          }
+        } catch (e) {
+          debugPrint("Error fetching admin: $e");
+        }
       }
 
-      // Update table names to match your Supabase
-      final pending = await _supabase
-          .from('mechanics')
-          .select('id')
-          .eq('status', 'pending');
-      final active = await _supabase
-          .from('requests')
-          .select('id')
-          .eq('status', 'active');
-      final drivers = await _supabase.from('users').select('id');
-      final verified = await _supabase
-          .from('mechanics')
-          .select('id')
-          .eq('status', 'approved');
-
-      if (mounted) {
-        setState(() {
-          _pendingMechanics = (pending as List).length;
-          _activeRequests = (active as List).length;
-          _registeredDrivers = (drivers as List).length;
-          _verifiedMechanics = (verified as List).length;
-        });
+      // Get pending verifications
+      try {
+        final pending = await _supabase
+            .from('mechanic_verification')
+            .select('id')
+            .eq('status', 'pending');
+        _pendingMechanics = pending.length;
+      } catch (e) {
+        debugPrint("Error fetching pending: $e");
       }
-    } catch (_) {
-      // Silently fail
+
+      // Get active requests (adjust table name to match your database)
+      try {
+        final active = await _supabase
+            .from('jobs')  // Changed from 'requests' - adjust to your table name
+            .select('id')
+            .or('status.eq.active,status.eq.in-progress');  // Active or in-progress
+        _activeRequests = active.length;
+      } catch (e) {
+        debugPrint("Error fetching active requests: $e");
+      }
+
+      // Get registered users/drivers
+      try {
+        final drivers = await _supabase
+            .from('users')  // Your users table
+            .select('id');
+        _registeredDrivers = drivers.length;
+      } catch (e) {
+        debugPrint("Error fetching drivers: $e");
+      }
+
+      // Get verified mechanics
+      try {
+        final verified = await _supabase
+            .from('mechanic_verification')
+            .select('id')
+            .eq('status', 'approved');
+        _verifiedMechanics = verified.length;
+      } catch (e) {
+        debugPrint("Error fetching verified: $e");
+      }
+
+    } catch (e) {
+      debugPrint("Error loading dashboard data: $e");
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -278,7 +306,7 @@ class _DashboardTabState extends State<_DashboardTab> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            _adminName,
+                            'Welcome, $_adminName',
                             style: const TextStyle(
                               color: Color(0xFF1A1A1A),
                               fontSize: 18,
@@ -298,10 +326,9 @@ class _DashboardTabState extends State<_DashboardTab> {
                         ],
                       ),
                       const Spacer(),
-                      const Icon(
-                        Icons.notifications_outlined,
-                        color: Color(0xFF19456B),
-                        size: 28,
+                      IconButton(
+                        icon: const Icon(Icons.refresh, color: Color(0xFF19456B), size: 28),
+                        onPressed: _loadData,
                       ),
                     ],
                   ),
@@ -322,35 +349,39 @@ class _DashboardTabState extends State<_DashboardTab> {
                           child: Column(
                             children: [
                               _StatCard(
-                                title: 'Pending Mechanics:',
+                                title: 'Pending Mechanics',
                                 value: '$_pendingMechanics',
                                 subtitle: 'Waiting for approval',
-                                percentage: '',
-                                isPositive: true,
+                                icon: Icons.pending_actions,
+                                color: const Color(0xFFFFB703),
+                                onTap: () => widget.onSwitchTab(1), // Switch to verification tab
                               ),
                               const SizedBox(height: 16),
                               _StatCard(
-                                title: 'Active Requests:',
+                                title: 'Active Requests',
                                 value: '$_activeRequests',
-                                subtitle: 'drivers requesting help',
-                                percentage: '',
-                                isPositive: true,
+                                subtitle: 'Drivers requesting help',
+                                icon: Icons.build_circle,
+                                color: const Color(0xFF19456B),
+                                onTap: null,
                               ),
                               const SizedBox(height: 16),
                               _StatCard(
-                                title: 'Registered Drivers:',
+                                title: 'Registered Drivers',
                                 value: '$_registeredDrivers',
-                                subtitle: 'users',
-                                percentage: '',
-                                isPositive: true,
+                                subtitle: 'Total users',
+                                icon: Icons.people,
+                                color: const Color(0xFF009227),
+                                onTap: null,
                               ),
                               const SizedBox(height: 16),
                               _StatCard(
-                                title: 'Verified Mechanics:',
+                                title: 'Verified Mechanics',
                                 value: '$_verifiedMechanics',
-                                subtitle: 'mechanics active',
-                                percentage: '',
-                                isPositive: true,
+                                subtitle: 'Mechanics active',
+                                icon: Icons.verified,
+                                color: const Color(0xFF0052CC),
+                                onTap: () => widget.onSwitchTab(1),
                               ),
                             ],
                           ),
@@ -371,103 +402,96 @@ class _StatCard extends StatelessWidget {
   final String title;
   final String value;
   final String subtitle;
-  final String percentage;
-  final bool isPositive;
+  final IconData icon;
+  final Color color;
+  final VoidCallback? onTap;
 
   const _StatCard({
     required this.title,
     required this.value,
     required this.subtitle,
-    required this.percentage,
-    required this.isPositive,
+    required this.icon,
+    required this.color,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
-      decoration: ShapeDecoration(
-        color: Colors.white,
-        shape: RoundedRectangleBorder(
-          side: const BorderSide(width: 1, color: Color(0xFFE5E5E5)),
-          borderRadius: BorderRadius.circular(12),
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(20),
+        decoration: ShapeDecoration(
+          color: Colors.white,
+          shape: RoundedRectangleBorder(
+            side: const BorderSide(width: 1, color: Color(0xFFE5E5E5)),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          shadows: const [
+            BoxShadow(
+              color: Color(0x3F000000),
+              blurRadius: 4,
+              offset: Offset(0, 4),
+              spreadRadius: 0,
+            ),
+          ],
         ),
-        shadows: const [
-          BoxShadow(
-            color: Color(0x3F000000),
-            blurRadius: 4,
-            offset: Offset(0, 4),
-            spreadRadius: 0,
-          ),
-        ],
-      ),
-      child: Stack(
-        children: [
-          SizedBox(
-            width: 260,
-            child: Text(
-              title,
-              style: const TextStyle(
-                color: Color(0xFF1A1A1A),
-                fontSize: 18,
-                fontFamily: 'Poppins',
-                fontWeight: FontWeight.w600,
-                height: 1.50,
+        child: Row(
+          children: [
+            // Icon container
+            Container(
+              width: 56,
+              height: 56,
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Icon(icon, color: color, size: 28),
+            ),
+            const SizedBox(width: 16),
+            // Text content
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Color(0xFF666666),
+                      fontSize: 13,
+                      fontFamily: 'Poppins',
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    value,
+                    style: const TextStyle(
+                      color: Color(0xFF1A1A1A),
+                      fontSize: 32,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: Color(0xFF999999),
+                      fontSize: 12,
+                      fontFamily: 'Inter',
+                      fontWeight: FontWeight.w400,
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          if (percentage.isNotEmpty)
-            Positioned(
-              right: 0,
-              top: 4,
-              child: Text(
-                percentage,
-                style: TextStyle(
-                  color: isPositive
-                      ? const Color(0xFF22C55E)
-                      : const Color(0xFFEF4444),
-                  fontSize: 12,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          Padding(
-            padding: const EdgeInsets.only(top: 36),
-            child: SizedBox(
-              width: double.infinity,
-              child: Text(
-                value,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFF1A1A1A),
-                  fontSize: 28,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w700,
-                  height: 1.50,
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.only(top: 78),
-            child: SizedBox(
-              width: double.infinity,
-              child: Text(
-                subtitle,
-                textAlign: TextAlign.center,
-                style: const TextStyle(
-                  color: Color(0xFF666666),
-                  fontSize: 12,
-                  fontFamily: 'Inter',
-                  fontWeight: FontWeight.w400,
-                  height: 1.50,
-                ),
-              ),
-            ),
-          ),
-        ],
+            // Arrow icon if tappable
+            if (onTap != null)
+              Icon(Icons.arrow_forward_ios, color: Colors.grey.shade400, size: 16),
+          ],
+        ),
       ),
     );
   }
