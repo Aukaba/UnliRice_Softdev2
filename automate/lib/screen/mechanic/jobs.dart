@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'homescreen.dart';
 import 'schedule.dart';
-import '../messages/user_message_list.dart';
+import 'chat.dart';
 import '../../Logic/jobs/jobs_logic.dart';
 import 'homescreen_checkrequest.dart';
 
@@ -239,7 +239,7 @@ class _MechanicJobsScreenState extends State<MechanicJobsScreen> {
           } else if (index == 3) {
             Navigator.pushReplacement(
               context,
-              MaterialPageRoute(builder: (_) => const UserMessageListScreen()),
+              MaterialPageRoute(builder: (_) => const MechanicChatScreen()),
             );
           }
         },
