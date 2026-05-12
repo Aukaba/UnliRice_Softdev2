@@ -188,18 +188,40 @@ void _checkStatus() async {
               ],
             ),
           ),
-          bottomNavigationBar: _MechanicBottomNavigationBar(
-            currentIndex: 0,
-            onItemTapped: (index) {
-              // Your navigation logic...
-              if (index == 1)
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(builder: (_) => const MechanicJobsScreen()),
-                );
-              // ... etc
-            },
-          ),
+bottomNavigationBar: _MechanicBottomNavigationBar(
+  currentIndex: 0,
+  onItemTapped: (index) {
+    switch (index) {
+      case 0:
+        // Already on home
+        return;
+      case 1:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MechanicJobsScreen()),
+        );
+        break;
+      case 2:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MechanicScheduleScreen()),
+        );
+        break;
+      case 3:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MechanicChatScreen()),
+        );
+        break;
+      case 4:
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const MechanicProfileScreen()),
+        );
+        break;
+    }
+  },
+),
         ),
 
         // LAYER 2: Verification Overlay
