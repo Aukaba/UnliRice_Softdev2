@@ -51,21 +51,47 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
     }
   }
 
-  Future<void> _signOut() async {
-    try {
-      await _supabase.auth.signOut();
-    } catch (e) {
-      print('Signout warning: $e');
-    } finally {
-      if (mounted) {
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-          (route) => false,
-        );
-      }
+Future<void> _signOut() async {
+  try {
+    // ✅ Set offline before signing out
+    final uid = _supabase.auth.currentUser?.id;
+    if (uid != null) {
+      await _supabase
+          .from('mechanic')
+          .update({'online_status': false})
+          .eq('uid', uid);
+    }
+    
+    await _supabase.auth.signOut();
+  } catch (e) {
+    debugPrint('Signout warning: $e');
+  } finally {
+    if (mounted) {
+      Navigator.of(context).pushAndRemoveUntil(
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+        (route) => false,
+      );
     }
   }
-
+}
+  @override
+  void dispose() {
+    _setOffline();  // ✅ Set offline when leaving profile
+    super.dispose();
+  }
+    Future<void> _setOffline() async {
+    try {
+      final uid = _supabase.auth.currentUser?.id;
+      if (uid != null) {
+        await _supabase
+            .from('mechanic')
+            .update({'online_status': false})
+            .eq('uid', uid);
+      }
+    } catch (e) {
+      debugPrint("Error setting offline: $e");
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return Scaffold(

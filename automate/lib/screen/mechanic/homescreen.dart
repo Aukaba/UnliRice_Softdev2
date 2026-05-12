@@ -20,8 +20,7 @@ class MechanicHomeScreen extends StatefulWidget {
 
 class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
   bool _showVerification = false;
-  String _verificationStatus =
-      'none'; // ✅ Add: 'none', 'pending', 'approved', 'rejected'
+  String _verificationStatus = 'none'; // ✅ Add: 'none', 'pending', 'approved', 'rejected'
   bool _isLoadingStatus = true;
   StreamSubscription? _dispatchSub;
   bool _isDialogShowing = false;
@@ -29,62 +28,66 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
   @override
   void initState() {
     super.initState();
+    _setOnlineStatus(true);
     _checkStatus();
     _listenForEmergencyDispatches();
     _checkActiveJob();
   }
 
-void _checkStatus() async {
-  try {
-    final uid = Supabase.instance.client.auth.currentUser?.id;
-    debugPrint("Checking status for UID: $uid");
+  void _checkStatus() async {
+    try {
+      final uid = Supabase.instance.client.auth.currentUser?.id;
+      debugPrint("Checking status for UID: $uid");
 
-    if (uid != null) {
-      final mechanicRes = await Supabase.instance.client
-          .from('mechanic')
-          .select('uid, verified')
-          .eq('uid', uid)
-          .maybeSingle();
-
-      debugPrint("Mechanic record: $mechanicRes");
-
-      if (mechanicRes != null && mounted) {
-        if (mechanicRes['verified'] == true) {
-          debugPrint("Already verified - no overlay");
-          setState(() => _showVerification = false);
-          return;
-        }
-
-        // Check verification status
-        final verificationRes = await Supabase.instance.client
-            .from('mechanic_verification')
-            .select('status')
-            .eq('mechanic_id', mechanicRes['uid'])
+      if (uid != null) {
+        final mechanicRes = await Supabase.instance.client
+            .from('mechanic')
+            .select('uid, verified')
+            .eq('uid', uid)
             .maybeSingle();
 
-        debugPrint("Verification record: $verificationRes");
+        debugPrint("Mechanic record: $mechanicRes");
 
-        if (mounted) {
-          setState(() {
-            if (verificationRes == null) {
-              // No submission - show upload form
-              _showVerification = true;
-              _verificationStatus = 'none';
-            } else {
-              // ✅ ADD THIS - Handle existing verification record
-              final status = verificationRes['status'] as String?;
-              _verificationStatus = status ?? 'pending';
-              _showVerification = status != 'approved';  // Hide only if approved
-              debugPrint("Status: $_verificationStatus, Show: $_showVerification");
-            }
-          });
+        if (mechanicRes != null && mounted) {
+          if (mechanicRes['verified'] == true) {
+            debugPrint("Already verified - no overlay");
+            setState(() => _showVerification = false);
+            return;
+          }
+
+          // Check verification status
+          final verificationRes = await Supabase.instance.client
+              .from('mechanic_verification')
+              .select('status')
+              .eq('mechanic_id', mechanicRes['uid'])
+              .maybeSingle();
+
+          debugPrint("Verification record: $verificationRes");
+
+          if (mounted) {
+            setState(() {
+              if (verificationRes == null) {
+                // No submission - show upload form
+                _showVerification = true;
+                _verificationStatus = 'none';
+              } else {
+                // ✅ ADD THIS - Handle existing verification record
+                final status = verificationRes['status'] as String?;
+                _verificationStatus = status ?? 'pending';
+                _showVerification =
+                    status != 'approved'; // Hide only if approved
+                debugPrint(
+                  "Status: $_verificationStatus, Show: $_showVerification",
+                );
+              }
+            });
+          }
         }
       }
+    } catch (e) {
+      debugPrint("Verification check failed: $e");
     }
-  } catch (e) {
-    debugPrint("Verification check failed: $e");
   }
-}
 
   Future<void> _checkActiveJob() async {
     final activeJob = await JobsLogic().getMechanicActiveJob();
@@ -120,10 +123,24 @@ void _checkStatus() async {
 
   @override
   void dispose() {
+    _setOnlineStatus(false);
     _dispatchSub?.cancel();
     super.dispose();
   }
 
+Future<void> _setOnlineStatus(bool isOnline) async {
+  try {
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid != null) {
+      await Supabase.instance.client
+          .from('mechanic')
+          .update({'online_status': isOnline})
+          .eq('uid', uid);
+    }
+  } catch (e) {
+    debugPrint("Error updating online status: $e");
+  }
+}
   Widget _buildBlob(double size, int color) {
     return Container(
       width: size,
@@ -188,40 +205,48 @@ void _checkStatus() async {
               ],
             ),
           ),
-bottomNavigationBar: _MechanicBottomNavigationBar(
-  currentIndex: 0,
-  onItemTapped: (index) {
-    switch (index) {
-      case 0:
-        // Already on home
-        return;
-      case 1:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const MechanicJobsScreen()),
-        );
-        break;
-      case 2:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const MechanicScheduleScreen()),
-        );
-        break;
-      case 3:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const MechanicChatScreen()),
-        );
-        break;
-      case 4:
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const MechanicProfileScreen()),
-        );
-        break;
-    }
-  },
-),
+          bottomNavigationBar: _MechanicBottomNavigationBar(
+            currentIndex: 0,
+            onItemTapped: (index) {
+              switch (index) {
+                case 0:
+                  // Already on home
+                  return;
+                case 1:
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const MechanicJobsScreen(),
+                    ),
+                  );
+                  break;
+                case 2:
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const MechanicScheduleScreen(),
+                    ),
+                  );
+                  break;
+                case 3:
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const MechanicChatScreen(),
+                    ),
+                  );
+                  break;
+                case 4:
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const MechanicProfileScreen(),
+                    ),
+                  );
+                  break;
+              }
+            },
+          ),
         ),
 
         // LAYER 2: Verification Overlay
@@ -291,36 +316,36 @@ class _HeaderSectionState extends State<_HeaderSection> {
     _fetchName();
   }
 
-  Future<void> _fetchName() async {
-    try {
-      final uid = Supabase.instance.client.auth.currentUser?.id;
-      if (uid != null) {
-        final res = await Supabase.instance.client
-            .from('mechanic')
-            .select('first_name, last_name, available_for_emergency')
-            .eq('uid', uid)
-            .maybeSingle();
-        if (res != null && mounted) {
-          setState(() {
-            _mechanicName = '${res['first_name']}';
-            _isOnline = res['available_for_emergency'] ?? false;
-          });
-        } else if (mounted) {
-          setState(() {
-            _mechanicName = 'Mechanic';
-            _isOnline = false;
-          });
-        }
-      }
-    } catch (_) {
-      if (mounted) {
+Future<void> _fetchName() async {
+  try {
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid != null) {
+      final res = await Supabase.instance.client
+          .from('mechanic')
+          .select('first_name, last_name, available_for_emergency, online_status')  // ✅ Add online_status
+          .eq('uid', uid)
+          .maybeSingle();
+      if (res != null && mounted) {
+        setState(() {
+          _mechanicName = '${res['first_name']}';
+          _isOnline = res['online_status'] ?? false;  // ✅ Use online_status for this
+        });
+      } else if (mounted) {
         setState(() {
           _mechanicName = 'Mechanic';
           _isOnline = false;
         });
       }
     }
+  } catch (_) {
+    if (mounted) {
+      setState(() {
+        _mechanicName = 'Mechanic';
+        _isOnline = false;
+      });
+    }
   }
+}
 
   @override
   Widget build(BuildContext context) {
