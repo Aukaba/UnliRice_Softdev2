@@ -48,4 +48,8 @@ app.*.map.json
 lib/config/env.dart
 .env
 .env.local
+<<<<<<< Updated upstream
 .env.*
+=======
+.env.*
+>>>>>>> Stashed changes
