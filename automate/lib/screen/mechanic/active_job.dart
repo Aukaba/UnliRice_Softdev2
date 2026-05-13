@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../Logic/jobs/jobs_logic.dart';
+import '../../screen/messages/user_chat_session.dart';
 import 'homescreen.dart';
 
 const String kOsrmRoutingBaseUrl = String.fromEnvironment(
@@ -62,8 +63,29 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
         debugPrint('[ActiveJob] setJobInProgress error: $e');
       });
     }
+    _fetchArrivedStatus();
     _fetchPhoneNumber();
     _startLocationTracking();
+  }
+
+  /// Read mechanic_arrived from DB so the button stays hidden after a restart.
+  Future<void> _fetchArrivedStatus() async {
+    final jobId =
+        widget.jobData?['id']?.toString() ??
+        widget.jobData?['job_id']?.toString();
+    if (jobId == null) return;
+    try {
+      final res = await _supabase
+          .from('jobs')
+          .select('mechanic_arrived')
+          .eq('id', jobId)
+          .maybeSingle();
+      if (res != null && res['mechanic_arrived'] == true && mounted) {
+        setState(() => _hasArrived = true);
+      }
+    } catch (e) {
+      debugPrint('[ActiveJob] _fetchArrivedStatus error: $e');
+    }
   }
 
   Future<void> _fetchPhoneNumber() async {
@@ -800,10 +822,26 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                                     ),
                                   ),
                                   onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Opening chat with $clientName',
+                                    final jobMap = widget.jobData?['jobs']
+                                        as Map<String, dynamic>?;
+                                    final userId =
+                                        widget.jobData?['user_id']?.toString() ??
+                                        jobMap?['user_id']?.toString() ??
+                                        '';
+                                    if (userId.isEmpty) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('User ID not found'),
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => UserChatSessionScreen(
+                                          mechanicName: clientName,
+                                          partnerId: userId,
                                         ),
                                       ),
                                     );
