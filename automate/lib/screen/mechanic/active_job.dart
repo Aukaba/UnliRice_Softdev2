@@ -42,6 +42,7 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
   String _totalDistanceText = 'Distance unavailable';
 
   String _phoneNumber = 'Loading...';
+  bool _hasArrived = false;
 
   // Helpers to safely pull strings from jobData
   String _field(String key, String fallback) =>
@@ -693,6 +694,48 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                             ),
                           ),
                           const SizedBox(height: 28),
+
+                          // Arrived button (shown until tapped)
+                          if (!_hasArrived)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF19456B),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  minimumSize: const Size.fromHeight(52),
+                                  elevation: 0,
+                                ),
+                                icon: const Icon(
+                                  Icons.check_circle_outline_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                label: Text(
+                                  'Arrived',
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  final jobId =
+                                      widget.jobData?['id']?.toString() ??
+                                      widget.jobData?['job_id']?.toString();
+                                  if (jobId != null) {
+                                    try {
+                                      await JobsLogic().setJobArrived(jobId);
+                                    } catch (e) {
+                                      debugPrint('[ActiveJob] setJobArrived error: $e');
+                                    }
+                                  }
+                                  if (mounted) setState(() => _hasArrived = true);
+                                },
+                              ),
+                            ),
 
                           // Diagnosis button
                           ElevatedButton.icon(

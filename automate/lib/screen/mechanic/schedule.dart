@@ -4,6 +4,7 @@ import 'homescreen.dart'; // adjust import paths as needed
 import 'jobs.dart';
 import 'profile.dart';
 import 'chat.dart';
+import 'homescreen_checkrequest.dart';
 import '../../Logic/jobs/jobs_logic.dart';
 
 
@@ -20,6 +21,7 @@ class _ScheduledJob {
   final String price;
   final String tag; // 'TODAY', 'TOMORROW', 'MON 03·27-28', etc.
   final DateTime date;
+  final Map<String, dynamic> rawJob;
 
   const _ScheduledJob({
     required this.title,
@@ -31,6 +33,7 @@ class _ScheduledJob {
     required this.price,
     required this.tag,
     required this.date,
+    required this.rawJob,
   });
 }
 
@@ -74,6 +77,7 @@ class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
         price: 'Pending Estimate', 
         tag: tag,
         date: date,
+        rawJob: j,
       );
     }).toList();
   }
@@ -536,7 +540,19 @@ class _ScheduleJobCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return GestureDetector(
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => MechanicCheckRequestScreen(
+              jobData: job.rawJob,
+              isAccepted: true,
+            ),
+          ),
+        );
+      },
+      child: Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -675,7 +691,8 @@ class _ScheduleJobCard extends StatelessWidget {
           ),
         ],
       ),
-    );
+    ),   // closes Container
+    );   // closes GestureDetector
   }
 }
 

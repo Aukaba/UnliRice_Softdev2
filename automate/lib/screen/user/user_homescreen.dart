@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'user_dashboard.dart';
 import 'user_activity.dart';
+import 'user_dashboard_match.dart';
 import '../../Logic/jobs/jobs_logic.dart';
 
 class UserHomeScreen extends StatefulWidget {
@@ -270,7 +271,7 @@ class _UserHomeScreenState extends State<UserHomeScreen> {
                   onTap: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const UserActivityScreen()),
+                      MaterialPageRoute(builder: (context) => UserDashboardMatchScreen(jobData: job)),
                     );
                   },
                   child: Container(
