@@ -6,6 +6,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:http/http.dart' as http;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../widgets/calendar_widget.dart';
 import 'user_looking_mechanic.dart';
 import '../../Logic/jobs/jobs_logic.dart';
@@ -30,11 +31,39 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
   bool _isLoading = false;
   Timer? _debounce;
 
+  List<Map<String, dynamic>> _userVehicles = [];
+  String? _selectedVehicleId;
+
   final MapController _mapController = MapController();
   LatLng _selectedLocation = const LatLng(
     10.2974,
     123.8687,
   ); // Default to CIT-U, Cebu
+
+  @override
+  void initState() {
+    super.initState();
+    _loadVehicles();
+  }
+
+  Future<void> _loadVehicles() async {
+    final user = Supabase.instance.client.auth.currentUser;
+    if (user == null) return;
+    try {
+      final data = await Supabase.instance.client
+          .from('user_vehicles')
+          .select()
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+      if (mounted) {
+        setState(() {
+          _userVehicles = List<Map<String, dynamic>>.from(data);
+        });
+      }
+    } catch (e) {
+      debugPrint("Error fetching vehicles: $e");
+    }
+  }
 
   @override
   void dispose() {
@@ -341,6 +370,66 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                               ),
                             ),
                           ),
+                          const SizedBox(height: 20),
+                          Text(
+                            "Select Registered Vehicle (Optional)",
+                            style: GoogleFonts.montserrat(
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                              color: Colors.black87,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          if (_userVehicles.isNotEmpty)
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 16),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEFEFEF),
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: DropdownButtonHideUnderline(
+                                child: DropdownButton<String>(
+                                  isExpanded: true,
+                                  hint: Text(
+                                    "Choose a vehicle or type below",
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 14,
+                                      color: Colors.black54,
+                                    ),
+                                  ),
+                                  value: _selectedVehicleId,
+                                  items: _userVehicles.map((v) {
+                                    return DropdownMenuItem<String>(
+                                      value: v['id'].toString(),
+                                      child: Text(
+                                        "${v['model']} - ${v['plate_number']}",
+                                        style: GoogleFonts.montserrat(fontSize: 14),
+                                      ),
+                                    );
+                                  }).toList(),
+                                  onChanged: (val) {
+                                    setState(() {
+                                      _selectedVehicleId = val;
+                                      if (val != null) {
+                                        final v = _userVehicles.firstWhere(
+                                            (element) => element['id'].toString() == val);
+                                        _vehicleController.text = v['model'] ?? '';
+                                        _plateController.text = v['plate_number'] ?? '';
+                                      }
+                                    });
+                                  },
+                                ),
+                              ),
+                            )
+                          else
+                            Text(
+                              "No registered vehicles. You can add them in your Profile.",
+                              style: GoogleFonts.montserrat(
+                                fontSize: 12,
+                                fontStyle: FontStyle.italic,
+                                color: Colors.grey,
+                              ),
+                            ),
                           const SizedBox(height: 20),
                           Text(
                             "Vehicle Information",
