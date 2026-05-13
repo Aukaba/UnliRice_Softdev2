@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../../Logic/chat/chat_logic.dart';
 import 'homescreen.dart';
 import 'jobs.dart';
 import 'schedule.dart';
@@ -24,6 +25,8 @@ class _MechanicChatScreenState extends State<MechanicChatScreen> {
     super.initState();
     _loadConversations();
     _listenForNewMessages();
+    // Clean up expired conversations (2 days after job completion)
+    ChatLogic().deleteExpiredMessages();
   }
 
   @override
@@ -79,6 +82,7 @@ class _MechanicChatScreenState extends State<MechanicChatScreen> {
           conversationMap[otherUserId] = {
             'user_id': otherUserId,
             'name': otherUserName,
+            'vehicle': '',
             'last_message': msg['content'] ?? '',
             'time': msg['created_at'] ?? '',
             'unread_count': 0,
@@ -93,6 +97,13 @@ class _MechanicChatScreenState extends State<MechanicChatScreen> {
       }
 
       if (mounted) {
+        // Enrich with vehicle model from jobs
+        for (final entry in conversationMap.entries) {
+          final vehicle = await ChatLogic().getVehicleModelForPartner(entry.key);
+          if (vehicle.isNotEmpty) {
+            conversationMap[entry.key]!['vehicle'] = vehicle;
+          }
+        }
         setState(() {
           _conversations = conversationMap.values.toList();
           _isLoading = false;
@@ -280,18 +291,20 @@ class _MechanicChatScreenState extends State<MechanicChatScreen> {
                               separatorBuilder: (_, __) => const SizedBox(height: 14),
                               itemBuilder: (context, index) {
                                 final conv = _conversations[index];
-                                return _ChatCard(
-                                  name: conv['name'] ?? 'User',
-                                  lastMessage: conv['last_message'] ?? '',
-                                  timeAgo: _formatTime(conv['time'] ?? ''),
-                                  unreadCount: conv['unread_count'] as int,
-                                  onTap: () {
-                                    _openChat(
-                                      userId: conv['user_id'] as String,
-                                      userName: conv['name'] as String,
-                                    );
-                                  },
-                                );
+                                 return _ChatCard(
+                                   name: conv['name'] ?? 'User',
+                                   vehicle: conv['vehicle'] ?? '',
+                                   lastMessage: conv['last_message'] ?? '',
+                                   timeAgo: _formatTime(conv['time'] ?? ''),
+                                   unreadCount: conv['unread_count'] as int,
+                                   onTap: () {
+                                     _openChat(
+                                       userId: conv['user_id'] as String,
+                                       userName: conv['name'] as String,
+                                       vehicle: conv['vehicle'] ?? '',
+                                     );
+                                   },
+                                 );
                               },
                             ),
                 ),
@@ -321,13 +334,14 @@ class _MechanicChatScreenState extends State<MechanicChatScreen> {
     );
   }
 
-  void _openChat({required String userId, required String userName}) {
+  void _openChat({required String userId, required String userName, String vehicle = ''}) {
     Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => _ChatDetailScreen(
           receiverId: userId,
           receiverName: userName,
+          vehicleModel: vehicle,
         ),
       ),
     );
@@ -338,6 +352,7 @@ class _MechanicChatScreenState extends State<MechanicChatScreen> {
 
 class _ChatCard extends StatelessWidget {
   final String name;
+  final String vehicle;
   final String lastMessage;
   final String timeAgo;
   final int unreadCount;
@@ -345,6 +360,7 @@ class _ChatCard extends StatelessWidget {
 
   const _ChatCard({
     required this.name,
+    this.vehicle = '',
     required this.lastMessage,
     required this.timeAgo,
     required this.unreadCount,
@@ -424,7 +440,16 @@ class _ChatCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(name, style: GoogleFonts.montserrat(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.black)),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(name, style: GoogleFonts.montserrat(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.black)),
+                            if (vehicle.isNotEmpty)
+                              Text(vehicle, style: GoogleFonts.inriaSans(fontSize: 11, fontWeight: FontWeight.w400, color: Colors.black45)),
+                          ],
+                        ),
+                      ),
                       Text(timeAgo, style: GoogleFonts.inriaSans(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.black38)),
                     ],
                   ),
@@ -454,10 +479,12 @@ class _ChatCard extends StatelessWidget {
 class _ChatDetailScreen extends StatefulWidget {
   final String receiverId;
   final String receiverName;
+  final String vehicleModel;
 
   const _ChatDetailScreen({
     required this.receiverId,
     required this.receiverName,
+    this.vehicleModel = '',
   });
 
   @override
@@ -469,12 +496,19 @@ class _ChatDetailScreenState extends State<_ChatDetailScreen> {
   List<Map<String, dynamic>> _messages = [];
   bool _isLoading = true;
   StreamSubscription? _subscription;
+  String _vehicleModel = '';
 
   @override
   void initState() {
     super.initState();
+    _vehicleModel = widget.vehicleModel;
     _loadMessages();
     _listenForMessages();
+    if (_vehicleModel.isEmpty) {
+      ChatLogic().getVehicleModelForPartner(widget.receiverId).then((v) {
+        if (mounted && v.isNotEmpty) setState(() => _vehicleModel = v);
+      });
+    }
   }
 
   @override
@@ -568,7 +602,14 @@ class _ChatDetailScreenState extends State<_ChatDetailScreen> {
       backgroundColor: const Color(0xFFF2F5F8),
       appBar: AppBar(
         backgroundColor: const Color(0xFFFFB703),
-        title: Text(widget.receiverName, style: GoogleFonts.montserrat(fontWeight: FontWeight.w700)),
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(widget.receiverName, style: GoogleFonts.montserrat(fontWeight: FontWeight.w700, fontSize: 16)),
+            if (_vehicleModel.isNotEmpty)
+              Text(_vehicleModel, style: GoogleFonts.montserrat(fontSize: 11, fontWeight: FontWeight.w400, color: Colors.black54)),
+          ],
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.black),
           onPressed: () => Navigator.pop(context),

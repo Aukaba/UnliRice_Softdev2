@@ -7,11 +7,13 @@ import 'package:intl/intl.dart';
 class UserChatSessionScreen extends StatefulWidget {
   final String mechanicName;
   final String partnerId;
+  final String? vehicleModel;
 
   const UserChatSessionScreen({
     super.key,
     required this.mechanicName,
     required this.partnerId,
+    this.vehicleModel,
   });
 
   @override
@@ -21,11 +23,21 @@ class UserChatSessionScreen extends StatefulWidget {
 class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
   final TextEditingController _msgController = TextEditingController();
   late Stream<List<Map<String, dynamic>>> _messagesStream;
+  String _vehicleModel = '';
 
   @override
   void initState() {
     super.initState();
     _messagesStream = ChatLogic().getMessagesWith(widget.partnerId);
+    _vehicleModel = widget.vehicleModel ?? '';
+    // Fetch vehicle from DB if not provided
+    if (_vehicleModel.isEmpty) {
+      ChatLogic().getVehicleModelForPartner(widget.partnerId).then((v) {
+        if (mounted && v.isNotEmpty) setState(() => _vehicleModel = v);
+      });
+    }
+    // Clean up expired chat sessions
+    ChatLogic().deleteExpiredMessages();
   }
 
   @override
@@ -139,14 +151,15 @@ class _UserChatSessionScreenState extends State<UserChatSessionScreen> {
                   color: Colors.black,
                 ),
               ),
-              Text(
-                "ADV 160 ROADSYNC",
-                style: GoogleFonts.montserrat(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w400,
-                  color: Colors.black54,
+              if (_vehicleModel.isNotEmpty)
+                Text(
+                  _vehicleModel,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w400,
+                    color: Colors.black54,
+                  ),
                 ),
-              ),
             ],
           ),
         ],

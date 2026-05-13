@@ -22,6 +22,8 @@ class _UserSuccessfulBookingScreenState
   final _supabase = Supabase.instance.client;
 
   bool _isLoading = true;
+  bool _ratingSubmitted = false;
+  bool _isSubmittingRating = false;
   List<Map<String, dynamic>> _diagnosisItems = [];
   double _totalBill = 0.0;
   double _diagnosisFee = 0.0;
@@ -124,6 +126,20 @@ class _UserSuccessfulBookingScreenState
         items = List<Map<String, dynamic>>.from(itemsRes as List);
       }
 
+      // 4. Check if user already submitted a rating for this job
+      final uid = _supabase.auth.currentUser?.id;
+      if (uid != null && _jobId.isNotEmpty) {
+        final existing = await _supabase
+            .from('mechanic_ratings')
+            .select('id')
+            .eq('job_id', _jobId)
+            .eq('user_id', uid)
+            .maybeSingle();
+        if (existing != null && mounted) {
+          setState(() => _ratingSubmitted = true);
+        }
+      }
+
       if (mounted) {
         setState(() {
           _diagnosisItems = items;
@@ -135,6 +151,49 @@ class _UserSuccessfulBookingScreenState
     } catch (e) {
       debugPrint('[SuccessfulBooking] fetchData error: $e');
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _submitRating() async {
+    if (_rating == 0 || _ratingSubmitted || _isSubmittingRating) return;
+    if (_mechanicId.isEmpty || _jobId.isEmpty) return;
+    final uid = _supabase.auth.currentUser?.id;
+    if (uid == null) return;
+
+    setState(() => _isSubmittingRating = true);
+    try {
+      await _supabase.from('mechanic_ratings').insert({
+        'job_id': _jobId,
+        'user_id': uid,
+        'mechanic_id': _mechanicId,
+        'rating': _rating,
+      });
+      if (mounted) {
+        setState(() {
+          _ratingSubmitted = true;
+          _isSubmittingRating = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Thank you! Your rating has been submitted.',
+                style: GoogleFonts.montserrat()),
+            backgroundColor: const Color(0xFF19456B),
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[SuccessfulBooking] submitRating error: $e');
+      if (mounted) {
+        setState(() => _isSubmittingRating = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to submit rating. Please try again.',
+                style: GoogleFonts.montserrat()),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -264,6 +323,65 @@ class _UserSuccessfulBookingScreenState
                             ),
                           ),
                         ],
+                        const SizedBox(height: 16),
+                        if (_ratingSubmitted)
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.symmetric(vertical: 12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFE8F5E9),
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.check_circle_rounded,
+                                    color: Color(0xFF2E7D32), size: 18),
+                                const SizedBox(width: 8),
+                                Text(
+                                  'Rating submitted — thank you!',
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: const Color(0xFF2E7D32),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        else
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton(
+                              onPressed: _rating > 0 && !_isSubmittingRating
+                                  ? _submitRating
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: const Color(0xFF19456B),
+                                disabledBackgroundColor: Colors.grey.shade300,
+                                padding:
+                                    const EdgeInsets.symmetric(vertical: 13),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              child: _isSubmittingRating
+                                  ? const SizedBox(
+                                      height: 18,
+                                      width: 18,
+                                      child: CircularProgressIndicator(
+                                          color: Colors.white, strokeWidth: 2),
+                                    )
+                                  : Text(
+                                      'Submit Rating',
+                                      style: GoogleFonts.montserrat(
+                                        fontSize: 14,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
