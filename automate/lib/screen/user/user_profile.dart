@@ -24,6 +24,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   void initState() {
     super.initState();
     _loadUserInfo();
+    _loadUserVehicles();
   }
 
   Future<void> _loadUserInfo() async {
@@ -37,25 +38,12 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           .select('first_name, last_name, phone_number')
           .eq('uid', user.id)
           .maybeSingle();
-
-      List<dynamic> vehiclesData = [];
-      try {
-        vehiclesData = await _supabase
-            .from('user_vehicles')
-            .select()
-            .eq('user_id', user.id)
-            .order('created_at', ascending: false);
-      } catch (e) {
-        print('Error fetching vehicles: $e');
-      }
-
       setState(() {
         final firstName = data?['first_name'] ?? '';
         final lastName = data?['last_name'] ?? '';
         _userName = '$firstName $lastName'.trim();
         _userPhone = data?['phone_number'] ?? '';
         _userEmail = user.email ?? '';
-        _userVehicles = List<Map<String, dynamic>>.from(vehiclesData);
       });
     } catch (e) {
       print('Error fetching user info: $e');
@@ -66,6 +54,29 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           _userPhone = 'Error';
         });
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadUserVehicles() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
+
+    try {
+      final vehiclesData = await _supabase
+          .from('user_vehicles')
+          .select()
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+
+      if (mounted) {
+        setState(() {
+          _userVehicles = List<Map<String, dynamic>>.from(vehiclesData);
+        });
+      }
+    } catch (e) {
+      print('Error fetching vehicles: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -559,7 +570,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     setState(() => _isLoading = true);
     try {
       await _supabase.from('user_vehicles').delete().eq('id', id);
-      await _loadUserInfo();
+      await _loadUserVehicles();
     } catch (e) {
       if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
@@ -644,7 +655,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                 } else {
                   await _supabase.from('user_vehicles').insert(data);
                 }
-                await _loadUserInfo();
+                await _loadUserVehicles();
               } catch (e) {
                 if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
                 setState(() => _isLoading = false);
