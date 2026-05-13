@@ -1159,7 +1159,10 @@ class _ScheduleSection extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const MechanicScheduleScreen(),
+                            builder: (_) => MechanicCheckRequestScreen(
+                              jobData: job,
+                              isAccepted: true,
+                            ),
                           ),
                         );
                       },
