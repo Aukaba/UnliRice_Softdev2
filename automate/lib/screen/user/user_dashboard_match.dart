@@ -33,6 +33,7 @@ class _UserDashboardMatchScreenState extends State<UserDashboardMatchScreen> {
   Timer? _pollTimer;
   bool _isFetching = false;
   bool _navigatedAway = false;
+  bool _mechanicArrived = false;
 
   @override
   void initState() {
@@ -44,9 +45,9 @@ class _UserDashboardMatchScreenState extends State<UserDashboardMatchScreen> {
     _fetchAndDraw();
     _pollTimer = Timer.periodic(const Duration(seconds: 10), (_) {
       _fetchAndDraw();
-      _checkJobCompletion();
+      _checkJobStatus();
     });
-    _checkJobCompletion(); // also run immediately
+    _checkJobStatus(); // also run immediately
   }
 
   @override
@@ -152,23 +153,32 @@ class _UserDashboardMatchScreenState extends State<UserDashboardMatchScreen> {
     }
   }
 
-  // ── Poll job status and auto-navigate when completed ─────────────────────────
-  Future<void> _checkJobCompletion() async {
+  // ── Poll job status + mechanic_arrived flag ──────────────────────────────────
+  Future<void> _checkJobStatus() async {
     if (_jobId.isEmpty || _navigatedAway) return;
     try {
       final res = await _supabase
           .from('jobs')
-          .select('status')
+          .select('status, mechanic_arrived')
           .eq('id', _jobId)
           .maybeSingle();
 
-      if (res != null && res['status'] == 'completed' && mounted && !_navigatedAway) {
+      if (res == null) return;
+
+      // Update arrived flag
+      final arrived = res['mechanic_arrived'] == true;
+      if (arrived != _mechanicArrived && mounted) {
+        setState(() => _mechanicArrived = arrived);
+      }
+
+      // Auto-navigate when completed
+      if (res['status'] == 'completed' && mounted && !_navigatedAway) {
         _navigatedAway = true;
         _pollTimer?.cancel();
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (_) => const UserSuccessfulBookingScreen(),
+            builder: (_) => UserSuccessfulBookingScreen(jobData: widget.jobData),
           ),
         );
       }
@@ -289,12 +299,19 @@ class _UserDashboardMatchScreenState extends State<UserDashboardMatchScreen> {
                   ),
                   child: Row(
                     children: [
-                      const Icon(Icons.directions_car,
-                          color: Colors.white70, size: 18),
+                      Icon(
+                        _mechanicArrived
+                            ? Icons.build_circle_outlined
+                            : Icons.directions_car,
+                        color: Colors.white70,
+                        size: 18,
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: Text(
-                          'Your mechanic is on the way · $_distanceText',
+                          _mechanicArrived
+                              ? 'Your mechanic has arrived and is diagnosing'
+                              : 'Your mechanic is on the way · $_distanceText',
                           style: GoogleFonts.montserrat(
                             color: Colors.white,
                             fontSize: 13,
@@ -335,7 +352,9 @@ class _UserDashboardMatchScreenState extends State<UserDashboardMatchScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'The mechanic is on the way',
+                    _mechanicArrived
+                        ? 'Mechanic is diagnosing'
+                        : 'The mechanic is on the way',
                     style: GoogleFonts.inriaSans(
                       fontSize: 22,
                       fontWeight: FontWeight.w700,
@@ -344,9 +363,11 @@ class _UserDashboardMatchScreenState extends State<UserDashboardMatchScreen> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    widget.jobData?['pickup_location'] != null
-                        ? 'Pickup: ${widget.jobData!['pickup_location']}'
-                        : 'Pickup location shown on the map',
+                    _mechanicArrived
+                        ? 'Your mechanic is at your location'
+                        : (widget.jobData?['pickup_location'] != null
+                            ? 'Pickup: ${widget.jobData!["pickup_location"]}'
+                            : 'Pickup location shown on the map'),
                     style: GoogleFonts.montserrat(
                       fontSize: 13,
                       fontWeight: FontWeight.w400,
@@ -416,30 +437,31 @@ class _UserDashboardMatchScreenState extends State<UserDashboardMatchScreen> {
 
                   const SizedBox(height: 20),
 
-                  // Cancel Booking Button
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: () => Navigator.pop(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFFB71C1C),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
+                  // Cancel Booking Button — hidden once mechanic has arrived
+                  if (!_mechanicArrived)
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton(
+                        onPressed: () => Navigator.pop(context),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFFB71C1C),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 16),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          elevation: 0,
                         ),
-                        elevation: 0,
-                      ),
-                      child: Text(
-                        'CANCEL BOOKING',
-                        style: GoogleFonts.inriaSans(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          letterSpacing: 0.5,
+                        child: Text(
+                          'CANCEL BOOKING',
+                          style: GoogleFonts.inriaSans(
+                            fontSize: 15,
+                            fontWeight: FontWeight.w700,
+                            letterSpacing: 0.5,
+                          ),
                         ),
                       ),
                     ),
-                  ),
                 ],
               ),
             ),

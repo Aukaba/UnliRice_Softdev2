@@ -444,6 +444,14 @@ class JobsLogic {
         .eq('id', jobId);
   }
 
+  // ─── Mark mechanic as arrived at job location ─────────────────────────────────
+  Future<void> setJobArrived(String jobId) async {
+    await _supabase
+        .from('jobs')
+        .update({'mechanic_arrived': true})
+        .eq('id', jobId);
+  }
+
   // ─── Mark a job as completed ──────────────────────────────────────────────────
   Future<void> setJobCompleted(String jobId) async {
     await _supabase
