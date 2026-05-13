@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../Logic/authentication/signup.dart';
+import '../mechanic/verification.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -67,17 +68,24 @@ class _SignupScreenState extends State<SignupScreen> {
       );
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              _accountType == 'mechanic'
-                  ? 'Mechanic account created! Please wait for verification.'
-                  : 'Driver account created! You can now log in.',
+        if (_accountType == 'mechanic') {
+          // Navigate mechanic to verification screen
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (_) => MechanicIdVerificationScreen(),
             ),
-            backgroundColor: Colors.green,
-          ),
-        );
-        Navigator.pop(context);
+          );
+        } else {
+          // Show success message for driver and return to login
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Driver account created! You can now log in.'),
+              backgroundColor: Colors.green,
+            ),
+          );
+          Navigator.pop(context);
+        }
       }
     } catch (e) {
       setState(() {
