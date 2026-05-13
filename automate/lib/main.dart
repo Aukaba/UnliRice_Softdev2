@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screen/authentication/login_screen.dart';
+import 'screen/authentication/loading_screen.dart';
 import 'screen/user/user_offline_screen.dart';
 import 'screen/mechanic/homescreen.dart';
 import 'screen/user/navigation_shell.dart';
@@ -64,7 +65,9 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const UserOfflineScreen(child: LoginScreen()),
+      home: UserOfflineScreen(
+        child: LoadingScreen(destination: const LoginScreen()),
+      ),
     );
   }
 }

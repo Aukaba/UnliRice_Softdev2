@@ -7,6 +7,7 @@ import 'forgot_password_screen.dart';
 import '../user/navigation_shell.dart';
 import '../mechanic/homescreen.dart';
 import '../admin/admin_dashboard_screen.dart';
+import 'loading_screen.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -79,24 +80,39 @@ class _LoginScreenState extends State<LoginScreen> {
       // In _login() method, change:
       if (accountType == 'admin') {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user_type', 'admin'); // ✅ Save directly
+        await prefs.setString('user_type', 'admin');
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
+          MaterialPageRoute(
+            builder: (context) => LoadingScreen(
+              destination: const AdminDashboardScreen(),
+              delay: const Duration(milliseconds: 1500),
+            ),
+          ),
         );
       } else if (accountType == 'mechanic') {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user_type', 'mechanic'); // ✅ Save directly
+        await prefs.setString('user_type', 'mechanic');
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const MechanicHomeScreen()),
+          MaterialPageRoute(
+            builder: (context) => LoadingScreen(
+              destination: const MechanicHomeScreen(),
+              delay: const Duration(milliseconds: 1500),
+            ),
+          ),
         );
       } else {
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user_type', 'user'); // ✅ Save directly
+        await prefs.setString('user_type', 'user');
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (context) => const UserNavigationShell()),
+          MaterialPageRoute(
+            builder: (context) => LoadingScreen(
+              destination: const UserNavigationShell(),
+              delay: const Duration(milliseconds: 1500),
+            ),
+          ),
         );
       }
     } catch (e) {
