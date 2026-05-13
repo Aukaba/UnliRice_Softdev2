@@ -244,29 +244,15 @@ class _UserDashboardMatchScreenState extends State<UserDashboardMatchScreen> {
                         color: Color(0xFFE51D1D),
                       ),
                     ),
-                    // Mechanic pin (blue dot)
+                    // Mechanic pin (tow truck)
                     if (_mechanicLatLng != null)
                       Marker(
                         point: _mechanicLatLng!,
-                        width: 44,
-                        height: 44,
-                        child: Container(
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF1A73E8),
-                            shape: BoxShape.circle,
-                            boxShadow: [
-                              BoxShadow(
-                                color: Colors.black26,
-                                blurRadius: 6,
-                                offset: Offset(0, 3),
-                              ),
-                            ],
-                          ),
-                          child: const Icon(
-                            Icons.engineering,
-                            color: Colors.white,
-                            size: 24,
-                          ),
+                        width: 90,
+                        height: 90,
+                        child: Image.asset(
+                          'assets/images/mechanic_truck.png',
+                          fit: BoxFit.contain,
                         ),
                       ),
                   ],

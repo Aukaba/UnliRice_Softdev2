@@ -242,16 +242,11 @@ class _MechanicCheckRequestScreenState
                     if (_mechanicLatLng != null)
                       Marker(
                         point: _mechanicLatLng!,
-                        width: 44,
-                        height: 44,
-                        child: Container(
-                          decoration: BoxDecoration(
-                            color: const Color(0xFF1A73E8),
-                            shape: BoxShape.circle,
-                            border: Border.all(color: Colors.white, width: 2),
-                            boxShadow: const [BoxShadow(color: Color(0x551A73E8), blurRadius: 8)],
-                          ),
-                          child: const Icon(Icons.engineering, color: Colors.white, size: 24),
+                        width: 90,
+                        height: 90,
+                        child: Image.asset(
+                          'assets/images/mechanic_truck.png',
+                          fit: BoxFit.contain,
                         ),
                       ),
                   ],
