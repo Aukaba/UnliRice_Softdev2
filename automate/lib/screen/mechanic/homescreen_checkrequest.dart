@@ -1,5 +1,11 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:http/http.dart' as http;
+import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'homescreen.dart';
 import 'jobs.dart';
 import 'schedule.dart';
@@ -37,6 +43,14 @@ class _MechanicCheckRequestScreenState
   double _dragStartHeight = 0;
   double _currentHeight = _collapsedHeight;
 
+  final _supabase = Supabase.instance.client;
+  final MapController _mapController = MapController();
+
+  LatLng? _mechanicLatLng;
+  List<LatLng> _routePoints = [];
+  String _totalDistanceText = 'Distance unavailable';
+  bool _isLoadingMap = true;
+
   @override
   void initState() {
     super.initState();
@@ -54,6 +68,97 @@ class _MechanicCheckRequestScreenState
         _currentHeight = _heightAnimation.value;
       });
     });
+
+    _calculateRoute();
+  }
+
+  Future<void> _calculateRoute() async {
+    LatLng mechLatLng = const LatLng(10.3180, 123.9006);
+    try {
+      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      if (serviceEnabled) {
+        LocationPermission permission = await Geolocator.checkPermission();
+        if (permission == LocationPermission.denied) {
+          permission = await Geolocator.requestPermission();
+        }
+        if (permission == LocationPermission.whileInUse || permission == LocationPermission.always) {
+          final pos = await Geolocator.getCurrentPosition(
+            locationSettings: const LocationSettings(accuracy: LocationAccuracy.high, timeLimit: Duration(seconds: 8)),
+          );
+          mechLatLng = LatLng(pos.latitude, pos.longitude);
+        }
+      }
+    } catch (e) {
+      debugPrint('[CheckRequest] GPS error: $e');
+      try {
+        final uid = _supabase.auth.currentUser?.id;
+        if (uid != null) {
+          final res = await _supabase.from('mechanic').select('latitude, longitude').eq('uid', uid).maybeSingle();
+          final mLat = double.tryParse(res?['latitude']?.toString() ?? '');
+          final mLng = double.tryParse(res?['longitude']?.toString() ?? '');
+          if (mLat != null && mLng != null) mechLatLng = LatLng(mLat, mLng);
+        }
+      } catch (_) {}
+    }
+
+    if (mounted) setState(() => _mechanicLatLng = mechLatLng);
+
+    final jobMap = widget.jobData?['jobs'] as Map<String, dynamic>?;
+    final latStr = widget.jobData?['latitude']?.toString() ?? jobMap?['latitude']?.toString();
+    final lngStr = widget.jobData?['longitude']?.toString() ?? jobMap?['longitude']?.toString();
+    final jobLat = double.tryParse(latStr ?? '') ?? 10.2974;
+    final jobLng = double.tryParse(lngStr ?? '') ?? 123.8687;
+    final jobLatLng = LatLng(jobLat, jobLng);
+
+    try {
+      final url = Uri.parse(
+        'https://router.project-osrm.org/route/v1/driving/'
+        '${mechLatLng.longitude},${mechLatLng.latitude};'
+        '${jobLatLng.longitude},${jobLatLng.latitude}'
+        '?geometries=geojson&overview=full',
+      );
+      final response = await http.get(url).timeout(const Duration(seconds: 10));
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final routes = data['routes'] as List?;
+        if (routes != null && routes.isNotEmpty) {
+          final route = routes[0];
+          
+          final distanceMeters = route['distance'] as num?;
+          String distText = 'Distance unavailable';
+          if (distanceMeters != null) {
+            if (distanceMeters >= 1000) {
+              distText = '${(distanceMeters / 1000).toStringAsFixed(1)} km';
+            } else {
+              distText = '${distanceMeters.toStringAsFixed(0)} m';
+            }
+          }
+
+          final coords = route['geometry']?['coordinates'] as List?;
+          if (coords != null) {
+            final points = coords.map((c) => LatLng((c[1] as num).toDouble(), (c[0] as num).toDouble())).toList();
+            if (mounted) {
+              setState(() {
+                _routePoints = points;
+                _totalDistanceText = distText;
+                _isLoadingMap = false;
+              });
+              
+              final bounds = LatLngBounds.fromPoints([mechLatLng, jobLatLng, ...points]);
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                _mapController.fitCamera(
+                  CameraFit.bounds(bounds: bounds, padding: const EdgeInsets.all(50)),
+                );
+              });
+            }
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('[CheckRequest] Route error: $e');
+    } finally {
+      if (mounted) setState(() => _isLoadingMap = false);
+    }
   }
 
   @override
@@ -98,12 +203,64 @@ class _MechanicCheckRequestScreenState
 
   @override
   Widget build(BuildContext context) {
+    final jobMap = widget.jobData?['jobs'] as Map<String, dynamic>?;
+    final latStr = widget.jobData?['latitude']?.toString() ?? jobMap?['latitude']?.toString();
+    final lngStr = widget.jobData?['longitude']?.toString() ?? jobMap?['longitude']?.toString();
+    final jobLat = double.tryParse(latStr ?? '') ?? 10.2974;
+    final jobLng = double.tryParse(lngStr ?? '') ?? 123.8687;
+    final jobLatLng = LatLng(jobLat, jobLng);
+
     return Scaffold(
       backgroundColor: const Color(0xFFF2F5F8),
-      body: SafeArea(
-        child: Stack(
-          children: [
-            Column(
+      body: Stack(
+        children: [
+          Positioned.fill(
+            child: FlutterMap(
+              mapController: _mapController,
+              options: MapOptions(
+                initialCenter: jobLatLng,
+                initialZoom: 16.0,
+                interactionOptions: const InteractionOptions(flags: InteractiveFlag.all & ~InteractiveFlag.rotate),
+              ),
+              children: [
+                TileLayer(
+                  urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+                  userAgentPackageName: 'com.example.automate',
+                ),
+                if (_routePoints.isNotEmpty)
+                  PolylineLayer(
+                    polylines: [Polyline(points: _routePoints, strokeWidth: 5.0, color: const Color(0xFF1A73E8))],
+                  ),
+                MarkerLayer(
+                  markers: [
+                    Marker(
+                      point: jobLatLng,
+                      width: 50,
+                      height: 50,
+                      child: const Icon(Icons.location_on, size: 50, color: Color(0xFFDD2E44)),
+                    ),
+                    if (_mechanicLatLng != null)
+                      Marker(
+                        point: _mechanicLatLng!,
+                        width: 44,
+                        height: 44,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF1A73E8),
+                            shape: BoxShape.circle,
+                            border: Border.all(color: Colors.white, width: 2),
+                            boxShadow: const [BoxShadow(color: Color(0x551A73E8), blurRadius: 8)],
+                          ),
+                          child: const Icon(Icons.engineering, color: Colors.white, size: 24),
+                        ),
+                      ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+          SafeArea(
+            child: Column(
               children: [
                 const SizedBox(height: 24),
                 Padding(
@@ -142,9 +299,9 @@ class _MechanicCheckRequestScreenState
                     ),
                   ),
                 ),
-                const Expanded(child: SizedBox()),
               ],
             ),
+          ),
             Positioned(
               left: 0,
               right: 0,
@@ -190,7 +347,10 @@ class _MechanicCheckRequestScreenState
                                   crossAxisAlignment:
                                       CrossAxisAlignment.stretch,
                                   children: [
-                                    _LocationDistanceRow(jobData: widget.jobData),
+                                    _LocationDistanceRow(
+                                      jobData: widget.jobData,
+                                      distanceText: _totalDistanceText,
+                                    ),
                                     const SizedBox(height: 20),
                                     _ClientInformationCard(jobData: widget.jobData),
                                     const SizedBox(height: 16),
@@ -214,7 +374,6 @@ class _MechanicCheckRequestScreenState
             ),
           ],
         ),
-      ),
       bottomNavigationBar: _MechanicBottomNavigationBar(
         currentIndex: 0,
         onItemTapped: (index) {
@@ -302,7 +461,8 @@ class _DragHandleRow extends StatelessWidget {
 
 class _LocationDistanceRow extends StatelessWidget {
   final Map<String, dynamic>? jobData;
-  const _LocationDistanceRow({this.jobData});
+  final String distanceText;
+  const _LocationDistanceRow({this.jobData, required this.distanceText});
 
   @override
   Widget build(BuildContext context) {
@@ -317,6 +477,7 @@ class _LocationDistanceRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   jobData?['pickup_location'] ?? 'Unknown Location',
+                  overflow: TextOverflow.ellipsis,
                   style: GoogleFonts.inriaSans(
                     fontSize: 14,
                     fontWeight: FontWeight.w600,
@@ -327,20 +488,27 @@ class _LocationDistanceRow extends StatelessWidget {
             ],
           ),
         ),
-        Row(
-          children: [
-            const Icon(Icons.directions_car_outlined,
-                size: 18, color: Colors.black54),
-            const SizedBox(width: 8),
-            Text(
-              'Distance unavailable',
-              style: GoogleFonts.inriaSans(
-                fontSize: 14,
-                fontWeight: FontWeight.w500,
-                color: Colors.black54,
+        const SizedBox(width: 10),
+        Flexible(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              const Icon(Icons.directions_car_outlined,
+                  size: 18, color: Colors.black54),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  distanceText,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.inriaSans(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: Colors.black54,
+                  ),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
