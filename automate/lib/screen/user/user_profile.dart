@@ -18,11 +18,13 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   String _userName = '';
   String _userEmail = '';
   String _userPhone = '';
+  List<Map<String, dynamic>> _userVehicles = [];
 
   @override
   void initState() {
     super.initState();
     _loadUserInfo();
+    _loadUserVehicles();
   }
 
   Future<void> _loadUserInfo() async {
@@ -36,7 +38,6 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           .select('first_name, last_name, phone_number')
           .eq('uid', user.id)
           .maybeSingle();
-
       setState(() {
         final firstName = data?['first_name'] ?? '';
         final lastName = data?['last_name'] ?? '';
@@ -53,6 +54,29 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
           _userPhone = 'Error';
         });
       }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadUserVehicles() async {
+    final user = _supabase.auth.currentUser;
+    if (user == null) return;
+
+    try {
+      final vehiclesData = await _supabase
+          .from('user_vehicles')
+          .select()
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false);
+
+      if (mounted) {
+        setState(() {
+          _userVehicles = List<Map<String, dynamic>>.from(vehiclesData);
+        });
+      }
+    } catch (e) {
+      print('Error fetching vehicles: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
     }
@@ -133,10 +157,66 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                   _buildProfileCard(),
                   const SizedBox(height: 24),
                   // Vehicle Section
-                  _buildSectionTitle(Icons.directions_car, 'Vehicle'),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      _buildSectionTitle(Icons.directions_car, 'Vehicles'),
+                      GestureDetector(
+                        onTap: () => _showVehicleDialog(context, vehicle: null),
+                        child: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFF19456B),
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Row(
+                            children: [
+                              const Icon(Icons.add, color: Colors.white, size: 14),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Add',
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.w600,
+                                  color: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: 12),
-                  _buildVehicleCard(context),
-                  const SizedBox(height: 24),
+                  if (_isLoading)
+                    const Center(child: CircularProgressIndicator())
+                  else if (_userVehicles.isEmpty)
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(20),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.05),
+                            blurRadius: 10,
+                            spreadRadius: 1,
+                            offset: const Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Text(
+                        "No vehicles added yet.",
+                        style: GoogleFonts.montserrat(color: Colors.grey.shade600),
+                      ),
+                    )
+                  else
+                    ..._userVehicles.map((v) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _buildVehicleItem(context, v),
+                    )),
+                  const SizedBox(height: 12),
                   // Contact Info Section
                   _buildSectionTitle(Icons.phone_in_talk_outlined, 'Contact Info'),
                   const SizedBox(height: 12),
@@ -322,7 +402,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  Widget _buildVehicleCard(BuildContext context) {
+  Widget _buildVehicleItem(BuildContext context, Map<String, dynamic> vehicle) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -340,53 +420,25 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header row: label + Add/Edit button
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Vehicle',
-                style: GoogleFonts.montserrat(
-                  fontSize: 13,
-                  color: Colors.grey.shade600,
-                  fontWeight: FontWeight.w500,
+              Expanded(
+                child: Text(
+                  vehicle['model'] ?? 'Unknown Model',
+                  style: GoogleFonts.montserrat(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: const Color(0xFF19456B),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
               Row(
                 children: [
-                  // Add vehicle button
                   GestureDetector(
-                    onTap: () {
-                      _showVehicleDialog(context, isEdit: false);
-                    },
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF19456B),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.add, color: Colors.white, size: 14),
-                          const SizedBox(width: 4),
-                          Text(
-                            'Add',
-                            style: GoogleFonts.montserrat(
-                              fontSize: 12,
-                              fontWeight: FontWeight.w600,
-                              color: Colors.white,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  // Edit vehicle button
-                  GestureDetector(
-                    onTap: () {
-                      _showVehicleDialog(context, isEdit: true);
-                    },
+                    onTap: () => _showVehicleDialog(context, vehicle: vehicle),
                     child: Container(
                       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                       decoration: BoxDecoration(
@@ -409,18 +461,34 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       ),
                     ),
                   ),
+                  const SizedBox(width: 8),
+                  GestureDetector(
+                    onTap: () => _deleteVehicle(vehicle['id']),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFD32F2F),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.delete, color: Colors.white, size: 14),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Del',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
                 ],
               ),
             ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            'Honda Civic 2021',
-            style: GoogleFonts.montserrat(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: const Color(0xFF19456B),
-            ),
           ),
           const SizedBox(height: 20),
           Row(
@@ -439,7 +507,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'CA 1A2B3C',
+                      vehicle['plate_number'] ?? 'N/A',
                       style: GoogleFonts.montserrat(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -463,7 +531,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      '24.5K km',
+                      vehicle['mileage']?.isEmpty ?? true ? 'N/A' : vehicle['mileage'],
                       style: GoogleFonts.montserrat(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -480,10 +548,41 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
     );
   }
 
-  void _showVehicleDialog(BuildContext context, {required bool isEdit}) {
-    final nameController = TextEditingController(text: isEdit ? 'Honda Civic 2021' : '');
-    final plateController = TextEditingController(text: isEdit ? 'CA 1A2B3C' : '');
-    final mileageController = TextEditingController(text: isEdit ? '24.5K km' : '');
+  Future<void> _deleteVehicle(String id) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Delete Vehicle', style: GoogleFonts.montserrat(fontWeight: FontWeight.bold)),
+        content: const Text('Are you sure you want to delete this vehicle?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Cancel')),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFD32F2F)),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm != true) return;
+
+    setState(() => _isLoading = true);
+    try {
+      await _supabase.from('user_vehicles').delete().eq('id', id);
+      await _loadUserVehicles();
+    } catch (e) {
+      if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  void _showVehicleDialog(BuildContext context, {Map<String, dynamic>? vehicle}) {
+    final isEdit = vehicle != null;
+    final nameController = TextEditingController(text: vehicle?['model'] ?? '');
+    final plateController = TextEditingController(text: vehicle?['plate_number'] ?? '');
+    final mileageController = TextEditingController(text: vehicle?['mileage'] ?? '');
 
     showDialog(
       context: context,
@@ -498,7 +597,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             TextField(
               controller: nameController,
               decoration: InputDecoration(
-                labelText: 'Vehicle Name',
+                labelText: 'Vehicle Model',
+                hintText: 'e.g. Honda Civic 2021',
                 labelStyle: GoogleFonts.montserrat(),
                 border: const OutlineInputBorder(),
               ),
@@ -508,6 +608,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               controller: plateController,
               decoration: InputDecoration(
                 labelText: 'Plate Number',
+                hintText: 'e.g. ABC 1234',
                 labelStyle: GoogleFonts.montserrat(),
                 border: const OutlineInputBorder(),
               ),
@@ -517,6 +618,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
               controller: mileageController,
               decoration: InputDecoration(
                 labelText: 'Mileage',
+                hintText: 'e.g. 24.5K km',
                 labelStyle: GoogleFonts.montserrat(),
                 border: const OutlineInputBorder(),
               ),
@@ -529,7 +631,36 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             child: Text('Cancel', style: GoogleFonts.montserrat(color: Colors.grey)),
           ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () async {
+              if (nameController.text.isEmpty || plateController.text.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Model and Plate are required')));
+                return;
+              }
+              Navigator.pop(context);
+              setState(() => _isLoading = true);
+              
+              try {
+                final user = _supabase.auth.currentUser;
+                if (user == null) return;
+
+                final data = {
+                  'user_id': user.id,
+                  'model': nameController.text.trim(),
+                  'plate_number': plateController.text.trim(),
+                  'mileage': mileageController.text.trim(),
+                };
+
+                if (isEdit) {
+                  await _supabase.from('user_vehicles').update(data).eq('id', vehicle['id']);
+                } else {
+                  await _supabase.from('user_vehicles').insert(data);
+                }
+                await _loadUserVehicles();
+              } catch (e) {
+                if (mounted) ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('Error: $e')));
+                setState(() => _isLoading = false);
+              }
+            },
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF19456B),
             ),

@@ -46,6 +46,9 @@ app.*.map.json
 
 # Local secrets — never commit the real env.dart
 lib/config/env.dart
+.env
+.env.local
+.env.*
 lib/config/.env
 lib/config/.env.local
 lib/config/.env.*

@@ -7,6 +7,7 @@ import 'forgot_password_screen.dart';
 import '../user/navigation_shell.dart';
 import '../mechanic/homescreen.dart';
 import '../admin/admin_dashboard_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -75,19 +76,24 @@ class _LoginScreenState extends State<LoginScreen> {
 
       if (!mounted) return;
 
+      // In _login() method, change:
       if (accountType == 'admin') {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_type', 'admin'); // ✅ Save directly
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const AdminDashboardScreen()),
         );
       } else if (accountType == 'mechanic') {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_type', 'mechanic'); // ✅ Save directly
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-            builder: (context) => const MechanicHomeScreen(),
-          ),
+          MaterialPageRoute(builder: (context) => const MechanicHomeScreen()),
         );
       } else {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('user_type', 'user'); // ✅ Save directly
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const UserNavigationShell()),
@@ -336,8 +342,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                 );
                               },
                               style: TextButton.styleFrom(
-                                padding:
-                                    const EdgeInsets.only(top: 8, bottom: 8),
+                                padding: const EdgeInsets.only(
+                                  top: 8,
+                                  bottom: 8,
+                                ),
                                 minimumSize: Size.zero,
                                 tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                               ),

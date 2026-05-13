@@ -1,48 +1,161 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'homescreen.dart';
 import 'jobs.dart';
 import 'schedule.dart';
 import 'profile.dart';
 
-class MechanicChatScreen extends StatelessWidget {
+class MechanicChatScreen extends StatefulWidget {
   const MechanicChatScreen({super.key});
 
-  final List<_ChatThread> _threads = const [
-    _ChatThread(
-      name: 'Aaron Barnaija',
-      vehicle: 'Yamaha MT-15',
-      lastMessage: 'Ni sud ka maw??',
-      timeAgo: '2 min ago',
-      unreadCount: 3,
-    ),
-    _ChatThread(
-      name: 'Rex Seadiño Jr.',
-      vehicle: 'Toyota Vios',
-      lastMessage: 'Are you on your way? My car is...',
-      timeAgo: '9 min ago',
-      unreadCount: 1,
-    ),
-    _ChatThread(
-      name: 'Mambaling monkey',
-      vehicle: 'Toyota Vios',
-      lastMessage: 'Thanks! I\'ll wait for you at the...',
-      timeAgo: '34 min ago',
-      unreadCount: 0,
-    ),
-  ];
+  @override
+  State<MechanicChatScreen> createState() => _MechanicChatScreenState();
+}
+
+class _MechanicChatScreenState extends State<MechanicChatScreen> {
+  List<Map<String, dynamic>> _conversations = [];
+  bool _isLoading = true;
+  StreamSubscription? _messagesSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadConversations();
+    _listenForNewMessages();
+  }
+
+  @override
+  void dispose() {
+    _messagesSubscription?.cancel();
+    super.dispose();
+  }
+
+  // Load all conversations for the current mechanic
+  Future<void> _loadConversations() async {
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) return;
+
+      // Get all unique conversations
+      final messages = await Supabase.instance.client
+          .from('messages')
+          .select('''
+            id,
+            sender_id,
+            receiver_id,
+            content,
+            is_read,
+            created_at,
+            sender:users!sender_id (
+              first_name,
+              last_name
+            )
+          ''')
+          .or('sender_id.eq.$userId,receiver_id.eq.$userId')
+          .order('created_at', ascending: false);
+
+      // Group messages by conversation
+      final Map<String, Map<String, dynamic>> conversationMap = {};
+
+      for (final msg in messages) {
+        final senderId = msg['sender_id'] as String;
+        final receiverId = msg['receiver_id'] as String;
+        final otherUserId = senderId == userId ? receiverId : senderId;
+        
+        if (!conversationMap.containsKey(otherUserId)) {
+          final senderData = msg['sender'] as Map<String, dynamic>? ?? {};
+          final otherUserData = senderId == userId 
+              ? await _getUserInfo(receiverId)
+              : senderData;
+          
+          String otherUserName = 'User';
+          if (otherUserData.isNotEmpty) {
+            otherUserName = '${otherUserData['first_name'] ?? ''} ${otherUserData['last_name'] ?? ''}'.trim();
+            if (otherUserName.isEmpty) otherUserName = 'User';
+          }
+
+          conversationMap[otherUserId] = {
+            'user_id': otherUserId,
+            'name': otherUserName,
+            'last_message': msg['content'] ?? '',
+            'time': msg['created_at'] ?? '',
+            'unread_count': 0,
+          };
+        }
+
+        // Count unread messages where current user is receiver
+        if (msg['receiver_id'] == userId && msg['is_read'] == false) {
+          conversationMap[otherUserId]!['unread_count'] = 
+              (conversationMap[otherUserId]!['unread_count'] as int) + 1;
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _conversations = conversationMap.values.toList();
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint("Error loading conversations: $e");
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<Map<String, dynamic>> _getUserInfo(String userId) async {
+    try {
+      final data = await Supabase.instance.client
+          .from('users')
+          .select('first_name, last_name')
+          .eq('uid', userId)
+          .maybeSingle();
+      return data ?? {};
+    } catch (e) {
+      return {};
+    }
+  }
+
+  void _listenForNewMessages() {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    _messagesSubscription = Supabase.instance.client
+        .from('messages')
+        .stream(primaryKey: ['id'])
+        .eq('receiver_id', userId)
+        .listen((data) {
+      _loadConversations(); // Reload conversations when new message arrives
+    });
+  }
+
+  String _formatTime(String timestamp) {
+    final dateTime = DateTime.tryParse(timestamp);
+    if (dateTime == null) return '';
+
+    final now = DateTime.now();
+    final difference = now.difference(dateTime);
+
+    if (difference.inMinutes < 1) return 'Just now';
+    if (difference.inMinutes < 60) return '${difference.inMinutes} min ago';
+    if (difference.inHours < 24) return '${difference.inHours}h ago';
+    if (difference.inDays < 7) return '${difference.inDays}d ago';
+    return '${dateTime.month}/${dateTime.day}';
+  }
+
+  int get totalUnread {
+    return _conversations.fold(0, (sum, conv) => sum + (conv['unread_count'] as int));
+  }
 
   @override
   Widget build(BuildContext context) {
-    final totalUnread =
-        _threads.fold<int>(0, (sum, t) => sum + t.unreadCount);
-
     return Scaffold(
       backgroundColor: const Color(0xFFF2F5F8),
       body: SafeArea(
         child: Stack(
           children: [
-            // ── Decorative amber blobs ──
+            // Decorative amber blobs
             Positioned(
               left: -60,
               top: 180,
@@ -71,11 +184,10 @@ class MechanicChatScreen extends StatelessWidget {
             Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // ── Header ──
+                // Header
                 Container(
                   margin: const EdgeInsets.fromLTRB(16, 16, 16, 0),
-                  padding: const EdgeInsets.symmetric(
-                      horizontal: 20, vertical: 18),
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
                   decoration: BoxDecoration(
                     color: const Color(0xFFFFB703),
                     borderRadius: BorderRadius.circular(32),
@@ -128,33 +240,60 @@ class MechanicChatScreen extends StatelessWidget {
                             child: const Icon(Icons.notifications_none,
                                 color: Colors.black87),
                           ),
-                          Positioned(
-                            top: 8,
-                            right: 8,
-                            child: Container(
-                              width: 8,
-                              height: 8,
-                              decoration: const BoxDecoration(
-                                color: Color(0xFFDD2E44),
-                                shape: BoxShape.circle,
+                          if (totalUnread > 0)
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: Container(
+                                width: 8,
+                                height: 8,
+                                decoration: const BoxDecoration(
+                                  color: Color(0xFFDD2E44),
+                                  shape: BoxShape.circle,
+                                ),
                               ),
                             ),
-                          ),
                         ],
                       ),
                     ],
                   ),
                 ),
 
-                // ── Thread list ──
+                // Thread list
                 Expanded(
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
-                    itemCount: _threads.length,
-                    separatorBuilder: (_, __) => const SizedBox(height: 14),
-                    itemBuilder: (context, index) =>
-                        _ChatCard(thread: _threads[index]),
-                  ),
+                  child: _isLoading
+                      ? const Center(child: CircularProgressIndicator(color: Color(0xFFFFB703)))
+                      : _conversations.isEmpty
+                          ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(Icons.chat_bubble_outline, size: 64, color: Colors.grey.shade300),
+                                  const SizedBox(height: 16),
+                                  Text('No messages yet', style: GoogleFonts.montserrat(fontSize: 16, color: Colors.grey)),
+                                ],
+                              ),
+                            )
+                          : ListView.separated(
+                              padding: const EdgeInsets.fromLTRB(16, 24, 16, 24),
+                              itemCount: _conversations.length,
+                              separatorBuilder: (_, __) => const SizedBox(height: 14),
+                              itemBuilder: (context, index) {
+                                final conv = _conversations[index];
+                                return _ChatCard(
+                                  name: conv['name'] ?? 'User',
+                                  lastMessage: conv['last_message'] ?? '',
+                                  timeAgo: _formatTime(conv['time'] ?? ''),
+                                  unreadCount: conv['unread_count'] as int,
+                                  onTap: () {
+                                    _openChat(
+                                      userId: conv['user_id'] as String,
+                                      userName: conv['name'] as String,
+                                    );
+                                  },
+                                );
+                              },
+                            ),
                 ),
               ],
             ),
@@ -172,8 +311,7 @@ class MechanicChatScreen extends StatelessWidget {
                 MaterialPageRoute(builder: (_) => const MechanicJobsScreen()));
           } else if (index == 2) {
             Navigator.pushReplacement(context,
-                MaterialPageRoute(
-                    builder: (_) => const MechanicScheduleScreen()));
+                MaterialPageRoute(builder: (_) => const MechanicScheduleScreen()));
           } else if (index == 4) {
             Navigator.pushReplacement(context,
                 MaterialPageRoute(builder: (_) => const MechanicProfileScreen()));
@@ -182,38 +320,41 @@ class MechanicChatScreen extends StatelessWidget {
       ),
     );
   }
-}
 
-// ─── Data model ───────────────────────────────────────────────────────────────
-
-class _ChatThread {
-  final String name;
-  final String vehicle;
-  final String lastMessage;
-  final String timeAgo;
-  final int unreadCount;
-
-  const _ChatThread({
-    required this.name,
-    required this.vehicle,
-    required this.lastMessage,
-    required this.timeAgo,
-    required this.unreadCount,
-  });
+  void _openChat({required String userId, required String userName}) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => _ChatDetailScreen(
+          receiverId: userId,
+          receiverName: userName,
+        ),
+      ),
+    );
+  }
 }
 
 // ─── Chat card ────────────────────────────────────────────────────────────────
 
 class _ChatCard extends StatelessWidget {
-  final _ChatThread thread;
-  const _ChatCard({required this.thread});
+  final String name;
+  final String lastMessage;
+  final String timeAgo;
+  final int unreadCount;
+  final VoidCallback onTap;
+
+  const _ChatCard({
+    required this.name,
+    required this.lastMessage,
+    required this.timeAgo,
+    required this.unreadCount,
+    required this.onTap,
+  });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {
-        // Navigate to individual chat screen
-      },
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
@@ -229,7 +370,6 @@ class _ChatCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Avatar with unread badge
             Stack(
               clipBehavior: Clip.none,
               children: [
@@ -240,10 +380,18 @@ class _ChatCard extends StatelessWidget {
                     color: const Color(0xFFF0F0F0),
                     borderRadius: BorderRadius.circular(18),
                   ),
-                  child: const Icon(Icons.person_outline_rounded,
-                      size: 30, color: Colors.black54),
+                  child: Center(
+                    child: Text(
+                      name.isNotEmpty ? name[0].toUpperCase() : '?',
+                      style: GoogleFonts.montserrat(
+                        fontSize: 22,
+                        fontWeight: FontWeight.w700,
+                        color: Colors.black54,
+                      ),
+                    ),
+                  ),
                 ),
-                if (thread.unreadCount > 0)
+                if (unreadCount > 0)
                   Positioned(
                     top: -6,
                     right: -6,
@@ -256,7 +404,7 @@ class _ChatCard extends StatelessWidget {
                       ),
                       child: Center(
                         child: Text(
-                          '${thread.unreadCount}',
+                          '$unreadCount',
                           style: GoogleFonts.montserrat(
                             fontSize: 11,
                             fontWeight: FontWeight.w800,
@@ -269,8 +417,6 @@ class _ChatCard extends StatelessWidget {
               ],
             ),
             const SizedBox(width: 14),
-
-            // Name / vehicle / preview
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -278,51 +424,256 @@ class _ChatCard extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text(
-                        thread.name,
-                        style: GoogleFonts.montserrat(
-                          fontSize: 15,
-                          fontWeight: FontWeight.w700,
-                          color: Colors.black,
-                        ),
-                      ),
-                      Text(
-                        thread.timeAgo,
-                        style: GoogleFonts.inriaSans(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w500,
-                          color: Colors.black38,
-                        ),
-                      ),
+                      Text(name, style: GoogleFonts.montserrat(fontSize: 15, fontWeight: FontWeight.w700, color: Colors.black)),
+                      Text(timeAgo, style: GoogleFonts.inriaSans(fontSize: 11, fontWeight: FontWeight.w500, color: Colors.black38)),
                     ],
-                  ),
-                  const SizedBox(height: 3),
-                  Text(
-                    thread.vehicle,
-                    style: GoogleFonts.inriaSans(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w500,
-                      color: Colors.black45,
-                    ),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    thread.lastMessage,
+                    lastMessage,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                     style: GoogleFonts.inriaSans(
                       fontSize: 13,
-                      fontWeight: thread.unreadCount > 0
-                          ? FontWeight.w700
-                          : FontWeight.w400,
-                      color: thread.unreadCount > 0
-                          ? Colors.black87
-                          : Colors.black45,
+                      fontWeight: unreadCount > 0 ? FontWeight.w700 : FontWeight.w400,
+                      color: unreadCount > 0 ? Colors.black87 : Colors.black45,
                     ),
                   ),
                 ],
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ─── Individual Chat Screen ───────────────────────────────────────────────────
+
+class _ChatDetailScreen extends StatefulWidget {
+  final String receiverId;
+  final String receiverName;
+
+  const _ChatDetailScreen({
+    required this.receiverId,
+    required this.receiverName,
+  });
+
+  @override
+  State<_ChatDetailScreen> createState() => _ChatDetailScreenState();
+}
+
+class _ChatDetailScreenState extends State<_ChatDetailScreen> {
+  final _messageController = TextEditingController();
+  List<Map<String, dynamic>> _messages = [];
+  bool _isLoading = true;
+  StreamSubscription? _subscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadMessages();
+    _listenForMessages();
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    _subscription?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadMessages() async {
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) return;
+
+      final messages = await Supabase.instance.client
+          .from('messages')
+          .select('*')
+          .or('sender_id.eq.$userId,receiver_id.eq.$userId')
+          .order('created_at', ascending: true);
+
+      // Filter messages between these two users
+      final conversationMessages = messages.where((msg) {
+        final sender = msg['sender_id'] as String;
+        final receiver = msg['receiver_id'] as String;
+        return (sender == userId && receiver == widget.receiverId) ||
+            (sender == widget.receiverId && receiver == userId);
+      }).toList();
+
+      if (mounted) {
+        setState(() {
+          _messages = conversationMessages;
+          _isLoading = false;
+        });
+      }
+
+      // Mark messages as read
+      await _markMessagesAsRead();
+    } catch (e) {
+      debugPrint("Error loading messages: $e");
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _markMessagesAsRead() async {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    await Supabase.instance.client
+        .from('messages')
+        .update({'is_read': true})
+        .eq('receiver_id', userId)
+        .eq('sender_id', widget.receiverId)
+        .eq('is_read', false);
+  }
+
+  void _listenForMessages() {
+    _subscription = Supabase.instance.client
+        .from('messages')
+        .stream(primaryKey: ['id'])
+        .listen((data) {
+      _loadMessages();
+    });
+  }
+
+  Future<void> _sendMessage() async {
+    final content = _messageController.text.trim();
+    if (content.isEmpty) return;
+
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    try {
+      await Supabase.instance.client.from('messages').insert({
+        'sender_id': userId,
+        'receiver_id': widget.receiverId,
+        'content': content,
+        'is_read': false,
+        'created_at': DateTime.now().toIso8601String(),
+      });
+
+      _messageController.clear();
+      _loadMessages();
+    } catch (e) {
+      debugPrint("Error sending message: $e");
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF2F5F8),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFFFB703),
+        title: Text(widget.receiverName, style: GoogleFonts.montserrat(fontWeight: FontWeight.w700)),
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : ListView.builder(
+                    padding: const EdgeInsets.all(16),
+                    itemCount: _messages.length,
+                    itemBuilder: (context, index) {
+                      final msg = _messages[index];
+                      final isMe = msg['sender_id'] == Supabase.instance.client.auth.currentUser?.id;
+                      return _MessageBubble(
+                        message: msg['content'] ?? '',
+                        isMe: isMe,
+                        time: msg['created_at'] ?? '',
+                      );
+                    },
+                  ),
+          ),
+          // Message input
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: const BoxDecoration(
+              color: Colors.white,
+              boxShadow: [BoxShadow(color: Color(0x0A000000), blurRadius: 10, offset: Offset(0, -2))],
+            ),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF5F7FA),
+                      borderRadius: BorderRadius.circular(24),
+                    ),
+                    child: TextField(
+                      controller: _messageController,
+                      decoration: InputDecoration(
+                        hintText: 'Type a message...',
+                        hintStyle: GoogleFonts.inriaSans(color: Colors.black38),
+                        border: InputBorder.none,
+                        contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                GestureDetector(
+                  onTap: _sendMessage,
+                  child: Container(
+                    width: 44,
+                    height: 44,
+                    decoration: const BoxDecoration(
+                      color: Color(0xFFFFB703),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.send_rounded, color: Colors.black, size: 20),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MessageBubble extends StatelessWidget {
+  final String message;
+  final bool isMe;
+  final String time;
+
+  const _MessageBubble({
+    required this.message,
+    required this.isMe,
+    required this.time,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final timeStr = DateTime.tryParse(time);
+    final formattedTime = timeStr != null
+        ? '${timeStr.hour}:${timeStr.minute.toString().padLeft(2, '0')}'
+        : '';
+
+    return Align(
+      alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: isMe ? const Color(0xFFFFB703) : Colors.white,
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Column(
+          crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+          children: [
+            Text(message, style: GoogleFonts.inriaSans(fontSize: 14, color: Colors.black87)),
+            const SizedBox(height: 4),
+            Text(formattedTime, style: GoogleFonts.inriaSans(fontSize: 10, color: Colors.black38)),
           ],
         ),
       ),
