@@ -64,7 +64,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const LoginScreen(),
+      home: const UserOfflineScreen(child: LoginScreen()),
     );
   }
 }
