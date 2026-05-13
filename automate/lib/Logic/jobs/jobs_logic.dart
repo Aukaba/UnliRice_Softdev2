@@ -256,8 +256,12 @@ class JobsLogic {
           }
         }
 
-        if (lapsed && job['status'] != 'cancelled') {
-          // Auto-cancel if it's lapsed but still pending/accepted
+        // Only auto-cancel jobs that are still pending or accepted.
+        // Never touch completed, in_progress, or already-cancelled jobs.
+        final status = job['status'] as String? ?? '';
+        final canAutoCancel = status == 'pending' || status == 'accepted';
+
+        if (lapsed && canAutoCancel) {
           _supabase.from('jobs').update({'status': 'cancelled'}).eq('id', job['id']).catchError((e) {
             debugPrint('[JobsLogic] auto-cancel user area error: $e');
           });
