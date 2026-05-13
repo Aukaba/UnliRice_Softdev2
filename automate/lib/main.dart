@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screen/authentication/login_screen.dart';
 import 'screen/authentication/loading_screen.dart';
+import 'screen/authentication/welcome_screen.dart';
 import 'screen/user/user_offline_screen.dart';
 import 'screen/mechanic/homescreen.dart';
 import 'screen/user/navigation_shell.dart';
@@ -66,7 +67,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         useMaterial3: true,
       ),
       home: UserOfflineScreen(
-        child: LoadingScreen(destination: const LoginScreen()),
+        child: LoadingScreen(destination: const WelcomeScreen()),
       ),
     );
   }
