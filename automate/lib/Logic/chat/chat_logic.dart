@@ -103,18 +103,27 @@ class ChatLogic {
       }
     }
 
-    // Also include partners from active jobs (accepted jobs only)
+    // Also include partners from active/completed jobs, and collect vehicle info
+    final vehicleMap = <String, String>{}; // partnerId -> vehicle model
     try {
       final jobsRes = await _supabase
           .from('jobs')
-          .select('user_id, mechanic_id, status')
+          .select('user_id, mechanic_id, status, vehicle, updated_at')
           .or('user_id.eq.$uid,mechanic_id.eq.$uid');
-          
+
       for (var job in jobsRes) {
-        if (job['status'] != 'pending' && job['status'] != 'completed' && job['status'] != 'canceled') {
-          final pId = job['user_id'] == uid ? job['mechanic_id'] : job['user_id'];
-          if (pId != null && pId.toString().trim().isNotEmpty && !partnerIds.contains(pId.toString())) {
-            partnerIds.add(pId.toString());
+        final status = job['status'] as String? ?? '';
+        if (status == 'pending') continue;
+
+        final pId = job['user_id'] == uid ? job['mechanic_id'] : job['user_id'];
+        if (pId != null && pId.toString().trim().isNotEmpty) {
+          final pIdStr = pId.toString();
+          if (!partnerIds.contains(pIdStr)) {
+            partnerIds.add(pIdStr);
+          }
+          final vehicle = job['vehicle']?.toString() ?? '';
+          if (vehicle.isNotEmpty) {
+            vehicleMap[pIdStr] = vehicle.toUpperCase();
           }
         }
       }
@@ -135,12 +144,71 @@ class ChatLogic {
       result.add({
         'partner_id': pId,
         'name': profilesMap[pId] ?? 'User',
+        'vehicle': vehicleMap[pId] ?? '',
         'last_message': msg?['content'] ?? 'Tap to chat',
         'time': msg?['created_at'],
         'is_unread': msg != null && msg['receiver_id'] == uid && msg['is_read'] == false,
       });
     }
     return result;
+  }
+
+  /// Fetch the vehicle model from the most recent shared job between
+  /// the current user and [partnerId].
+  Future<String> getVehicleModelForPartner(String partnerId) async {
+    final uid = _supabase.auth.currentUser?.id;
+    if (uid == null) return '';
+    try {
+      final res = await _supabase
+          .from('jobs')
+          .select('vehicle')
+          .or('and(user_id.eq.$uid,mechanic_id.eq.$partnerId),and(user_id.eq.$partnerId,mechanic_id.eq.$uid)')
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle();
+      return (res?['vehicle']?.toString() ?? '').toUpperCase();
+    } catch (e) {
+      debugPrint('[ChatLogic] getVehicleModelForPartner error: $e');
+      return '';
+    }
+  }
+
+  /// Deletes all messages between the current user and any partner whose
+  /// shared job has been completed for more than 48 hours.
+  Future<void> deleteExpiredMessages() async {
+    final uid = _supabase.auth.currentUser?.id;
+    if (uid == null) return;
+    try {
+      final completedJobs = await _supabase
+          .from('jobs')
+          .select('user_id, mechanic_id, updated_at')
+          .or('user_id.eq.$uid,mechanic_id.eq.$uid')
+          .eq('status', 'completed');
+
+      final now = DateTime.now().toUtc();
+      const threshold = Duration(hours: 48);
+
+      for (final job in completedJobs) {
+        final updatedAtStr = job['updated_at']?.toString();
+        if (updatedAtStr == null) continue;
+        final updatedAt = DateTime.tryParse(updatedAtStr)?.toUtc();
+        if (updatedAt == null) continue;
+        if (now.difference(updatedAt) < threshold) continue;
+
+        final userId = job['user_id']?.toString() ?? '';
+        final mechanicId = job['mechanic_id']?.toString() ?? '';
+        if (userId.isEmpty || mechanicId.isEmpty) continue;
+
+        await _supabase
+            .from('messages')
+            .delete()
+            .or('and(sender_id.eq.$userId,receiver_id.eq.$mechanicId),and(sender_id.eq.$mechanicId,receiver_id.eq.$userId)');
+
+        debugPrint('[ChatLogic] Purged expired chat: user=$userId mechanic=$mechanicId');
+      }
+    } catch (e) {
+      debugPrint('[ChatLogic] deleteExpiredMessages error: $e');
+    }
   }
 
   Future<String?> _resolveUserName(String uid) async {

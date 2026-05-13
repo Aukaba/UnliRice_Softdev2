@@ -21,6 +21,12 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
   bool _isLoading = true;
   String _mechanicName = '';
 
+  // Rating stats
+  String _avgRating = '—';
+  String _reviewCount = '0';
+  String _jobsDone = '0';
+  String _yearJoined = '—';
+
   @override
   void initState() {
     super.initState();
@@ -34,15 +40,51 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
 
       final data = await _supabase
           .from('mechanic')
-          .select('first_name, last_name, available_for_emergency')
+          .select('first_name, last_name, available_for_emergency, created_at')
           .eq('uid', uid)
           .single();
+
+      // Year joined
+      final createdAt = data['created_at']?.toString();
+      final year = createdAt != null
+          ? DateTime.tryParse(createdAt)?.year.toString() ?? '—'
+          : '—';
+
+      // Rating summary from view
+      String avgRating = '—';
+      String reviewCount = '0';
+      try {
+        final ratingRes = await _supabase
+            .from('mechanic_rating_summary')
+            .select('avg_rating, review_count')
+            .eq('mechanic_id', uid)
+            .maybeSingle();
+        if (ratingRes != null) {
+          avgRating = (ratingRes['avg_rating']?.toString() ?? '—');
+          reviewCount = (ratingRes['review_count']?.toString() ?? '0');
+        }
+      } catch (_) {}
+
+      // Completed jobs count
+      String jobsDone = '0';
+      try {
+        final jobsRes = await _supabase
+            .from('jobs')
+            .select('id')
+            .eq('mechanic_id', uid)
+            .eq('status', 'completed');
+        jobsDone = (jobsRes as List).length.toString();
+      } catch (_) {}
 
       setState(() {
         final firstName = data['first_name'] ?? '';
         final lastName = data['last_name'] ?? '';
         _mechanicName = '$firstName $lastName'.trim();
         _availableForEmergency = data['available_for_emergency'] ?? false;
+        _avgRating = avgRating;
+        _reviewCount = reviewCount;
+        _jobsDone = jobsDone;
+        _yearJoined = year;
       });
     } catch (e, stackTrace) {
       debugPrint('Failed to load mechanic info: $e');
@@ -273,15 +315,15 @@ Future<void> _signOut() async {
                                 mainAxisAlignment: MainAxisAlignment.spaceAround,
                                 children: [
                                   _ProfileStat(
-                                    value: '4.9',
+                                    value: _avgRating,
                                     label: 'REVIEWS',
-                                    sub: '128',
+                                    sub: _reviewCount,
                                     isRating: true,
                                   ),
                                   Container(width: 1, height: 40, color: const Color(0xFFEEEEEE)),
-                                  _ProfileStat(value: '342', label: 'JOBS DONE'),
+                                  _ProfileStat(value: _jobsDone, label: 'JOBS DONE'),
                                   Container(width: 1, height: 40, color: const Color(0xFFEEEEEE)),
-                                  _ProfileStat(value: 'Since', label: '2022', isSince: true),
+                                  _ProfileStat(value: 'Since', label: _yearJoined, isSince: true),
                                 ],
                               ),
                             ],
