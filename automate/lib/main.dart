@@ -2,14 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'screen/authentication/login_screen.dart';
 import 'screen/user/user_offline_screen.dart';
+import 'screen/mechanic/homescreen.dart';
+import 'screen/user/navigation_shell.dart';
+import 'screen/admin/admin_dashboard_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'config/env.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Supabase.initialize(
-    url: Env.supabaseUrl,
-    anonKey: Env.supabaseAnonKey,
-  );
+  await Supabase.initialize(url: Env.supabaseUrl, anonKey: Env.supabaseAnonKey);
   runApp(const MyApp());
 }
 
@@ -25,7 +26,6 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _setOffline();
   }
 
   @override
@@ -36,21 +36,22 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    // Only set offline if the app is completely detached/closed. If we set offline on 'inactive'
-    // or 'paused', testing locally by switching windows or running in the background will force them offline!
     if (state == AppLifecycleState.detached) {
-      _setOffline();
+      _setOnlineStatus(false);
+    } else if (state == AppLifecycleState.paused) {
+      _setOnlineStatus(false); // Also set offline when minimized
     }
   }
 
-  void _setOffline() {
+  Future<void> _setOnlineStatus(bool isOnline) async {
     final user = Supabase.instance.client.auth.currentUser;
     if (user != null) {
-      Supabase.instance.client
-          .from('mechanic')
-          .update({'available_for_emergency': false})
-          .eq('uid', user.id)
-          .catchError((_) {});
+      try {
+        await Supabase.instance.client
+            .from('mechanic')
+            .update({'online_status': isOnline})
+            .eq('uid', user.id);
+      } catch (_) {}
     }
   }
 
@@ -63,7 +64,7 @@ class _MyAppState extends State<MyApp> with WidgetsBindingObserver {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
         useMaterial3: true,
       ),
-      home: const UserOfflineScreen(child: LoginScreen()),
+      home: const LoginScreen(),
     );
   }
 }
