@@ -18,7 +18,7 @@ class MechanicHomeScreen extends StatefulWidget {
   State<MechanicHomeScreen> createState() => _MechanicHomeScreenState();
 }
 
-class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
+class _MechanicHomeScreenState extends State<MechanicHomeScreen>  with WidgetsBindingObserver{
   bool _showVerification = false;
   String _verificationStatus = 'none'; // ✅ Add: 'none', 'pending', 'approved', 'rejected'
   bool _isLoadingStatus = true;
@@ -28,6 +28,7 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
   @override
   void initState() {
     super.initState();
+     WidgetsBinding.instance.addObserver(this);  // ✅ ADD THIS
     _setOnlineStatus(true);
     _checkStatus();
     _listenForEmergencyDispatches();
@@ -121,17 +122,31 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen> {
     });
   }
 
-  @override
-  void dispose() {
-    _setOnlineStatus(false);
-    _dispatchSub?.cancel();
-    super.dispose();
+@override
+void dispose() {
+  WidgetsBinding.instance.removeObserver(this);  // ✅ ADD THIS
+  _setOnlineStatus(false);  // ✅ ADD THIS
+  _dispatchSub?.cancel();
+  super.dispose();
+}
+@override
+void didChangeAppLifecycleState(AppLifecycleState state) {
+  debugPrint("App lifecycle state: $state");
+  
+  if (state == AppLifecycleState.paused) {
+    _setOnlineStatus(false);  // App goes to background
+  } else if (state == AppLifecycleState.resumed) {
+    _setOnlineStatus(true);  // App comes back to foreground
+  } else if (state == AppLifecycleState.detached) {
+    _setOnlineStatus(false);  // App is closed
   }
+}
 
 Future<void> _setOnlineStatus(bool isOnline) async {
   try {
     final uid = Supabase.instance.client.auth.currentUser?.id;
     if (uid != null) {
+      debugPrint("Setting online_status to: $isOnline");
       await Supabase.instance.client
           .from('mechanic')
           .update({'online_status': isOnline})

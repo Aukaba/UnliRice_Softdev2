@@ -15,6 +15,7 @@ class MechanicProfileScreen extends StatefulWidget {
 }
 
 class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
+  
   static final _supabase = Supabase.instance.client;
   bool _availableForEmergency = false;
   bool _isLoading = true;
