@@ -49,3 +49,9 @@ lib/config/env.dart
 .env
 .env.local
 .env.*
+lib/config/.env
+lib/config/.env.local
+lib/config/.env.*
+.env
+.env.local
+.env.*
