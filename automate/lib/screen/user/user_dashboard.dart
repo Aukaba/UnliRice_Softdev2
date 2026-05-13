@@ -19,6 +19,8 @@ class UserDashboardScreen extends StatefulWidget {
 }
 
 class _UserDashboardScreenState extends State<UserDashboardScreen> {
+  static final _supabase = Supabase.instance.client;
+
   bool isEmergency = true; // State for Service Type toggle
 
   final TextEditingController _titleController = TextEditingController();
@@ -47,10 +49,10 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
   }
 
   Future<void> _loadVehicles() async {
-    final user = Supabase.instance.client.auth.currentUser;
+    final user = _supabase.auth.currentUser;
     if (user == null) return;
     try {
-      final data = await Supabase.instance.client
+      final data = await _supabase
           .from('user_vehicles')
           .select()
           .eq('user_id', user.id)
