@@ -6,6 +6,9 @@ import 'schedule.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'chat.dart';
 import '../authentication/login_screen.dart'; // Just in case for logout
+import 'earnings_payouts_screen.dart';
+import 'job_history_screen.dart';
+import 'working_hours_screen.dart';
 
 class MechanicProfileScreen extends StatefulWidget {
   const MechanicProfileScreen({super.key});
@@ -26,7 +29,7 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
   String _reviewCount = '0';
   String _jobsDone = '0';
   String _yearJoined = '—';
-
+  
   final List<String> _presetSpecializations = [
   'Toyota', 'Honda', 'Mitsubishi', 'Suzuki', 'Ford', 'Nissan', 'Mazda',
   'Hyundai', 'Kia', 'Isuzu', 'BMW', 'Mercedes',
@@ -826,12 +829,24 @@ Future<void> _signOut() async {
                                 title: 'Earnings & Payouts',
                                 subtitle: 'View payment history',
                                 isFirst: true,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => EarningsPayoutsScreen(),
+                                  ),
+                                ),
                               ),
                               const _Divider(),
                               _MenuRow(
                                 icon: Icons.description_outlined,
                                 title: 'Job History',
                                 subtitle: 'Past completed jobs',
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const JobHistoryScreen(),
+                                  ),
+                                ),
                               ),
                               const _Divider(),
                               _MenuRow(
@@ -839,6 +854,12 @@ Future<void> _signOut() async {
                                 title: 'Working Hours',
                                 subtitle: 'Set your weekly schedule',
                                 isLast: true,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const WorkingHoursScreen(),
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -1068,6 +1089,7 @@ class _MenuRow extends StatelessWidget {
   final String subtitle;
   final bool isFirst;
   final bool isLast;
+  final VoidCallback? onTap;
 
   const _MenuRow({
     required this.icon,
@@ -1075,12 +1097,13 @@ class _MenuRow extends StatelessWidget {
     required this.subtitle,
     this.isFirst = false,
     this.isLast = false,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {},
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         decoration: BoxDecoration(
