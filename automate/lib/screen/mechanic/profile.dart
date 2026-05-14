@@ -8,7 +8,7 @@ import 'chat.dart';
 import '../authentication/login_screen.dart'; // Just in case for logout
 import 'earnings_payouts_screen.dart';
 import 'job_history_screen.dart';
-import 'working_hours_screen.dart';
+
 import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
 
@@ -35,16 +35,7 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
   Uint8List? _profileImageBytes;   // holds picked image in memory
   String? _profileImageUrl;        // holds the URL from Supabase Storage
   bool _isUploadingPhoto = false;
-  
-  final List<String> _presetSpecializations = [
-  'Toyota', 'Honda', 'Mitsubishi', 'Suzuki', 'Ford', 'Nissan', 'Mazda',
-  'Hyundai', 'Kia', 'Isuzu', 'BMW', 'Mercedes',
-  'Engine Repair', 'Transmission', 'Brake System', 'Electrical',
-  'AC Repair', 'Suspension', 'Tire & Wheels', 'Oil Change',
-  'Body Work', 'Motorcycle', 'Diesel Engines',
-];
 
-  List<String> _selectedSpecializations = ['Toyota', 'Honda', 'Engine Repair', 'Transmission'];
 
   @override
   void initState() {
@@ -72,7 +63,6 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
       if (uid == null) return;
  
       final fileName = 'profile_$uid.jpg';
-      final storagePath = 'mechanic-profiles/$fileName';
  
       // Upload to Supabase Storage bucket named "mechanic-profiles"
       await _supabase.storage.from('mechanic-profiles').uploadBinary(
@@ -138,15 +128,24 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
 
       final data = await _supabase
           .from('mechanic')
-          .select('first_name, last_name, available_for_emergency, created_at, profile_image_url')
+          .select('first_name, last_name, available_for_emergency')
           .eq('uid', uid)
           .single();
 
-      // Year joined
-      final createdAt = data['created_at']?.toString();
-      final year = createdAt != null
-          ? DateTime.tryParse(createdAt)?.year.toString() ?? '—'
-          : '—';
+      // Year joined from verification record
+      String year = '—';
+      try {
+        final verRes = await _supabase
+            .from('mechanic_verification')
+            .select('created_at')
+            .eq('mechanic_id', uid)
+            .order('created_at', ascending: false)
+            .limit(1)
+            .maybeSingle();
+        if (verRes != null && verRes['created_at'] != null) {
+          year = DateTime.tryParse(verRes['created_at'].toString())?.year.toString() ?? '—';
+        }
+      } catch (_) {}
 
       // Rating summary from view
       String avgRating = '—';
@@ -158,7 +157,10 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
             .eq('mechanic_id', uid)
             .maybeSingle();
         if (ratingRes != null) {
-          avgRating = (ratingRes['avg_rating']?.toString() ?? '—');
+          final val = ratingRes['avg_rating'];
+          if (val != null) {
+            avgRating = double.tryParse(val.toString())?.toStringAsFixed(1) ?? '—';
+          }
           reviewCount = (ratingRes['review_count']?.toString() ?? '0');
         }
       } catch (_) {}
@@ -177,7 +179,6 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
       setState(() {
         final firstName = data['first_name'] ?? '';
         final lastName = data['last_name'] ?? '';
-        _profileImageUrl = data['profile_image_url'];
         _mechanicName = '$firstName $lastName'.trim();
         _availableForEmergency = data['available_for_emergency'] ?? false;
         _avgRating = avgRating;
@@ -218,297 +219,13 @@ Future<void> _signOut() async {
 }
   @override
   void dispose() {
-    _setOffline();  // ✅ Set offline when leaving profile
+    // ✅ Do NOT call _setOffline() here — going to another screen tab
+    // should not mark the mechanic offline. Online status is managed
+    // by the homescreen's WidgetsBindingObserver (app lifecycle).
     super.dispose();
   }
-    Future<void> _setOffline() async {
-    try {
-      final uid = _supabase.auth.currentUser?.id;
-      if (uid != null) {
-        await _supabase
-            .from('mechanic')
-            .update({'online_status': false})
-            .eq('uid', uid);
-      }
-    } catch (e) {
-      debugPrint("Error setting offline: $e");
-    }
-  }
 
-  void _showSpecializationsSheet() {
-  final TextEditingController _customController = TextEditingController();
-  List<String> tempSelected = List.from(_selectedSpecializations);
 
-  showModalBottomSheet(
-    context: context,
-    isScrollControlled: true,
-    backgroundColor: Colors.white,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
-    ),
-    builder: (context) {
-      return StatefulBuilder(
-        builder: (context, setSheetState) {
-          return Padding(
-            padding: EdgeInsets.only(
-              bottom: MediaQuery.of(context).viewInsets.bottom,
-            ),
-            child: DraggableScrollableSheet(
-              expand: false,
-              initialChildSize: 0.75,
-              minChildSize: 0.5,
-              maxChildSize: 0.92,
-              builder: (_, scrollController) => Column(
-                children: [
-                  // ── Handle ──
-                  const SizedBox(height: 14),
-                  Center(
-                    child: Container(
-                      width: 40, height: 4,
-                      decoration: BoxDecoration(
-                        color: Colors.black12,
-                        borderRadius: BorderRadius.circular(2),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // ── Header ──
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    child: Row(
-                      children: [
-                        Container(
-                          width: 40, height: 40,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFFFB703),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: const Icon(Icons.shield_outlined, size: 20, color: Colors.black),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Edit Specializations',
-                                style: GoogleFonts.montserrat(
-                                  fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black,
-                                )),
-                              Text('${tempSelected.length} selected',
-                                style: GoogleFonts.inriaSans(
-                                  fontSize: 12, color: Colors.black45, fontWeight: FontWeight.w500,
-                                )),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-                  Container(height: 1, color: const Color(0xFFF0F0F0)),
-                  const SizedBox(height: 16),
-
-                  // ── Scrollable content ──
-                  Expanded(
-                    child: ListView(
-                      controller: scrollController,
-                      padding: const EdgeInsets.symmetric(horizontal: 20),
-                      children: [
-                        // Preset chips
-                        Text('Vehicle Brands & Services',
-                          style: GoogleFonts.inriaSans(
-                            fontSize: 11, fontWeight: FontWeight.w800,
-                            color: Colors.black38, letterSpacing: 1.2,
-                          )),
-                        const SizedBox(height: 12),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: _presetSpecializations.map((s) {
-                            final isSelected = tempSelected.contains(s);
-                            return GestureDetector(
-                              onTap: () => setSheetState(() {
-                                isSelected
-                                    ? tempSelected.remove(s)
-                                    : tempSelected.add(s);
-                              }),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 180),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 14, vertical: 9),
-                                decoration: BoxDecoration(
-                                  color: isSelected
-                                      ? const Color(0xFF121212)
-                                      : const Color(0xFFF5F7FA),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: Border.all(
-                                    color: isSelected
-                                        ? Colors.transparent
-                                        : const Color(0xFFE8E8E8),
-                                  ),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    if (isSelected) ...[
-                                      const Icon(Icons.check_rounded,
-                                          size: 13, color: Color(0xFFFFB703)),
-                                      const SizedBox(width: 5),
-                                    ],
-                                    Text(s,
-                                      style: GoogleFonts.inriaSans(
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
-                                        color: isSelected
-                                            ? Colors.white
-                                            : Colors.black87,
-                                      )),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }).toList(),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        // Custom input
-                        Text('Add Custom',
-                          style: GoogleFonts.inriaSans(
-                            fontSize: 11, fontWeight: FontWeight.w800,
-                            color: Colors.black38, letterSpacing: 1.2,
-                          )),
-                        const SizedBox(height: 12),
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                controller: _customController,
-                                style: GoogleFonts.inriaSans(
-                                  fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black,
-                                ),
-                                decoration: InputDecoration(
-                                  hintText: 'e.g. Turbo Repair, EV Systems...',
-                                  hintStyle: GoogleFonts.inriaSans(
-                                    fontSize: 13, color: Colors.black26,
-                                  ),
-                                  filled: true,
-                                  fillColor: const Color(0xFFF5F7FA),
-                                  contentPadding: const EdgeInsets.symmetric(
-                                      horizontal: 16, vertical: 12),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                    borderSide: BorderSide.none,
-                                  ),
-                                  focusedBorder: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(14),
-                                    borderSide: const BorderSide(
-                                        color: Color(0xFFFFB703), width: 2),
-                                  ),
-                                ),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            GestureDetector(
-                              onTap: () {
-                                final val = _customController.text.trim();
-                                if (val.isNotEmpty && !tempSelected.contains(val)) {
-                                  setSheetState(() {
-                                    tempSelected.add(val);
-                                    _customController.clear();
-                                  });
-                                }
-                              },
-                              child: Container(
-                                width: 46, height: 46,
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFFFB703),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: const Icon(Icons.add_rounded,
-                                    size: 22, color: Colors.black),
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        // Show custom (non-preset) tags
-                        if (tempSelected.any((s) => !_presetSpecializations.contains(s))) ...[
-                          const SizedBox(height: 14),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 8,
-                            children: tempSelected
-                                .where((s) => !_presetSpecializations.contains(s))
-                                .map((s) => Container(
-                                      padding: const EdgeInsets.symmetric(
-                                          horizontal: 12, vertical: 7),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF121212),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Text(s,
-                                            style: GoogleFonts.inriaSans(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.white,
-                                            )),
-                                          const SizedBox(width: 6),
-                                          GestureDetector(
-                                            onTap: () => setSheetState(
-                                                () => tempSelected.remove(s)),
-                                            child: const Icon(Icons.close_rounded,
-                                                size: 14, color: Colors.white54),
-                                          ),
-                                        ],
-                                      ),
-                                    ))
-                                .toList(),
-                          ),
-                        ],
-
-                        const SizedBox(height: 100),
-                      ],
-                    ),
-                  ),
-
-                  // ── Save button ──
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-                    child: GestureDetector(
-                      onTap: () {
-                        setState(() => _selectedSpecializations = List.from(tempSelected));
-                        Navigator.pop(context);
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF121212),
-                          borderRadius: BorderRadius.circular(18),
-                        ),
-                        child: Center(
-                          child: Text('Save Specializations',
-                            style: GoogleFonts.montserrat(
-                              fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white,
-                            )),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        },
-      );
-    },
-  );
-}
 
   @override
   Widget build(BuildContext context) {
@@ -721,15 +438,6 @@ Future<void> _signOut() async {
                                                 size: 18, color: Color(0xFF1DA1F2)),
                                           ],
                                         ),
-                                        const SizedBox(height: 4),
-                                        Text(
-                                          'Mekaniko ng NewJeans bai',
-                                          style: GoogleFonts.inriaSans(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w500,
-                                            color: Colors.black54,
-                                          ),
-                                        ),
                                       ],
                                     ),
                                   ),
@@ -823,118 +531,7 @@ Future<void> _signOut() async {
                           ),
                         ),
 
-                        const SizedBox(height: 14),
 
-                        // ── Specializations ──
-                        Container(
-                          margin: const EdgeInsets.symmetric(horizontal: 16),
-                          padding: const EdgeInsets.all(18),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(28),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x0A000000),
-                                blurRadius: 14,
-                                offset: Offset(0, 6),
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Row(
-                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Row(
-                                    children: [
-                                      const Icon(Icons.shield_outlined,
-                                          size: 20, color: Colors.black87),
-                                      const SizedBox(width: 8),
-                                      Text(
-                                        'Specializations',
-                                        style: GoogleFonts.montserrat(
-                                          fontSize: 15,
-                                          fontWeight: FontWeight.w700,
-                                          color: Colors.black,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                  GestureDetector(
-                                    onTap: _showSpecializationsSheet,
-                                    child: Row(
-                                      children: [
-                                        Text(
-                                          'Edit',
-                                          style: GoogleFonts.inriaSans(
-                                            fontSize: 13,
-                                            fontWeight: FontWeight.w700,
-                                            color: const Color(0xFFFFB703),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 4),
-                                        const Icon(
-                                          Icons.edit_outlined,
-                                          size: 18,
-                                          color: Color(0xFFFFB703),
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 14),
-                              Wrap(
-                                spacing: 8,
-                                runSpacing: 8,
-                                children: _selectedSpecializations.isEmpty
-                                    ? [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 14, vertical: 8),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFF5F7FA),
-                                            borderRadius: BorderRadius.circular(20),
-                                            border: Border.all(
-                                                color: const Color(0xFFE8E8E8)),
-                                          ),
-                                          child: Text(
-                                            'No specializations added',
-                                            style: GoogleFonts.inriaSans(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w600,
-                                              color: Colors.black87,
-                                            ),
-                                          ),
-                                        ),
-                                      ]
-                                    : _selectedSpecializations
-                                        .map((s) => Container(
-                                              padding: const EdgeInsets.symmetric(
-                                                  horizontal: 14, vertical: 8),
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFFF5F7FA),
-                                                borderRadius: BorderRadius.circular(20),
-                                                border: Border.all(
-                                                    color: const Color(0xFFE8E8E8)),
-                                              ),
-                                              child: Text(
-                                                s,
-                                                style: GoogleFonts.inriaSans(
-                                                  fontSize: 13,
-                                                  fontWeight: FontWeight.w600,
-                                                  color: Colors.black87,
-                                                ),
-                                              ),
-                                            ))
-                                        .toList(),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
 
                         // ── Business section ──
                         Padding(
@@ -981,23 +578,11 @@ Future<void> _signOut() async {
                                 icon: Icons.description_outlined,
                                 title: 'Job History',
                                 subtitle: 'Past completed jobs',
-                                onTap: () => Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => const JobHistoryScreen(),
-                                  ),
-                                ),
-                              ),
-                              const _Divider(),
-                              _MenuRow(
-                                icon: Icons.schedule_outlined,
-                                title: 'Working Hours',
-                                subtitle: 'Set your weekly schedule',
                                 isLast: true,
                                 onTap: () => Navigator.push(
                                   context,
                                   MaterialPageRoute(
-                                    builder: (_) => const WorkingHoursScreen(),
+                                    builder: (_) => const JobHistoryScreen(),
                                   ),
                                 ),
                               ),
@@ -1036,28 +621,10 @@ Future<void> _signOut() async {
                           child: Column(
                             children: [
                               _MenuRow(
-                                icon: Icons.notifications_outlined,
-                                title: 'Notifications',
-                                subtitle: 'Manage alerts & sounds',
-                                isFirst: true,
-                              ),
-                              const _Divider(),
-                              _MenuRow(
-                                icon: Icons.location_on_outlined,
-                                title: 'Service Area',
-                                subtitle: 'Set your coverage radius',
-                              ),
-                              const _Divider(),
-                              _MenuRow(
                                 icon: Icons.settings_outlined,
                                 title: 'Account Settings',
                                 subtitle: 'Edit profile & details',
-                              ),
-                              const _Divider(),
-                              _MenuRow(
-                                icon: Icons.help_outline_rounded,
-                                title: 'Help & Support',
-                                subtitle: 'FAQs and contact',
+                                isFirst: true,
                                 isLast: true,
                               ),
                             ],

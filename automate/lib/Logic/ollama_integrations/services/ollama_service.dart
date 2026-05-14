@@ -59,7 +59,7 @@ class OllamaService {
             "num_ctx": 2048,    // Limits memory usage for 8GB VRAM
           }
         }),
-      ).timeout(const Duration(seconds: 90));
+      ).timeout(const Duration(seconds: 120));
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body);

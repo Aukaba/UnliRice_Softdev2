@@ -36,85 +36,88 @@ class _MechanicChatScreenState extends State<MechanicChatScreen> {
   }
 
   // Load all conversations for the current mechanic
-  Future<void> _loadConversations() async {
-    try {
-      final userId = Supabase.instance.client.auth.currentUser?.id;
-      if (userId == null) return;
+Future<void> _loadConversations() async {
+  try {
+    final userId = Supabase.instance.client.auth.currentUser?.id;
+    if (userId == null) return;
 
-      // Get all unique conversations
-      final messages = await Supabase.instance.client
-          .from('messages')
-          .select('''
-            id,
-            sender_id,
-            receiver_id,
-            content,
-            is_read,
-            created_at,
-            sender:users!sender_id (
-              first_name,
-              last_name
-            )
-          ''')
-          .or('sender_id.eq.$userId,receiver_id.eq.$userId')
-          .order('created_at', ascending: false);
+    debugPrint('[Chat] Loading conversations for: $userId');
 
-      // Group messages by conversation
-      final Map<String, Map<String, dynamic>> conversationMap = {};
+    // ✅ Simple query without joins
+    final messages = await Supabase.instance.client
+        .from('messages')
+        .select('*')
+        .or('sender_id.eq.$userId,receiver_id.eq.$userId')
+        .order('created_at', ascending: false);
 
-      for (final msg in messages) {
-        final senderId = msg['sender_id'] as String;
-        final receiverId = msg['receiver_id'] as String;
-        final otherUserId = senderId == userId ? receiverId : senderId;
-        
-        if (!conversationMap.containsKey(otherUserId)) {
-          final senderData = msg['sender'] as Map<String, dynamic>? ?? {};
-          final otherUserData = senderId == userId 
-              ? await _getUserInfo(receiverId)
-              : senderData;
-          
-          String otherUserName = 'User';
-          if (otherUserData.isNotEmpty) {
-            otherUserName = '${otherUserData['first_name'] ?? ''} ${otherUserData['last_name'] ?? ''}'.trim();
-            if (otherUserName.isEmpty) otherUserName = 'User';
-          }
+    debugPrint('[Chat] Total messages found: ${messages.length}');
 
-          conversationMap[otherUserId] = {
-            'user_id': otherUserId,
-            'name': otherUserName,
-            'vehicle': '',
-            'last_message': msg['content'] ?? '',
-            'time': msg['created_at'] ?? '',
-            'unread_count': 0,
-          };
-        }
-
-        // Count unread messages where current user is receiver
-        if (msg['receiver_id'] == userId && msg['is_read'] == false) {
-          conversationMap[otherUserId]!['unread_count'] = 
-              (conversationMap[otherUserId]!['unread_count'] as int) + 1;
-        }
-      }
-
-      if (mounted) {
-        // Enrich with vehicle model from jobs
-        for (final entry in conversationMap.entries) {
-          final vehicle = await ChatLogic().getVehicleModelForPartner(entry.key);
-          if (vehicle.isNotEmpty) {
-            conversationMap[entry.key]!['vehicle'] = vehicle;
-          }
-        }
-        setState(() {
-          _conversations = conversationMap.values.toList();
-          _isLoading = false;
-        });
-      }
-    } catch (e) {
-      debugPrint("Error loading conversations: $e");
+    if (messages.isEmpty) {
       if (mounted) setState(() => _isLoading = false);
+      return;
     }
+
+    // Group by conversation partner
+    final Map<String, Map<String, dynamic>> conversationMap = {};
+
+    for (final msg in messages) {
+      final senderId = msg['sender_id'] as String;
+      final receiverId = msg['receiver_id'] as String;
+      final otherUserId = senderId == userId ? receiverId : senderId;
+
+if (!conversationMap.containsKey(otherUserId)) {
+  String userName = 'User';
+  
+  try {
+    // ✅ Use the correct table name with proper quoting
+    final userData = await Supabase.instance.client
+        .from('user')  // This is your actual table name
+        .select('first_name, last_name')
+        .eq('uid', otherUserId)
+        .maybeSingle();
+    
+    debugPrint('[Chat] User lookup for $otherUserId: $userData');
+    
+    if (userData != null) {
+      final first = userData['first_name'] ?? '';
+      final last = userData['last_name'] ?? '';
+      userName = '$first $last'.trim();
+      if (userName.isEmpty) userName = 'User';
+    }
+  } catch (e) {
+    debugPrint('[Chat] Error looking up user $otherUserId: $e');
   }
 
+  conversationMap[otherUserId] = {
+    'user_id': otherUserId,
+    'name': userName,
+    'vehicle': '',
+    'last_message': msg['content'] ?? '',
+    'time': msg['created_at'] ?? '',
+    'unread_count': 0,
+  };
+}
+
+      // Count unread
+      if (msg['receiver_id'] == userId && msg['is_read'] == false) {
+        conversationMap[otherUserId]!['unread_count'] = 
+            (conversationMap[otherUserId]!['unread_count'] as int) + 1;
+      }
+    }
+
+    debugPrint('[Chat] Conversations: ${conversationMap.length}');
+
+    if (mounted) {
+      setState(() {
+        _conversations = conversationMap.values.toList();
+        _isLoading = false;
+      });
+    }
+  } catch (e) {
+    debugPrint('[Chat] Error: $e');
+    if (mounted) setState(() => _isLoading = false);
+  }
+}
   Future<Map<String, dynamic>> _getUserInfo(String userId) async {
     try {
       final data = await Supabase.instance.client

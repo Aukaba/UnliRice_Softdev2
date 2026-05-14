@@ -27,16 +27,20 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen>  with WidgetsBi
   bool _isLoadingStatus = true;
   StreamSubscription? _dispatchSub;
   bool _isDialogShowing = false;
+  String? _shownDispatchId; // ✅ tracks the dispatch ID already shown, prevents spam
+    StreamSubscription<Position>? _positionStream;
+  Timer? _locationTimer;
 
-  @override
-  void initState() {
-    super.initState();
-     WidgetsBinding.instance.addObserver(this);  // ✅ ADD THIS
-    _setOnlineStatus(true);
-    _checkStatus();
-    _listenForEmergencyDispatches();
-    _checkActiveJob();
-  }
+@override
+void initState() {
+  super.initState();
+  WidgetsBinding.instance.addObserver(this);
+  _setOnlineStatus(true);
+  _startLocationTracking(); // ✅ Start location tracking
+  _checkStatus();
+  _listenForEmergencyDispatches();
+  _checkActiveJob();
+}
 
   void _checkStatus() async {
     try {
@@ -107,10 +111,13 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen>  with WidgetsBi
 
   void _listenForEmergencyDispatches() {
     _dispatchSub = JobsLogic().getMyEmergencyDispatch().listen((dispatches) {
-      if (dispatches.isNotEmpty && !_isDialogShowing && mounted) {
-        final dispatch = dispatches.first;
-        _showEmergencyDialog(dispatch);
-      }
+      if (dispatches.isEmpty || _isDialogShowing || !mounted) return;
+      final dispatch = dispatches.first;
+      final dispatchId = dispatch['id']?.toString();
+      // ✅ Only show the dialog once per unique dispatch
+      if (dispatchId == null || dispatchId == _shownDispatchId) return;
+      _shownDispatchId = dispatchId;
+      _showEmergencyDialog(dispatch);
     });
   }
 
@@ -122,15 +129,72 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen>  with WidgetsBi
       builder: (context) => _EmergencyAlertDialog(dispatch: dispatch),
     ).then((_) {
       _isDialogShowing = false;
+      // ✅ Reset so a NEW dispatch for this mechanic can be shown later
+      // (keep _shownDispatchId so the SAME dispatch won't re-show)
     });
   }
 
 @override
 void dispose() {
-  WidgetsBinding.instance.removeObserver(this);  // ✅ ADD THIS
-  _setOnlineStatus(false);  // ✅ ADD THIS
+  WidgetsBinding.instance.removeObserver(this);
+  _setOnlineStatus(false);
+  _stopLocationTracking(); // ✅ Stop location tracking
   _dispatchSub?.cancel();
   super.dispose();
+}
+// Start listening to location changes
+Future<void> _startLocationTracking() async {
+  try {
+    // Check permission
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      debugPrint('Location permission denied');
+      return;
+    }
+
+    // Listen to continuous location updates
+    _positionStream = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 50, // Update every 50 meters
+      ),
+    ).listen((Position position) {
+      _updateLocation(position.latitude, position.longitude);
+    });
+
+  } catch (e) {
+    debugPrint('Error starting location tracking: $e');
+  }
+}
+
+// Update location in database
+Future<void> _updateLocation(double latitude, double longitude) async {
+  try {
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid != null) {
+      await Supabase.instance.client
+          .from('mechanic')
+          .update({
+            'latitude': latitude,
+            'longitude': longitude,
+          })
+          .eq('uid', uid);
+      debugPrint('Location updated: $latitude, $longitude');
+    }
+  } catch (e) {
+    debugPrint('Error updating location: $e');
+  }
+}
+
+// Stop location tracking
+void _stopLocationTracking() {
+  _positionStream?.cancel();
+  _locationTimer?.cancel();
 }
 @override
 void didChangeAppLifecycleState(AppLifecycleState state) {
@@ -960,8 +1024,47 @@ class _RequestCard extends StatelessWidget {
   }
 }
 
-class _PerformanceSection extends StatelessWidget {
+class _PerformanceSection extends StatefulWidget {
   const _PerformanceSection();
+
+  @override
+  State<_PerformanceSection> createState() => _PerformanceSectionState();
+}
+
+class _PerformanceSectionState extends State<_PerformanceSection> {
+  String _rating = '—';
+  String _accuracy = '—';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRating();
+  }
+
+  Future<void> _fetchRating() async {
+    try {
+      final uid = Supabase.instance.client.auth.currentUser?.id;
+      if (uid == null) return;
+      final res = await Supabase.instance.client
+          .from('mechanic_rating_summary')
+          .select('avg_rating')
+          .eq('mechanic_id', uid)
+          .maybeSingle();
+      if (res != null && mounted) {
+        setState(() {
+          final ratingVal = res['avg_rating'];
+          if (ratingVal != null) {
+            final parsedRating = double.tryParse(ratingVal.toString()) ?? 0.0;
+            _rating = parsedRating.toStringAsFixed(1);
+            _accuracy = '${((parsedRating / 5.0) * 100).clamp(0, 100).toInt()}%';
+          } else {
+            _rating = '—';
+            _accuracy = '—';
+          }
+        });
+      }
+    } catch (_) {}
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -993,19 +1096,11 @@ class _PerformanceSection extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 18),
-            const Row(
+            Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _PerformanceMetric(label: 'Rating', value: '4.9'),
-                _PerformanceMetric(label: 'Accuracy', value: '94%'),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _PerformanceMetric(label: 'Avg. Response', value: '2.5 MIN'),
-                _PerformanceMetric(label: 'Completion', value: '98%'),
+                _PerformanceMetric(label: 'Rating', value: _rating),
+                _PerformanceMetric(label: 'Accuracy', value: _accuracy),
               ],
             ),
           ],
@@ -1157,6 +1252,7 @@ class _ScheduleSection extends StatelessWidget {
     switch (rawStatus.toLowerCase()) {
       case 'accepted':
         return 'Incoming';
+      case 'in_progress':
       case 'in-progress':
       case 'ongoing':
         return 'Ongoing';
@@ -1234,10 +1330,19 @@ class _ScheduleSection extends StatelessWidget {
               return Column(
                 children: topJobs.map((job) {
                   final title = job['title'] ?? 'Service Request';
-                  final rawDate = job['scheduled_date'] ?? job['created_at'];
+                  final isEmergency =
+                      (job['service_type'] as String?) == 'emergency';
+                  final statusRaw = job['status'] as String?;
+                  final statusMapped = _mapStatus(statusRaw);
+
+                  // Emergency jobs use created_at; scheduled jobs use scheduled_date
+                  final rawDate = isEmergency
+                      ? job['created_at']
+                      : (job['scheduled_date'] ?? job['created_at']);
                   DateTime date = DateTime.now();
                   if (rawDate != null) {
-                    date = DateTime.tryParse(rawDate) ?? DateTime.now();
+                    date =
+                        (DateTime.tryParse(rawDate) ?? DateTime.now()).toLocal();
                   }
 
                   final hourStr = date.hour > 12
@@ -1252,13 +1357,11 @@ class _ScheduleSection extends StatelessWidget {
                   final today = DateTime(now.year, now.month, now.day);
                   final jobDate = DateTime(date.year, date.month, date.day);
 
-                  String displayTime = timeString;
-                  if (jobDate != today) {
-                    displayTime = '${date.month}/${date.day} - $timeString';
-                  }
-
-                  final statusRaw = job['status'] as String?;
-                  final statusMapped = _mapStatus(statusRaw);
+                  final displayTime = isEmergency
+                      ? 'Emergency — $timeString'
+                      : (jobDate != today
+                          ? '${date.month}/${date.day} - $timeString'
+                          : timeString);
 
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 12),
@@ -1266,16 +1369,28 @@ class _ScheduleSection extends StatelessWidget {
                       title: title,
                       time: displayTime,
                       status: statusMapped,
+                      isEmergency: isEmergency,
                       onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => MechanicCheckRequestScreen(
-                              jobData: job,
-                              isAccepted: true,
+                        // In-progress emergency jobs → active job screen
+                        if (isEmergency && statusRaw == 'in_progress') {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) =>
+                                  MechanicActiveJobScreen(jobData: job),
                             ),
-                          ),
-                        );
+                          );
+                        } else {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => MechanicCheckRequestScreen(
+                                jobData: job,
+                                isAccepted: true,
+                              ),
+                            ),
+                          );
+                        }
                       },
                     ),
                   );
@@ -1293,6 +1408,7 @@ class _ScheduleCard extends StatelessWidget {
   final String title;
   final String time;
   final String status;
+  final bool isEmergency;
   final VoidCallback onTap;
 
   const _ScheduleCard({
@@ -1300,6 +1416,7 @@ class _ScheduleCard extends StatelessWidget {
     required this.time,
     required this.status,
     required this.onTap,
+    this.isEmergency = false,
   });
 
   @override
@@ -1326,6 +1443,9 @@ class _ScheduleCard extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(24),
+          border: isEmergency
+              ? Border.all(color: const Color(0xFFD72B2B).withOpacity(0.35), width: 1.5)
+              : null,
           boxShadow: const [
             BoxShadow(
               color: Color(0x0F000000),
@@ -1340,16 +1460,33 @@ class _ScheduleCard extends StatelessWidget {
               width: 46,
               height: 46,
               decoration: BoxDecoration(
-                color: const Color(0xFFF5F7FA),
+                color: isEmergency
+                    ? const Color(0xFFFFE5E5)
+                    : const Color(0xFFF5F7FA),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: const Icon(Icons.schedule, color: Color(0xFF121212)),
+              child: Icon(
+                isEmergency ? Icons.warning_amber_rounded : Icons.schedule,
+                color: isEmergency
+                    ? const Color(0xFFD72B2B)
+                    : const Color(0xFF121212),
+              ),
             ),
             const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
+                  if (isEmergency)
+                    Text(
+                      '🚨 EMERGENCY',
+                      style: GoogleFonts.inriaSans(
+                        fontSize: 10,
+                        fontWeight: FontWeight.w800,
+                        color: const Color(0xFFD72B2B),
+                        letterSpacing: 0.5,
+                      ),
+                    ),
                   Text(
                     title,
                     style: GoogleFonts.montserrat(
@@ -1389,6 +1526,7 @@ class _ScheduleCard extends StatelessWidget {
         ),
       ),
     );
+
   }
 }
 

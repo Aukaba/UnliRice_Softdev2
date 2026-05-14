@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
 
 class JobHistoryScreen extends StatefulWidget {
   const JobHistoryScreen({super.key});
@@ -9,76 +11,121 @@ class JobHistoryScreen extends StatefulWidget {
 }
 
 class _JobHistoryScreenState extends State<JobHistoryScreen> {
-  String _selectedFilter = 'All';
-  final List<String> _filters = ['All', 'Completed', 'Cancelled'];
 
-  final List<_HistoryJobData> _jobs = const [
-    _HistoryJobData(
-      title: 'Engine Repair',
-      client: 'Ron Seldizo',
-      vehicle: 'Toyota Vios',
-      date: 'Apr 28, 2025',
-      duration: '2h 15m',
-      price: '₱2,000',
-      status: 'Completed',
-      rating: 5,
-    ),
-    _HistoryJobData(
-      title: 'Flat Tire Fix',
-      client: 'Aaron Barnaija',
-      vehicle: 'Yamaha N-115',
-      date: 'Apr 27, 2025',
-      duration: '45m',
-      price: '₱1,200',
-      status: 'Completed',
-      rating: 5,
-    ),
-    _HistoryJobData(
-      title: 'AC Repair',
-      client: 'Mambaling Motorcab',
-      vehicle: 'Toyota Vios',
-      date: 'Apr 26, 2025',
-      duration: '3h',
-      price: '₱1,800',
-      status: 'Completed',
-      rating: 4,
-    ),
-    _HistoryJobData(
-      title: 'Oil Change',
-      client: 'Jay Mercado',
-      vehicle: 'Honda Civic',
-      date: 'Apr 25, 2025',
-      duration: '30m',
-      price: '₱800',
-      status: 'Completed',
-      rating: 5,
-    ),
-    _HistoryJobData(
-      title: 'Brake Check',
-      client: 'Liza Santos',
-      vehicle: 'Mitsubishi Mirage',
-      date: 'Apr 24, 2025',
-      duration: '-',
-      price: '₱0',
-      status: 'Cancelled',
-      rating: 0,
-    ),
-    _HistoryJobData(
-      title: 'Transmission Flush',
-      client: 'Bert Quizon',
-      vehicle: 'Ford Ranger',
-      date: 'Apr 23, 2025',
-      duration: '1h 30m',
-      price: '₱2,500',
-      status: 'Completed',
-      rating: 4,
-    ),
-  ];
+  bool _isLoading = true;
+  List<_HistoryJobData> _jobs = [];
 
-  List<_HistoryJobData> get _filtered {
-    if (_selectedFilter == 'All') return _jobs;
-    return _jobs.where((j) => j.status == _selectedFilter).toList();
+  @override
+  void initState() {
+    super.initState();
+    _fetchJobHistory();
   }
+
+  Future<void> _fetchJobHistory() async {
+    try {
+      final uid = Supabase.instance.client.auth.currentUser?.id;
+      if (uid == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // Fetch completed jobs for this mechanic
+      final jobsList = await Supabase.instance.client
+          .from('jobs')
+          .select('id, title, status, created_at, scheduled_date, user_id, vehicle')
+          .eq('mechanic_id', uid)
+          .eq('status', 'completed')
+          .order('created_at', ascending: false);
+
+      final userIds = jobsList
+          .map((j) => j['user_id'])
+          .where((id) => id != null)
+          .toSet()
+          .toList();
+      final jobIds = jobsList.map((j) => j['id']).toList();
+
+      // Fetch user names
+      Map<String, String> userNameMap = {};
+      if (userIds.isNotEmpty) {
+        try {
+          final usersRes = await Supabase.instance.client
+              .from('user')
+              .select('uid, first_name, last_name')
+              .inFilter('uid', userIds);
+          for (var u in usersRes) {
+            final name =
+                '${u['first_name'] ?? ''} ${u['last_name'] ?? ''}'.trim();
+            userNameMap[u['uid']] = name.isEmpty ? 'Unknown Client' : name;
+          }
+        } catch (_) {}
+      }
+
+      // Fetch diagnosis bills for completed jobs
+      Map<String, double> diagMap = {};
+      if (jobIds.isNotEmpty) {
+        try {
+          final diagRes = await Supabase.instance.client
+              .from('job_diagnosis')
+              .select('job_id, total_bill')
+              .inFilter('job_id', jobIds);
+          for (var d in diagRes) {
+            diagMap[d['job_id']] =
+                double.tryParse(d['total_bill']?.toString() ?? '0') ?? 0.0;
+          }
+        } catch (_) {}
+      }
+
+      // Fetch ratings for completed jobs
+      Map<String, int> ratingMap = {};
+      if (jobIds.isNotEmpty) {
+        try {
+          final ratingsRes = await Supabase.instance.client
+              .from('job_ratings')
+              .select('job_id, rating')
+              .inFilter('job_id', jobIds);
+          for (var r in ratingsRes) {
+            ratingMap[r['job_id']] =
+                (r['rating'] as num?)?.round() ?? 0;
+          }
+        } catch (_) {}
+      }
+
+      final List<_HistoryJobData> loaded = [];
+      for (var job in jobsList) {
+        final rawDate = job['scheduled_date'] ?? job['created_at'];
+        final date = rawDate != null
+            ? DateTime.tryParse(rawDate.toString()) ?? DateTime.now()
+            : DateTime.now();
+        final dateStr = DateFormat('MMM d, yyyy').format(date);
+
+        final bill = diagMap[job['id']] ?? 0.0;
+        final isCompleted = job['status'] == 'completed';
+
+        loaded.add(_HistoryJobData(
+          title: job['title']?.toString() ?? 'Job',
+          client: userNameMap[job['user_id']] ?? 'Unknown Client',
+          vehicle: job['vehicle']?.toString() ?? '-',
+          date: dateStr,
+          price: isCompleted
+              ? '₱${NumberFormat('#,##0').format(bill + 200)}'
+              : '₱0',
+          status: 'Completed',
+          rating: ratingMap[job['id']] ?? 0,
+        ));
+      }
+
+      if (mounted) {
+        setState(() {
+          _jobs = loaded;
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error fetching job history: $e');
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
@@ -171,7 +218,9 @@ class _JobHistoryScreenState extends State<JobHistoryScreen> {
                                   ),
                                 ),
                                 Text(
-                                  '${_filtered.length} jobs found',
+                                  _isLoading
+                                      ? 'Loading...'
+                                      : '${_jobs.length} jobs found',
                                   style: GoogleFonts.inriaSans(
                                     fontSize: 13,
                                     fontWeight: FontWeight.w500,
@@ -183,63 +232,35 @@ class _JobHistoryScreenState extends State<JobHistoryScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
-                      Row(
-                        children: _filters.map((f) {
-                          final active = _selectedFilter == f;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: GestureDetector(
-                              onTap: () =>
-                                  setState(() => _selectedFilter = f),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: active ? Colors.black : Colors.white,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  f,
-                                  style: GoogleFonts.inriaSans(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: active
-                                        ? const Color(0xFFFFB703)
-                                        : Colors.black54,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          );
-                        }).toList(),
-                      ),
                     ],
                   ),
                 ),
 
                 Expanded(
-                  child: _filtered.isEmpty
-                      ? Center(
-                          child: Text(
-                            'No $_selectedFilter jobs',
-                            style: GoogleFonts.inriaSans(
-                              fontSize: 15,
-                              color: Colors.black38,
-                              fontWeight: FontWeight.w600,
+                  child: _isLoading
+                      ? const Center(
+                          child: CircularProgressIndicator(
+                              color: Color(0xFFFFB703)))
+                      : _jobs.isEmpty
+                          ? Center(
+                              child: Text(
+                                'No completed jobs',
+                                style: GoogleFonts.inriaSans(
+                                  fontSize: 15,
+                                  color: Colors.black38,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            )
+                          : ListView.separated(
+                              padding:
+                                  const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                              itemCount: _jobs.length,
+                              separatorBuilder: (_, __) =>
+                                  const SizedBox(height: 10),
+                              itemBuilder: (_, i) =>
+                                  _HistoryCard(job: _jobs[i]),
                             ),
-                          ),
-                        )
-                      : ListView.separated(
-                          padding:
-                              const EdgeInsets.fromLTRB(16, 20, 16, 24),
-                          itemCount: _filtered.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 10),
-                          itemBuilder: (_, i) =>
-                              _HistoryCard(job: _filtered[i]),
-                        ),
                 ),
               ],
             ),
@@ -255,7 +276,6 @@ class _HistoryJobData {
   final String client;
   final String vehicle;
   final String date;
-  final String duration;
   final String price;
   final String status;
   final int rating;
@@ -265,7 +285,6 @@ class _HistoryJobData {
     required this.client,
     required this.vehicle,
     required this.date,
-    required this.duration,
     required this.price,
     required this.status,
     required this.rating,
@@ -375,18 +394,6 @@ class _HistoryCard extends StatelessWidget {
               const SizedBox(width: 4),
               Text(
                 job.date,
-                style: GoogleFonts.inriaSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black38,
-                ),
-              ),
-              const SizedBox(width: 14),
-              const Icon(Icons.timer_outlined,
-                  size: 13, color: Colors.black38),
-              const SizedBox(width: 4),
-              Text(
-                job.duration,
                 style: GoogleFonts.inriaSans(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
