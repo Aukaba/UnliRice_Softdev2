@@ -9,6 +9,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../../Logic/jobs/jobs_logic.dart';
+import '../../screen/messages/user_chat_session.dart';
 import 'homescreen.dart';
 
 const String kOsrmRoutingBaseUrl = String.fromEnvironment(
@@ -42,6 +43,7 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
   String _totalDistanceText = 'Distance unavailable';
 
   String _phoneNumber = 'Loading...';
+  bool _hasArrived = false;
 
   // Helpers to safely pull strings from jobData
   String _field(String key, String fallback) =>
@@ -61,8 +63,29 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
         debugPrint('[ActiveJob] setJobInProgress error: $e');
       });
     }
+    _fetchArrivedStatus();
     _fetchPhoneNumber();
     _startLocationTracking();
+  }
+
+  /// Read mechanic_arrived from DB so the button stays hidden after a restart.
+  Future<void> _fetchArrivedStatus() async {
+    final jobId =
+        widget.jobData?['id']?.toString() ??
+        widget.jobData?['job_id']?.toString();
+    if (jobId == null) return;
+    try {
+      final res = await _supabase
+          .from('jobs')
+          .select('mechanic_arrived')
+          .eq('id', jobId)
+          .maybeSingle();
+      if (res != null && res['mechanic_arrived'] == true && mounted) {
+        setState(() => _hasArrived = true);
+      }
+    } catch (e) {
+      debugPrint('[ActiveJob] _fetchArrivedStatus error: $e');
+    }
   }
 
   Future<void> _fetchPhoneNumber() async {
@@ -390,22 +413,11 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                     // Mechanic location pin
                     Marker(
                       point: mechLatLng,
-                      width: 44,
-                      height: 44,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF1A73E8),
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.white, width: 2),
-                          boxShadow: const [
-                            BoxShadow(color: Color(0x551A73E8), blurRadius: 8),
-                          ],
-                        ),
-                        child: const Icon(
-                          Icons.engineering,
-                          color: Colors.white,
-                          size: 24,
-                        ),
+                      width: 90,
+                      height: 90,
+                      child: Image.asset(
+                        'assets/images/mechanic_truck.png',
+                        fit: BoxFit.contain,
                       ),
                     ),
                   ],
@@ -694,6 +706,48 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                           ),
                           const SizedBox(height: 28),
 
+                          // Arrived button (shown until tapped)
+                          if (!_hasArrived)
+                            Padding(
+                              padding: const EdgeInsets.only(bottom: 12),
+                              child: ElevatedButton.icon(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF19456B),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  minimumSize: const Size.fromHeight(52),
+                                  elevation: 0,
+                                ),
+                                icon: const Icon(
+                                  Icons.check_circle_outline_rounded,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
+                                label: Text(
+                                  'Arrived',
+                                  style: GoogleFonts.montserrat(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w700,
+                                    color: Colors.white,
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  final jobId =
+                                      widget.jobData?['id']?.toString() ??
+                                      widget.jobData?['job_id']?.toString();
+                                  if (jobId != null) {
+                                    try {
+                                      await JobsLogic().setJobArrived(jobId);
+                                    } catch (e) {
+                                      debugPrint('[ActiveJob] setJobArrived error: $e');
+                                    }
+                                  }
+                                  if (mounted) setState(() => _hasArrived = true);
+                                },
+                              ),
+                            ),
+
                           // Diagnosis button
                           ElevatedButton.icon(
                             style: ElevatedButton.styleFrom(
@@ -757,10 +811,26 @@ class _MechanicActiveJobScreenState extends State<MechanicActiveJobScreen> {
                                     ),
                                   ),
                                   onPressed: () {
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          'Opening chat with $clientName',
+                                    final jobMap = widget.jobData?['jobs']
+                                        as Map<String, dynamic>?;
+                                    final userId =
+                                        widget.jobData?['user_id']?.toString() ??
+                                        jobMap?['user_id']?.toString() ??
+                                        '';
+                                    if (userId.isEmpty) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        const SnackBar(
+                                          content: Text('User ID not found'),
+                                        ),
+                                      );
+                                      return;
+                                    }
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => UserChatSessionScreen(
+                                          mechanicName: clientName,
+                                          partnerId: userId,
                                         ),
                                       ),
                                     );

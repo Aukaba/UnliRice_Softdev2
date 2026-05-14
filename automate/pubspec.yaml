@@ -43,6 +43,7 @@ dependencies:
   flutter_map: ^8.3.0
   latlong2: ^0.9.1
   geolocator: ^13.0.2
+  connectivity_plus: ^7.1.1
 
 dev_dependencies:
   flutter_test:
@@ -71,6 +72,8 @@ flutter:
     - assets/images/AutoMate_logo.png
     - assets/images/robotttt.png
     - assets/images/matchmate.png
+    - assets/images/nointernet.png
+    - assets/images/mechanic_truck.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/to/resolution-aware-images

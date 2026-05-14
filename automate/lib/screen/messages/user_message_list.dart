@@ -19,6 +19,8 @@ class _UserMessageListScreenState extends State<UserMessageListScreen> {
   void initState() {
     super.initState();
     _partnersStream = ChatLogic().getActivePartners();
+    // Clean up any expired conversations (2 days after job completion)
+    ChatLogic().deleteExpiredMessages();
   }
 
   @override
@@ -333,6 +335,7 @@ class _UserMessageListScreenState extends State<UserMessageListScreen> {
                                             UserChatSessionScreen(
                                               mechanicName: p['name'],
                                               partnerId: p['partner_id'],
+                                              vehicleModel: p['vehicle'],
                                             ),
                                       ),
                                     );

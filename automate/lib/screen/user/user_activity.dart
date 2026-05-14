@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../messages/user_chat_session.dart';
 import '../../Logic/jobs/jobs_logic.dart';
+import 'user_dashboard_match.dart';
 
 class UserActivityScreen extends StatefulWidget {
   final VoidCallback? onMessageTap;
@@ -144,6 +145,7 @@ class _UserActivityScreenState extends State<UserActivityScreen> {
 
                           return _buildActivityCard(
                             context: context,
+                            job: job,
                             name: job['mechanic_name'] ?? (job['mechanic_id'] != null ? 'Mechanic Assigned' : 'Waiting for Mechanic'),
                             partnerId: job['mechanic_id'],
                             service: job['title'] ?? 'Service',
@@ -169,6 +171,7 @@ class _UserActivityScreenState extends State<UserActivityScreen> {
 
   Widget _buildActivityCard({
     required BuildContext context,
+    required Map<String, dynamic> job,
     required String name,
     required String service,
     required String status,
@@ -199,7 +202,14 @@ class _UserActivityScreenState extends State<UserActivityScreen> {
                 ? Colors.black54
                 : Colors.red.shade800;
 
-    return Container(
+    return GestureDetector(
+      onTap: isOngoingOrAssigned
+          ? () => Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => UserDashboardMatchScreen(jobData: job)),
+            )
+          : null,
+      child: Container(
       margin: const EdgeInsets.only(bottom: 16.0),
       decoration: BoxDecoration(
         color: Colors.white,
@@ -349,7 +359,8 @@ class _UserActivityScreenState extends State<UserActivityScreen> {
             ),
           ],
         ),
-      ),
-    );
+      ),    // closes Padding
+    ),      // closes Container
+    );      // closes GestureDetector
   }
 }

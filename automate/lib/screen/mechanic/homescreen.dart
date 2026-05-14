@@ -1,7 +1,10 @@
 import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
 import '../../Logic/jobs/jobs_logic.dart';
 import '../../screen/authentication/mechanic_verification.dart';
 import 'homescreen_checkrequest.dart';
@@ -324,43 +327,96 @@ class _HeaderSection extends StatefulWidget {
 class _HeaderSectionState extends State<_HeaderSection> {
   String _mechanicName = 'Loading...';
   bool _isOnline = false;
+  String _locationLabel = '...';
 
   @override
   void initState() {
     super.initState();
     _fetchName();
+    _fetchLocation();
   }
 
-Future<void> _fetchName() async {
-  try {
-    final uid = Supabase.instance.client.auth.currentUser?.id;
-    if (uid != null) {
-      final res = await Supabase.instance.client
-          .from('mechanic')
-          .select('first_name, last_name, available_for_emergency, online_status')  // ✅ Add online_status
-          .eq('uid', uid)
-          .maybeSingle();
-      if (res != null && mounted) {
-        setState(() {
-          _mechanicName = '${res['first_name']}';
-          _isOnline = res['online_status'] ?? false;  // ✅ Use online_status for this
-        });
-      } else if (mounted) {
+  Future<void> _fetchName() async {
+    try {
+      final uid = Supabase.instance.client.auth.currentUser?.id;
+      if (uid != null) {
+        final res = await Supabase.instance.client
+            .from('mechanic')
+            .select('first_name, last_name, available_for_emergency, online_status')
+            .eq('uid', uid)
+            .maybeSingle();
+        if (res != null && mounted) {
+          setState(() {
+            _mechanicName = '${res['first_name']}';
+            _isOnline = res['online_status'] ?? false;
+          });
+        } else if (mounted) {
+          setState(() {
+            _mechanicName = 'Mechanic';
+            _isOnline = false;
+          });
+        }
+      }
+    } catch (_) {
+      if (mounted) {
         setState(() {
           _mechanicName = 'Mechanic';
           _isOnline = false;
         });
       }
     }
-  } catch (_) {
-    if (mounted) {
-      setState(() {
-        _mechanicName = 'Mechanic';
-        _isOnline = false;
-      });
+  }
+
+  Future<void> _fetchLocation() async {
+    try {
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        if (mounted) setState(() => _locationLabel = 'Location off');
+        return;
+      }
+      final pos = await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(
+          accuracy: LocationAccuracy.low,
+          timeLimit: Duration(seconds: 8),
+        ),
+      );
+      final url = Uri.parse(
+        'https://nominatim.openstreetmap.org/reverse'
+        '?lat=${pos.latitude}&lon=${pos.longitude}&format=json',
+      );
+      final resp = await http.get(
+        url,
+        headers: {'User-Agent': 'automate-mechanic-app/1.0'},
+      );
+      if (resp.statusCode == 200) {
+        final data = jsonDecode(resp.body) as Map<String, dynamic>;
+        final addr = data['address'] as Map<String, dynamic>? ?? {};
+        final suburb = addr['suburb'] ??
+            addr['quarter'] ??
+            addr['neighbourhood'] ??
+            addr['village'] ??
+            '';
+        final city = addr['city'] ??
+            addr['town'] ??
+            addr['municipality'] ??
+            addr['county'] ??
+            '';
+        final label = [suburb, city]
+            .where((s) => s.toString().isNotEmpty)
+            .join(', ');
+        if (mounted) {
+          setState(() => _locationLabel =
+              label.isNotEmpty ? label : 'Location found');
+        }
+      }
+    } catch (e) {
+      if (mounted) setState(() => _locationLabel = 'Locating...');
     }
   }
-}
 
   @override
   Widget build(BuildContext context) {
@@ -465,7 +521,7 @@ Future<void> _fetchName() async {
                     ),
                     const SizedBox(width: 6),
                     Text(
-                      'Tisa, Cebu City',
+                      _locationLabel,
                       style: GoogleFonts.inriaSans(
                         fontSize: 12,
                         fontWeight: FontWeight.w600,
@@ -483,30 +539,85 @@ Future<void> _fetchName() async {
   }
 }
 
-class _StatsSection extends StatelessWidget {
+class _StatsSection extends StatefulWidget {
   const _StatsSection();
 
   @override
+  State<_StatsSection> createState() => _StatsSectionState();
+}
+
+class _StatsSectionState extends State<_StatsSection> {
+  String _today = '...';
+  String _thisWeek = '...';
+  String _totalJobs = '...';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchStats();
+  }
+
+  String _fmt(double amount) {
+    if (amount >= 1000000) return '₱${(amount / 1000000).toStringAsFixed(1)}M';
+    if (amount >= 1000) return '₱${(amount / 1000).toStringAsFixed(1)}K';
+    return '₱${amount.toStringAsFixed(0)}';
+  }
+
+  Future<void> _fetchStats() async {
+    try {
+      final uid = Supabase.instance.client.auth.currentUser?.id;
+      if (uid == null) return;
+
+      final result = await Supabase.instance.client
+          .rpc('get_mechanic_stats', params: {'mechanic_uid': uid});
+
+      final data = result as Map<String, dynamic>;
+      final todayEarnings =
+          double.tryParse(data['today_earnings']?.toString() ?? '0') ?? 0;
+      final weekEarnings =
+          double.tryParse(data['week_earnings']?.toString() ?? '0') ?? 0;
+      final totalJobs = int.tryParse(data['total_jobs']?.toString() ?? '0') ?? 0;
+
+      if (mounted) {
+        setState(() {
+          _today = _fmt(todayEarnings);
+          _thisWeek = _fmt(weekEarnings);
+          _totalJobs = totalJobs.toString();
+        });
+      }
+    } catch (e) {
+      debugPrint('[StatsSection] fetchStats error: $e');
+      if (mounted) {
+        setState(() {
+          _today = '₱0';
+          _thisWeek = '₱0';
+          _totalJobs = '0';
+        });
+      }
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const Padding(
-      padding: EdgeInsets.symmetric(horizontal: 16),
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
             child: _StatCard(
-              value: '₱4,500',
+              value: _today,
               label: 'TODAY',
               highlighted: true,
             ),
           ),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           Expanded(
-            child: _StatCard(value: '₱23.8K', label: 'THIS WEEK'),
+            child: _StatCard(value: _thisWeek, label: 'THIS WEEK'),
           ),
-          SizedBox(width: 12),
+          const SizedBox(width: 12),
           Expanded(
-            child: _StatCard(value: '342', label: 'TOTAL JOBS'),
+            child: _StatCard(value: _totalJobs, label: 'TOTAL JOBS'),
           ),
         ],
       ),
@@ -1159,7 +1270,10 @@ class _ScheduleSection extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                            builder: (_) => const MechanicScheduleScreen(),
+                            builder: (_) => MechanicCheckRequestScreen(
+                              jobData: job,
+                              isAccepted: true,
+                            ),
                           ),
                         );
                       },
