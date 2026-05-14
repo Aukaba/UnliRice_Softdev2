@@ -1058,6 +1058,7 @@ class _PerformanceSection extends StatefulWidget {
 
 class _PerformanceSectionState extends State<_PerformanceSection> {
   String _rating = '—';
+  String _accuracy = '—';
 
   @override
   void initState() {
@@ -1076,7 +1077,15 @@ class _PerformanceSectionState extends State<_PerformanceSection> {
           .maybeSingle();
       if (res != null && mounted) {
         setState(() {
-          _rating = res['avg_rating']?.toString() ?? '—';
+          final ratingVal = res['avg_rating'];
+          if (ratingVal != null) {
+            final parsedRating = double.tryParse(ratingVal.toString()) ?? 0.0;
+            _rating = parsedRating.toStringAsFixed(1);
+            _accuracy = '${((parsedRating / 5.0) * 100).clamp(0, 100).toInt()}%';
+          } else {
+            _rating = '—';
+            _accuracy = '—';
+          }
         });
       }
     } catch (_) {}
@@ -1116,15 +1125,7 @@ class _PerformanceSectionState extends State<_PerformanceSection> {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 _PerformanceMetric(label: 'Rating', value: _rating),
-                const _PerformanceMetric(label: 'Accuracy', value: '94%'),
-              ],
-            ),
-            const SizedBox(height: 16),
-            const Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                _PerformanceMetric(label: 'Avg. Response', value: '2.5 MIN'),
-                _PerformanceMetric(label: 'Completion', value: '98%'),
+                _PerformanceMetric(label: 'Accuracy', value: _accuracy),
               ],
             ),
           ],

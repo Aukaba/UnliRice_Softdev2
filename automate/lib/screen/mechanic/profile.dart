@@ -128,15 +128,24 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
 
       final data = await _supabase
           .from('mechanic')
-          .select('first_name, last_name, available_for_emergency, created_at, profile_image_url')
+          .select('first_name, last_name, available_for_emergency')
           .eq('uid', uid)
           .single();
 
-      // Year joined
-      final createdAt = data['created_at']?.toString();
-      final year = createdAt != null
-          ? DateTime.tryParse(createdAt)?.year.toString() ?? '—'
-          : '—';
+      // Year joined from verification record
+      String year = '—';
+      try {
+        final verRes = await _supabase
+            .from('mechanic_verification')
+            .select('created_at')
+            .eq('mechanic_id', uid)
+            .order('created_at', ascending: false)
+            .limit(1)
+            .maybeSingle();
+        if (verRes != null && verRes['created_at'] != null) {
+          year = DateTime.tryParse(verRes['created_at'].toString())?.year.toString() ?? '—';
+        }
+      } catch (_) {}
 
       // Rating summary from view
       String avgRating = '—';
@@ -148,7 +157,10 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
             .eq('mechanic_id', uid)
             .maybeSingle();
         if (ratingRes != null) {
-          avgRating = (ratingRes['avg_rating']?.toString() ?? '—');
+          final val = ratingRes['avg_rating'];
+          if (val != null) {
+            avgRating = double.tryParse(val.toString())?.toStringAsFixed(1) ?? '—';
+          }
           reviewCount = (ratingRes['review_count']?.toString() ?? '0');
         }
       } catch (_) {}
@@ -167,7 +179,6 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
       setState(() {
         final firstName = data['first_name'] ?? '';
         final lastName = data['last_name'] ?? '';
-        _profileImageUrl = data['profile_image_url'];
         _mechanicName = '$firstName $lastName'.trim();
         _availableForEmergency = data['available_for_emergency'] ?? false;
         _avgRating = avgRating;
