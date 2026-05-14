@@ -79,9 +79,9 @@ class _EarningsPayoutsScreenState extends State<EarningsPayoutsScreen> {
 
       final now = DateTime.now();
       
-      double earnedToday = 0, pendingToday = 0; int jobsToday = 0;
-      double earnedWeek = 0, pendingWeek = 0; int jobsWeek = 0;
-      double earnedMonth = 0, pendingMonth = 0; int jobsMonth = 0;
+      double earnedToday = 0; int jobsToday = 0;
+      double earnedWeek = 0; int jobsWeek = 0;
+      double earnedMonth = 0; int jobsMonth = 0;
 
       List<_PayoutData> loadedPayouts = [];
 
@@ -102,11 +102,14 @@ class _EarningsPayoutsScreenState extends State<EarningsPayoutsScreen> {
 
         double bill = diagMap[job['id']] ?? 0.0;
 
+        // Add ₱200 labor fee for completed jobs
+        final totalAmount = isCompleted ? bill + 200 : bill;
+
         loadedPayouts.add(_PayoutData(
           jobTitle: job['title']?.toString() ?? 'Job',
           client: clientName,
           date: dateStr,
-          amount: '₱${NumberFormat('#,##0').format(bill)}',
+          amount: '₱${NumberFormat('#,##0').format(totalAmount)}',
           status: isCompleted ? 'Paid' : 'Pending',
         ));
 
@@ -121,13 +124,13 @@ class _EarningsPayoutsScreenState extends State<EarningsPayoutsScreen> {
         final isThisMonth = date.year == now.year && date.month == now.month;
 
         if (isToday) {
-          if (isCompleted) { earnedToday += bill; jobsToday++; } else { pendingToday += bill; }
+          if (isCompleted) { earnedToday += bill + 200; jobsToday++; }
         }
         if (isThisWeek) {
-          if (isCompleted) { earnedWeek += bill; jobsWeek++; } else { pendingWeek += bill; }
+          if (isCompleted) { earnedWeek += bill + 200; jobsWeek++; }
         }
         if (isThisMonth) {
-          if (isCompleted) { earnedMonth += bill; jobsMonth++; } else { pendingMonth += bill; }
+          if (isCompleted) { earnedMonth += bill + 200; jobsMonth++; }
         }
       }
 
