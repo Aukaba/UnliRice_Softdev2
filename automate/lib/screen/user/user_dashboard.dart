@@ -32,6 +32,9 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
   TimeOfDay? _selectedTime;
   bool _isLoading = false;
   Timer? _debounce;
+  Timer? _locationDebounce;
+  List<Map<String, dynamic>> _locationSuggestions = [];
+  bool _isSearchingLocation = false;
 
   List<Map<String, dynamic>> _userVehicles = [];
   String? _selectedVehicleId;
@@ -70,6 +73,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _locationDebounce?.cancel();
     _titleController.dispose();
     _vehicleController.dispose();
     _plateController.dispose();
@@ -102,6 +106,43 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
     } catch (e) {
       debugPrint("Reverse geocoding error: $e");
     }
+  }
+
+  void _onLocationChanged(String query) {
+    if (_locationDebounce?.isActive ?? false) _locationDebounce!.cancel();
+    if (query.isEmpty || query.length < 3) {
+      setState(() {
+        _locationSuggestions = [];
+      });
+      return;
+    }
+    
+    _locationDebounce = Timer(const Duration(milliseconds: 600), () async {
+      setState(() {
+        _isSearchingLocation = true;
+      });
+      try {
+        final url = Uri.parse('https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(query)}&format=json&addressdetails=1&countrycodes=ph&limit=5');
+        // Do NOT set User-Agent header to avoid CORS issues on Flutter Web
+        final response = await http.get(url);
+        if (response.statusCode == 200) {
+          final List data = json.decode(response.body);
+          if (mounted) {
+            setState(() {
+              _locationSuggestions = data.cast<Map<String, dynamic>>();
+            });
+          }
+        }
+      } catch (e) {
+        debugPrint("Location search error: $e");
+      } finally {
+        if (mounted) {
+          setState(() {
+            _isSearchingLocation = false;
+          });
+        }
+      }
+    });
   }
 
   void _submitJobRequest() async {
@@ -495,7 +536,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                           ),
                           const SizedBox(height: 20),
                           Text(
-                            "Pickup Location",
+                            "Location",
                             style: GoogleFonts.montserrat(
                               fontSize: 14,
                               fontWeight: FontWeight.w400,
@@ -505,16 +546,14 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                           const SizedBox(height: 8),
                           Container(
                             decoration: BoxDecoration(
-                              color: const Color(
-                                0xFFEFEFEF,
-                              ), // Light gray background
+                              color: const Color(0xFFEFEFEF),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: TextField(
                               controller: _locationController,
+                              onChanged: _onLocationChanged,
                               decoration: InputDecoration(
-                                hintText:
-                                    "Cebu Institute of Technology - University",
+                                hintText: "e.g. Cebu Institute of Technology",
                                 hintStyle: GoogleFonts.montserrat(
                                   fontSize: 14,
                                   fontWeight: FontWeight.w400,
@@ -532,6 +571,70 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                               ),
                             ),
                           ),
+                          if (_isSearchingLocation)
+                            const Padding(
+                              padding: EdgeInsets.symmetric(vertical: 8),
+                              child: Center(child: CircularProgressIndicator()),
+                            )
+                          else if (_locationSuggestions.isNotEmpty)
+                            Container(
+                              margin: const EdgeInsets.only(top: 4),
+                              decoration: BoxDecoration(
+                                color: Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.grey.shade300),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.05),
+                                    blurRadius: 10,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: ListView.separated(
+                                padding: EdgeInsets.zero,
+                                shrinkWrap: true,
+                                physics: const NeverScrollableScrollPhysics(),
+                                itemCount: _locationSuggestions.length,
+                                separatorBuilder: (context, index) => const Divider(height: 1),
+                                itemBuilder: (context, index) {
+                                  final option = _locationSuggestions[index];
+                                  final name = option['name']?.toString() ?? '';
+                                  final displayNameRaw = option['display_name']?.toString() ?? '';
+                                  final parts = displayNameRaw.split(',');
+                                  
+                                  final String title = name.isNotEmpty ? name : parts.first;
+                                  final String subtitle = parts.length > 1 ? parts.skip(name.isNotEmpty ? 0 : 1).take(2).join(',').trim() : displayNameRaw;
+                                  
+                                  return ListTile(
+                                    leading: const Icon(Icons.location_on, color: Color(0xFF19456B)),
+                                    title: Text(
+                                      title,
+                                      style: GoogleFonts.montserrat(fontSize: 13, fontWeight: FontWeight.w600),
+                                    ),
+                                    subtitle: Text(
+                                      subtitle,
+                                      style: GoogleFonts.montserrat(fontSize: 11, color: Colors.black54),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                    onTap: () {
+                                      final lat = double.tryParse(option['lat'].toString());
+                                      final lon = double.tryParse(option['lon'].toString());
+                                      if (lat != null && lon != null) {
+                                        setState(() {
+                                          _selectedLocation = LatLng(lat, lon);
+                                          _mapController.move(_selectedLocation, 15.0);
+                                          _locationSuggestions = [];
+                                        });
+                                      }
+                                      _locationController.text = title;
+                                      FocusScope.of(context).unfocus();
+                                    },
+                                  );
+                                },
+                              ),
+                            ),
                           const SizedBox(height: 20),
                           Text(
                             "Service Type",
