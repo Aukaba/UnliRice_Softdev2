@@ -43,10 +43,19 @@ class _EarningsPayoutsScreenState extends State<EarningsPayoutsScreen> {
           .from('jobs')
           .select('id, title, status, created_at, scheduled_date, user_id')
           .eq('mechanic_id', uid)
-          .inFilter('status', ['completed', 'in_progress', 'accepted', 'pending_payment'])
+          .inFilter('status', [
+            'completed',
+            'in_progress',
+            'accepted',
+            'pending_payment',
+          ])
           .order('created_at', ascending: false);
 
-      final userIds = jobsList.map((j) => j['user_id']).where((id) => id != null).toSet().toList();
+      final userIds = jobsList
+          .map((j) => j['user_id'])
+          .where((id) => id != null)
+          .toSet()
+          .toList();
       final jobIds = jobsList.map((j) => j['id']).toList();
 
       // Fetch related users
@@ -72,32 +81,40 @@ class _EarningsPayoutsScreenState extends State<EarningsPayoutsScreen> {
               .select('job_id, total_bill')
               .inFilter('job_id', jobIds);
           for (var d in diagRes) {
-            diagMap[d['job_id']] = double.tryParse(d['total_bill']?.toString() ?? '0') ?? 0.0;
+            diagMap[d['job_id']] =
+                double.tryParse(d['total_bill']?.toString() ?? '0') ?? 0.0;
           }
         } catch (_) {}
       }
 
       final now = DateTime.now();
-      
-      double earnedToday = 0; int jobsToday = 0;
-      double earnedWeek = 0; int jobsWeek = 0;
-      double earnedMonth = 0; int jobsMonth = 0;
+
+      double earnedToday = 0;
+      int jobsToday = 0;
+      double earnedWeek = 0;
+      int jobsWeek = 0;
+      double earnedMonth = 0;
+      int jobsMonth = 0;
 
       List<_PayoutData> loadedPayouts = [];
 
       for (var job in jobsList) {
         final status = job['status'];
         final isCompleted = status == 'completed';
-        
+
         final userObj = userMap[job['user_id']];
         String clientName = 'Unknown Client';
         if (userObj != null) {
-          clientName = '${userObj['first_name'] ?? ''} ${userObj['last_name'] ?? ''}'.trim();
+          clientName =
+              '${userObj['first_name'] ?? ''} ${userObj['last_name'] ?? ''}'
+                  .trim();
           if (clientName.isEmpty) clientName = 'Unknown Client';
         }
 
         final rawDate = job['scheduled_date'] ?? job['created_at'];
-        final date = rawDate != null ? DateTime.tryParse(rawDate.toString()) ?? now : now;
+        final date = rawDate != null
+            ? DateTime.tryParse(rawDate.toString()) ?? now
+            : now;
         final dateStr = DateFormat('MMM d, yyyy').format(date);
 
         double bill = diagMap[job['id']] ?? 0.0;
@@ -105,32 +122,47 @@ class _EarningsPayoutsScreenState extends State<EarningsPayoutsScreen> {
         // Add ₱200 labor fee for completed jobs
         final totalAmount = isCompleted ? bill + 200 : bill;
 
-        loadedPayouts.add(_PayoutData(
-          jobTitle: job['title']?.toString() ?? 'Job',
-          client: clientName,
-          date: dateStr,
-          amount: '₱${NumberFormat('#,##0').format(totalAmount)}',
-          status: isCompleted ? 'Paid' : 'Pending',
-        ));
+        loadedPayouts.add(
+          _PayoutData(
+            jobTitle: job['title']?.toString() ?? 'Job',
+            client: clientName,
+            date: dateStr,
+            amount: '₱${NumberFormat('#,##0').format(totalAmount)}',
+            status: isCompleted ? 'Paid' : 'Pending',
+          ),
+        );
 
         // Time checks
-        final isToday = date.year == now.year && date.month == now.month && date.day == now.day;
-        
+        final isToday =
+            date.year == now.year &&
+            date.month == now.month &&
+            date.day == now.day;
+
         final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
         final endOfWeek = startOfWeek.add(const Duration(days: 6));
-        final isThisWeek = date.isAfter(startOfWeek.subtract(const Duration(days: 1))) && 
-                           date.isBefore(endOfWeek.add(const Duration(days: 1)));
-                           
+        final isThisWeek =
+            date.isAfter(startOfWeek.subtract(const Duration(days: 1))) &&
+            date.isBefore(endOfWeek.add(const Duration(days: 1)));
+
         final isThisMonth = date.year == now.year && date.month == now.month;
 
         if (isToday) {
-          if (isCompleted) { earnedToday += bill + 200; jobsToday++; }
+          if (isCompleted) {
+            earnedToday += bill + 200;
+            jobsToday++;
+          }
         }
         if (isThisWeek) {
-          if (isCompleted) { earnedWeek += bill + 200; jobsWeek++; }
+          if (isCompleted) {
+            earnedWeek += bill + 200;
+            jobsWeek++;
+          }
         }
         if (isThisMonth) {
-          if (isCompleted) { earnedMonth += bill + 200; jobsMonth++; }
+          if (isCompleted) {
+            earnedMonth += bill + 200;
+            jobsMonth++;
+          }
         }
       }
 
@@ -139,15 +171,15 @@ class _EarningsPayoutsScreenState extends State<EarningsPayoutsScreen> {
           _summaryByPeriod = {
             'Today': {
               'earned': '₱${NumberFormat('#,##0').format(earnedToday)}',
-              'jobs': '$jobsToday Jobs'
+              'jobs': '$jobsToday Jobs',
             },
             'This Week': {
               'earned': '₱${NumberFormat('#,##0').format(earnedWeek)}',
-              'jobs': '$jobsWeek Jobs'
+              'jobs': '$jobsWeek Jobs',
             },
             'This Month': {
               'earned': '₱${NumberFormat('#,##0').format(earnedMonth)}',
-              'jobs': '$jobsMonth Jobs'
+              'jobs': '$jobsMonth Jobs',
             },
           };
           _payouts = loadedPayouts;
@@ -209,156 +241,167 @@ class _EarningsPayoutsScreenState extends State<EarningsPayoutsScreen> {
               ),
             ),
 
-            _isLoading 
-                ? const Center(child: CircularProgressIndicator(color: Color(0xFFFFB703)))
+            _isLoading
+                ? const Center(
+                    child: CircularProgressIndicator(color: Color(0xFFFFB703)),
+                  )
                 : Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // ── Header ──
-                Container(
-                  padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFFB703),
-                    borderRadius:
-                        BorderRadius.vertical(bottom: Radius.circular(32)),
-                  ),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      Row(
-                        children: [
-                          GestureDetector(
-                            onTap: () => Navigator.pop(context),
-                            child: Container(
-                              width: 44,
-                              height: 44,
-                              decoration: BoxDecoration(
-                                color: Colors.black,
-                                borderRadius: BorderRadius.circular(14),
-                              ),
-                              child: const Icon(
-                                  Icons.arrow_back_ios_new_rounded,
-                                  color: Color(0xFFFFB703),
-                                  size: 18),
-                            ),
+                      // ── Header ──
+                      Container(
+                        padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
+                        decoration: const BoxDecoration(
+                          color: Color(0xFFFFB703),
+                          borderRadius: BorderRadius.vertical(
+                            bottom: Radius.circular(32),
                           ),
-                          const SizedBox(width: 14),
-                          Expanded(
-                            child: Text(
-                              'Earnings & Payouts',
-                              style: GoogleFonts.montserrat(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w800,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 20),
-                      // ── Period filter ──
-                      Row(
-                        children: _periods.map((p) {
-                          final active = _selectedPeriod == p;
-                          return Padding(
-                            padding: const EdgeInsets.only(right: 8),
-                            child: GestureDetector(
-                              onTap: () =>
-                                  setState(() => _selectedPeriod = p),
-                              child: AnimatedContainer(
-                                duration: const Duration(milliseconds: 200),
-                                padding: const EdgeInsets.symmetric(
-                                    horizontal: 16, vertical: 8),
-                                decoration: BoxDecoration(
-                                  color: active
-                                      ? Colors.black
-                                      : Colors.white,
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  p,
-                                  style: GoogleFonts.inriaSans(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w700,
-                                    color: active
-                                        ? const Color(0xFFFFB703)
-                                        : Colors.black54,
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                GestureDetector(
+                                  onTap: () => Navigator.pop(context),
+                                  child: Container(
+                                    width: 44,
+                                    height: 44,
+                                    decoration: BoxDecoration(
+                                      color: Colors.black,
+                                      borderRadius: BorderRadius.circular(14),
+                                    ),
+                                    child: const Icon(
+                                      Icons.arrow_back_ios_new_rounded,
+                                      color: Color(0xFFFFB703),
+                                      size: 18,
+                                    ),
                                   ),
                                 ),
-                              ),
+                                const SizedBox(width: 14),
+                                Expanded(
+                                  child: Text(
+                                    'Earnings & Payouts',
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w800,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          );
-                        }).toList(),
+                            const SizedBox(height: 20),
+                            // ── Period filter ──
+                            Row(
+                              children: _periods.map((p) {
+                                final active = _selectedPeriod == p;
+                                return Padding(
+                                  padding: const EdgeInsets.only(right: 8),
+                                  child: GestureDetector(
+                                    onTap: () =>
+                                        setState(() => _selectedPeriod = p),
+                                    child: AnimatedContainer(
+                                      duration: const Duration(
+                                        milliseconds: 200,
+                                      ),
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                        vertical: 8,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: active
+                                            ? Colors.black
+                                            : Colors.white,
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        p,
+                                        style: GoogleFonts.inriaSans(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w700,
+                                          color: active
+                                              ? const Color(0xFFFFB703)
+                                              : Colors.black54,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                      Expanded(
+                        child: SingleChildScrollView(
+                          padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // ── Summary cards ──
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: _SummaryCard(
+                                      label: 'TOTAL EARNED',
+                                      value: summary['earned']!,
+                                      icon: Icons.trending_up_rounded,
+                                      dark: true,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 12),
+                                  Expanded(
+                                    child: _SummaryCard(
+                                      label: 'JOBS COMPLETED',
+                                      value: summary['jobs']!,
+                                      icon: Icons.build_circle_outlined,
+                                    ),
+                                  ),
+                                ],
+                              ),
+
+                              const SizedBox(height: 28),
+
+                              // ── Payment history header ──
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text(
+                                    'Payment History',
+                                    style: GoogleFonts.montserrat(
+                                      fontSize: 16,
+                                      fontWeight: FontWeight.w700,
+                                      color: Colors.black,
+                                    ),
+                                  ),
+                                  Text(
+                                    '${_payouts.length} transactions',
+                                    style: GoogleFonts.inriaSans(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                      color: Colors.black38,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 14),
+
+                              // ── Payout list ──
+                              ..._payouts.map(
+                                (p) => Padding(
+                                  padding: const EdgeInsets.only(bottom: 10),
+                                  child: _PayoutCard(data: p),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                ),
-
-                Expanded(
-                  child: SingleChildScrollView(
-                    padding: const EdgeInsets.fromLTRB(16, 20, 16, 24),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // ── Summary cards ──
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _SummaryCard(
-                                label: 'TOTAL EARNED',
-                                value: summary['earned']!,
-                                icon: Icons.trending_up_rounded,
-                                dark: true,
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              child: _SummaryCard(
-                                label: 'JOBS COMPLETED',
-                                value: summary['jobs']!,
-                                icon: Icons.build_circle_outlined,
-                              ),
-                            ),
-                          ],
-                        ),
-
-                        const SizedBox(height: 28),
-
-                        // ── Payment history header ──
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Payment History',
-                              style: GoogleFonts.montserrat(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.black,
-                              ),
-                            ),
-                            Text(
-                              '${_payouts.length} transactions',
-                              style: GoogleFonts.inriaSans(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w600,
-                                color: Colors.black38,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 14),
-
-                        // ── Payout list ──
-                        ..._payouts.map((p) => Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: _PayoutCard(data: p),
-                            )),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ],
         ),
       ),
@@ -412,17 +455,23 @@ class _SummaryCard extends StatelessWidget {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(value,
-                        style: GoogleFonts.montserrat(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w700,
-                            color: valueColor)),
+                    Text(
+                      value,
+                      style: GoogleFonts.montserrat(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w700,
+                        color: valueColor,
+                      ),
+                    ),
                     const SizedBox(height: 4),
-                    Text(label,
-                        style: GoogleFonts.inriaSans(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w600,
-                            color: labelColor)),
+                    Text(
+                      label,
+                      style: GoogleFonts.inriaSans(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w600,
+                        color: labelColor,
+                      ),
+                    ),
                   ],
                 ),
               ],
@@ -432,17 +481,23 @@ class _SummaryCard extends StatelessWidget {
               children: [
                 Icon(icon, size: 20, color: iconColor),
                 const SizedBox(height: 10),
-                Text(value,
-                    style: GoogleFonts.montserrat(
-                        fontSize: 20,
-                        fontWeight: FontWeight.w700,
-                        color: valueColor)),
+                Text(
+                  value,
+                  style: GoogleFonts.montserrat(
+                    fontSize: 20,
+                    fontWeight: FontWeight.w700,
+                    color: valueColor,
+                  ),
+                ),
                 const SizedBox(height: 4),
-                Text(label,
-                    style: GoogleFonts.inriaSans(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: labelColor)),
+                Text(
+                  label,
+                  style: GoogleFonts.inriaSans(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: labelColor,
+                  ),
+                ),
               ],
             ),
     );
@@ -499,8 +554,11 @@ class _PayoutCard extends StatelessWidget {
               color: const Color(0xFFF5F7FA),
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(Icons.receipt_long_outlined,
-                size: 20, color: Color(0xFF121212)),
+            child: const Icon(
+              Icons.receipt_long_outlined,
+              size: 20,
+              color: Color(0xFF121212),
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -541,8 +599,7 @@ class _PayoutCard extends StatelessWidget {
               ),
               const SizedBox(height: 4),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
                 decoration: BoxDecoration(
                   color: _isPaid
                       ? const Color(0xFFE8F7EA)

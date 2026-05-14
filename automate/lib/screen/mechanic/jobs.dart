@@ -279,6 +279,20 @@ class _JobCard extends StatelessWidget {
     }
   }
 
+  String _getDisplayTime() {
+    final scheduledStr = job['scheduled_date'];
+    if (scheduledStr != null) {
+      final parsed = DateTime.tryParse(scheduledStr);
+      if (parsed != null) {
+        final date = parsed.toLocal();
+        final hourStr = date.hour > 12 ? date.hour - 12 : date.hour == 0 ? 12 : date.hour;
+        final timeString = '$hourStr:${date.minute.toString().padLeft(2, '0')} ${date.hour >= 12 ? 'PM' : 'AM'} PST';
+        return '${date.month}/${date.day} • $timeString';
+      }
+    }
+    return _timeAgo(job['created_at']);
+  }
+
   @override
   Widget build(BuildContext context) {
     final title = job['title'] ?? 'Service Request';
@@ -409,7 +423,7 @@ class _JobCard extends StatelessWidget {
                   size: 14, color: Colors.black38),
               const SizedBox(width: 4),
               Text(
-                _timeAgo(job['created_at']),
+                _getDisplayTime(),
                 style: GoogleFonts.inriaSans(
                   fontSize: 12,
                   fontWeight: FontWeight.w600,
