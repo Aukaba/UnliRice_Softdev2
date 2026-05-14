@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -60,10 +61,7 @@ class JobsLogic {
         final first = res['first_name'] ?? '';
         final last = res['last_name'] ?? '';
         final phone = res['phone_number'] ?? '';
-        return {
-          'name': '$first $last'.trim(),
-          'phone': phone,
-        };
+        return {'name': '$first $last'.trim(), 'phone': phone};
       }
     } catch (e) {
       debugPrint('[JobsLogic] _lookupUser(user, $uid): $e');
@@ -114,7 +112,7 @@ class JobsLogic {
       debugPrint('[JobsLogic] getPendingJobs: ${res.length} rows');
       final jobs = List<Map<String, dynamic>>.from(res);
       final validJobs = <Map<String, dynamic>>[];
-      
+
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
 
@@ -130,9 +128,13 @@ class JobsLogic {
         }
 
         if (lapsed) {
-          _supabase.from('jobs').update({'status': 'cancelled'}).eq('id', job['id']).catchError((e) {
-            debugPrint('[JobsLogic] auto-cancel error: $e');
-          });
+          _supabase
+              .from('jobs')
+              .update({'status': 'cancelled'})
+              .eq('id', job['id'])
+              .catchError((e) {
+                debugPrint('[JobsLogic] auto-cancel error: $e');
+              });
           continue;
         }
         validJobs.add(job);
@@ -160,7 +162,7 @@ class JobsLogic {
 
       final allJobs = List<Map<String, dynamic>>.from(res);
       final jobs = <Map<String, dynamic>>[];
-      
+
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
 
@@ -176,9 +178,13 @@ class JobsLogic {
         }
 
         if (lapsed) {
-          _supabase.from('jobs').update({'status': 'cancelled'}).eq('id', job['id']).catchError((e) {
-            debugPrint('[JobsLogic] auto-cancel scheduled error: $e');
-          });
+          _supabase
+              .from('jobs')
+              .update({'status': 'cancelled'})
+              .eq('id', job['id'])
+              .catchError((e) {
+                debugPrint('[JobsLogic] auto-cancel scheduled error: $e');
+              });
           continue;
         }
         jobs.add(job);
@@ -262,9 +268,13 @@ class JobsLogic {
         final canAutoCancel = status == 'pending' || status == 'accepted';
 
         if (lapsed && canAutoCancel) {
-          _supabase.from('jobs').update({'status': 'cancelled'}).eq('id', job['id']).catchError((e) {
-            debugPrint('[JobsLogic] auto-cancel user area error: $e');
-          });
+          _supabase
+              .from('jobs')
+              .update({'status': 'cancelled'})
+              .eq('id', job['id'])
+              .catchError((e) {
+                debugPrint('[JobsLogic] auto-cancel user area error: $e');
+              });
           final updatedJob = Map<String, dynamic>.from(job);
           updatedJob['status'] = 'cancelled';
           jobs.add(updatedJob);
@@ -313,8 +323,10 @@ class JobsLogic {
     final user = _supabase.auth.currentUser;
     if (user == null) return 0;
 
-    final res =
-        await _supabase.from('jobs').select('id').eq('user_id', user.id);
+    final res = await _supabase
+        .from('jobs')
+        .select('id')
+        .eq('user_id', user.id);
     return (res as List).length;
   }
 
@@ -323,12 +335,13 @@ class JobsLogic {
     final user = _supabase.auth.currentUser;
     if (user == null) throw Exception('Mechanic is not logged in.');
 
-    await _supabase.from('jobs').update({
-      'status': 'accepted',
-      'mechanic_id': user.id,
-    }).eq('id', jobId);
+    await _supabase
+        .from('jobs')
+        .update({'status': 'accepted', 'mechanic_id': user.id})
+        .eq('id', jobId);
   }
 
+  // ─── Emergency Auto-Match ──────────────────────────────────────────
   // ─── Emergency Auto-Match ──────────────────────────────────────────
   Future<void> dispatchEmergency({
     required String title,
@@ -343,46 +356,111 @@ class JobsLogic {
     if (user == null) throw Exception('User is not logged in.');
 
     // 1. Create the job
-    final jobRes = await _supabase.from('jobs').insert({
-      'user_id': user.id,
-      'title': title,
-      'vehicle': vehicle,
-      'plate_number': plateNumber,
-      'pickup_location': pickupLocation,
-      'service_type': 'emergency',
-      'issue_description': issueDescription,
-      'status': 'pending',
-      'priority': 'High',
-      if (latitude != null) 'latitude': latitude,
-      if (longitude != null) 'longitude': longitude,
-    }).select('id').single();
+    final jobRes = await _supabase
+        .from('jobs')
+        .insert({
+          'user_id': user.id,
+          'title': title,
+          'vehicle': vehicle,
+          'plate_number': plateNumber,
+          'pickup_location': pickupLocation,
+          'service_type': 'emergency',
+          'issue_description': issueDescription,
+          'status': 'pending',
+          'priority': 'High',
+          if (latitude != null) 'latitude': latitude,
+          if (longitude != null) 'longitude': longitude,
+        })
+        .select('id')
+        .single();
 
     final jobId = jobRes['id'];
 
-    // 2. Pick a random available mechanic
+    // 2. Find ALL qualified mechanics (online + available + verified)
     final mechanicsRes = await _supabase
         .from('mechanic')
-        .select('uid')
+        .select('uid, latitude, longitude')
+        .eq('online_status', true)
         .eq('available_for_emergency', true)
-        .limit(1);
+        .eq('verified', true);
 
-    debugPrint('[JobsLogic] dispatchEmergency - matching mechanics count: ${(mechanicsRes as List).length}');
+    debugPrint(
+      '[JobsLogic] dispatchEmergency - available mechanics: ${mechanicsRes.length}',
+    );
 
-    if (mechanicsRes.isNotEmpty) {
-      final mechanicId = mechanicsRes[0]['uid'];
-      debugPrint('[JobsLogic] dispatchEmergency - dispatching to mechanicId: $mechanicId');
-      
-      // 3. Insert dispatch
-      await _supabase.from('emergency_dispatches').insert({
-        'job_id': jobId,
-        'mechanic_id': mechanicId,
-        'status': 'pending',
-      });
-    } else {
-      debugPrint('[JobsLogic] dispatchEmergency - NO AVAILABLE MECHANIC FOUND');
+    if (mechanicsRes.isEmpty) {
+      debugPrint('[JobsLogic] dispatchEmergency - NO AVAILABLE MECHANIC');
+      throw Exception('No mechanics currently available for emergency');
     }
+
+    // 3. Find nearest mechanic using Haversine formula
+    String? nearestMechanicId;
+    double shortestDistance = double.infinity;
+
+    for (final mechanic in mechanicsRes) {
+      if (latitude != null &&
+          longitude != null &&
+          mechanic['latitude'] != null &&
+          mechanic['longitude'] != null) {
+        final distance = _calculateDistance(
+          latitude,
+          longitude,
+          (mechanic['latitude'] as num).toDouble(),
+          (mechanic['longitude'] as num).toDouble(),
+        );
+
+        debugPrint(
+          '[JobsLogic] Mechanic ${mechanic['uid']}: ${distance.toStringAsFixed(2)} km',
+        );
+
+        if (distance < shortestDistance) {
+          shortestDistance = distance;
+          nearestMechanicId = mechanic['uid'] as String;
+        }
+      }
+    }
+
+    // ✅ Fallback: if no mechanic has coordinates, pick the first one
+    nearestMechanicId ??= (mechanicsRes.first['uid'] as String);
+
+    debugPrint(
+      '[JobsLogic] dispatchEmergency - nearest: $nearestMechanicId (${shortestDistance.toStringAsFixed(2)} km)',
+    );
+
+    // ✅ 4. Create dispatch record
+    await _supabase.from('emergency_dispatches').insert({
+      'job_id': jobId,
+      'mechanic_id': nearestMechanicId,
+      'status': 'pending',
+      'created_at': DateTime.now().toIso8601String(),
+    });
   }
 
+  // ✅ Haversine distance formula
+  double _calculateDistance(
+    double lat1,
+    double lon1,
+    double lat2,
+    double lon2,
+  ) {
+    const double earthRadius = 6371; // kilometers
+
+    double dLat = _toRadians(lat2 - lat1);
+    double dLon = _toRadians(lon2 - lon1);
+
+    double a =
+        sin(dLat / 2) * sin(dLat / 2) +
+        cos(_toRadians(lat1)) *
+            cos(_toRadians(lat2)) *
+            sin(dLon / 2) *
+            sin(dLon / 2);
+
+    double c = 2 * atan2(sqrt(a), sqrt(1 - a));
+
+    return earthRadius * c;
+  }
+
+  double _toRadians(double degree) => degree * (pi / 180);
   Stream<List<Map<String, dynamic>>> getMyEmergencyDispatch() {
     final user = _supabase.auth.currentUser;
     if (user == null) return const Stream.empty();
@@ -396,10 +474,12 @@ class JobsLogic {
             .eq('status', 'pending')
             .order('created_at', ascending: false)
             .limit(1);
-        
+
         final dispatches = List<Map<String, dynamic>>.from(res);
         if (dispatches.isNotEmpty) {
-          debugPrint('[JobsLogic] getMyEmergencyDispatch - fetched ${dispatches.length} pending dispatches');
+          debugPrint(
+            '[JobsLogic] getMyEmergencyDispatch - fetched ${dispatches.length} pending dispatches',
+          );
         }
 
         // We should also enrich the job with the user name
@@ -427,13 +507,20 @@ class JobsLogic {
     });
   }
 
-  Future<void> respondToDispatch(String dispatchId, String jobId, bool accept) async {
+  Future<void> respondToDispatch(
+    String dispatchId,
+    String jobId,
+    bool accept,
+  ) async {
     final status = accept ? 'accepted' : 'declined';
-    
-    await _supabase.from('emergency_dispatches').update({
-      'status': status,
-      'responded_at': DateTime.now().toIso8601String(),
-    }).eq('id', dispatchId);
+
+    await _supabase
+        .from('emergency_dispatches')
+        .update({
+          'status': status,
+          'responded_at': DateTime.now().toIso8601String(),
+        })
+        .eq('id', dispatchId);
 
     if (accept) {
       await acceptJob(jobId);
