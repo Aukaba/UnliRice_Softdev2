@@ -6,6 +6,11 @@ import 'schedule.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'chat.dart';
 import '../authentication/login_screen.dart'; // Just in case for logout
+import 'earnings_payouts_screen.dart';
+import 'job_history_screen.dart';
+import 'working_hours_screen.dart';
+import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
 
 class MechanicProfileScreen extends StatefulWidget {
   const MechanicProfileScreen({super.key});
@@ -27,10 +32,103 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
   String _jobsDone = '0';
   String _yearJoined = '—';
 
+  Uint8List? _profileImageBytes;   // holds picked image in memory
+  String? _profileImageUrl;        // holds the URL from Supabase Storage
+  bool _isUploadingPhoto = false;
+  
+  final List<String> _presetSpecializations = [
+  'Toyota', 'Honda', 'Mitsubishi', 'Suzuki', 'Ford', 'Nissan', 'Mazda',
+  'Hyundai', 'Kia', 'Isuzu', 'BMW', 'Mercedes',
+  'Engine Repair', 'Transmission', 'Brake System', 'Electrical',
+  'AC Repair', 'Suspension', 'Tire & Wheels', 'Oil Change',
+  'Body Work', 'Motorcycle', 'Diesel Engines',
+];
+
+  List<String> _selectedSpecializations = ['Toyota', 'Honda', 'Engine Repair', 'Transmission'];
+
   @override
   void initState() {
     super.initState();
     _loadMechanicInfo();
+  }
+
+  Future<void> _pickAndUploadProfileImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 800,
+    );
+    if (picked == null || !mounted) return;
+ 
+    final bytes = await picked.readAsBytes();
+    setState(() {
+      _profileImageBytes = bytes;
+      _isUploadingPhoto = true;
+    });
+ 
+    try {
+      final uid = _supabase.auth.currentUser?.id;
+      if (uid == null) return;
+ 
+      final fileName = 'profile_$uid.jpg';
+      final storagePath = 'mechanic-profiles/$fileName';
+ 
+      // Upload to Supabase Storage bucket named "mechanic-profiles"
+      await _supabase.storage.from('mechanic-profiles').uploadBinary(
+        fileName,
+        bytes,
+        fileOptions: const FileOptions(
+          contentType: 'image/jpeg',
+          upsert: true, // overwrite if exists
+        ),
+      );
+ 
+      // Get public URL
+      final url = _supabase.storage
+          .from('mechanic-profiles')
+          .getPublicUrl(fileName);
+ 
+      // Save URL to mechanic table
+      await _supabase
+          .from('mechanic')
+          .update({'profile_image_url': url})
+          .eq('uid', uid);
+ 
+      if (mounted) {
+        setState(() => _profileImageUrl = url);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Profile photo updated!',
+                style: GoogleFonts.inriaSans(
+                    fontWeight: FontWeight.w600, color: Colors.white)),
+            backgroundColor: const Color(0xFF2F8A48),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Failed to upload profile image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload photo.',
+                style: GoogleFonts.inriaSans(
+                    fontWeight: FontWeight.w600, color: Colors.white)),
+            backgroundColor: const Color(0xFFD72B2B),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingPhoto = false);
+    }
   }
 
   Future<void> _loadMechanicInfo() async {
@@ -40,7 +138,7 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
 
       final data = await _supabase
           .from('mechanic')
-          .select('first_name, last_name, available_for_emergency, created_at')
+          .select('first_name, last_name, available_for_emergency, created_at, profile_image_url')
           .eq('uid', uid)
           .single();
 
@@ -79,6 +177,7 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
       setState(() {
         final firstName = data['first_name'] ?? '';
         final lastName = data['last_name'] ?? '';
+        _profileImageUrl = data['profile_image_url'];
         _mechanicName = '$firstName $lastName'.trim();
         _availableForEmergency = data['available_for_emergency'] ?? false;
         _avgRating = avgRating;
@@ -135,6 +234,282 @@ Future<void> _signOut() async {
       debugPrint("Error setting offline: $e");
     }
   }
+
+  void _showSpecializationsSheet() {
+  final TextEditingController _customController = TextEditingController();
+  List<String> tempSelected = List.from(_selectedSpecializations);
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.white,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
+    ),
+    builder: (context) {
+      return StatefulBuilder(
+        builder: (context, setSheetState) {
+          return Padding(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+            ),
+            child: DraggableScrollableSheet(
+              expand: false,
+              initialChildSize: 0.75,
+              minChildSize: 0.5,
+              maxChildSize: 0.92,
+              builder: (_, scrollController) => Column(
+                children: [
+                  // ── Handle ──
+                  const SizedBox(height: 14),
+                  Center(
+                    child: Container(
+                      width: 40, height: 4,
+                      decoration: BoxDecoration(
+                        color: Colors.black12,
+                        borderRadius: BorderRadius.circular(2),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+
+                  // ── Header ──
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 40, height: 40,
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFFFB703),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Icon(Icons.shield_outlined, size: 20, color: Colors.black),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Edit Specializations',
+                                style: GoogleFonts.montserrat(
+                                  fontSize: 16, fontWeight: FontWeight.w700, color: Colors.black,
+                                )),
+                              Text('${tempSelected.length} selected',
+                                style: GoogleFonts.inriaSans(
+                                  fontSize: 12, color: Colors.black45, fontWeight: FontWeight.w500,
+                                )),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+                  Container(height: 1, color: const Color(0xFFF0F0F0)),
+                  const SizedBox(height: 16),
+
+                  // ── Scrollable content ──
+                  Expanded(
+                    child: ListView(
+                      controller: scrollController,
+                      padding: const EdgeInsets.symmetric(horizontal: 20),
+                      children: [
+                        // Preset chips
+                        Text('Vehicle Brands & Services',
+                          style: GoogleFonts.inriaSans(
+                            fontSize: 11, fontWeight: FontWeight.w800,
+                            color: Colors.black38, letterSpacing: 1.2,
+                          )),
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _presetSpecializations.map((s) {
+                            final isSelected = tempSelected.contains(s);
+                            return GestureDetector(
+                              onTap: () => setSheetState(() {
+                                isSelected
+                                    ? tempSelected.remove(s)
+                                    : tempSelected.add(s);
+                              }),
+                              child: AnimatedContainer(
+                                duration: const Duration(milliseconds: 180),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 14, vertical: 9),
+                                decoration: BoxDecoration(
+                                  color: isSelected
+                                      ? const Color(0xFF121212)
+                                      : const Color(0xFFF5F7FA),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: Border.all(
+                                    color: isSelected
+                                        ? Colors.transparent
+                                        : const Color(0xFFE8E8E8),
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    if (isSelected) ...[
+                                      const Icon(Icons.check_rounded,
+                                          size: 13, color: Color(0xFFFFB703)),
+                                      const SizedBox(width: 5),
+                                    ],
+                                    Text(s,
+                                      style: GoogleFonts.inriaSans(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: isSelected
+                                            ? Colors.white
+                                            : Colors.black87,
+                                      )),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+
+                        const SizedBox(height: 24),
+
+                        // Custom input
+                        Text('Add Custom',
+                          style: GoogleFonts.inriaSans(
+                            fontSize: 11, fontWeight: FontWeight.w800,
+                            color: Colors.black38, letterSpacing: 1.2,
+                          )),
+                        const SizedBox(height: 12),
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                controller: _customController,
+                                style: GoogleFonts.inriaSans(
+                                  fontSize: 14, fontWeight: FontWeight.w600, color: Colors.black,
+                                ),
+                                decoration: InputDecoration(
+                                  hintText: 'e.g. Turbo Repair, EV Systems...',
+                                  hintStyle: GoogleFonts.inriaSans(
+                                    fontSize: 13, color: Colors.black26,
+                                  ),
+                                  filled: true,
+                                  fillColor: const Color(0xFFF5F7FA),
+                                  contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 12),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: BorderSide.none,
+                                  ),
+                                  focusedBorder: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(14),
+                                    borderSide: const BorderSide(
+                                        color: Color(0xFFFFB703), width: 2),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            GestureDetector(
+                              onTap: () {
+                                final val = _customController.text.trim();
+                                if (val.isNotEmpty && !tempSelected.contains(val)) {
+                                  setSheetState(() {
+                                    tempSelected.add(val);
+                                    _customController.clear();
+                                  });
+                                }
+                              },
+                              child: Container(
+                                width: 46, height: 46,
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFFFB703),
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                                child: const Icon(Icons.add_rounded,
+                                    size: 22, color: Colors.black),
+                              ),
+                            ),
+                          ],
+                        ),
+
+                        // Show custom (non-preset) tags
+                        if (tempSelected.any((s) => !_presetSpecializations.contains(s))) ...[
+                          const SizedBox(height: 14),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children: tempSelected
+                                .where((s) => !_presetSpecializations.contains(s))
+                                .map((s) => Container(
+                                      padding: const EdgeInsets.symmetric(
+                                          horizontal: 12, vertical: 7),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF121212),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Text(s,
+                                            style: GoogleFonts.inriaSans(
+                                              fontSize: 13,
+                                              fontWeight: FontWeight.w600,
+                                              color: Colors.white,
+                                            )),
+                                          const SizedBox(width: 6),
+                                          GestureDetector(
+                                            onTap: () => setSheetState(
+                                                () => tempSelected.remove(s)),
+                                            child: const Icon(Icons.close_rounded,
+                                                size: 14, color: Colors.white54),
+                                          ),
+                                        ],
+                                      ),
+                                    ))
+                                .toList(),
+                          ),
+                        ],
+
+                        const SizedBox(height: 100),
+                      ],
+                    ),
+                  ),
+
+                  // ── Save button ──
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+                    child: GestureDetector(
+                      onTap: () {
+                        setState(() => _selectedSpecializations = List.from(tempSelected));
+                        Navigator.pop(context);
+                      },
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF121212),
+                          borderRadius: BorderRadius.circular(18),
+                        ),
+                        child: Center(
+                          child: Text('Save Specializations',
+                            style: GoogleFonts.montserrat(
+                              fontSize: 15, fontWeight: FontWeight.w700, color: Colors.white,
+                            )),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -256,20 +631,74 @@ Future<void> _signOut() async {
                               // Avatar + name
                               Row(
                                 children: [
-                                  Container(
-                                    width: 64,
-                                    height: 64,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(20),
-                                      color: const Color(0xFFE0D6C8),
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(20),
-                                      child: const Icon(
-                                        Icons.person,
-                                        size: 40,
-                                        color: Color(0xFF8B7355),
-                                      ),
+                                  GestureDetector(
+                                    onTap: _pickAndUploadProfileImage,
+                                    child: Stack(
+                                      children: [
+                                        Container(
+                                          width: 64,
+                                          height: 64,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(20),
+                                            color: const Color(0xFFE0D6C8),
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(20),
+                                            child: _isUploadingPhoto
+                                                ? const Center(
+                                                    child: SizedBox(
+                                                      width: 24,
+                                                      height: 24,
+                                                      child: CircularProgressIndicator(
+                                                        color: Color(0xFFFFB703),
+                                                        strokeWidth: 2.5,
+                                                      ),
+                                                    ),
+                                                  )
+                                                : _profileImageBytes != null
+                                                    ? Image.memory(
+                                                        _profileImageBytes!,
+                                                        fit: BoxFit.cover,
+                                                        width: 64,
+                                                        height: 64,
+                                                      )
+                                                    : _profileImageUrl != null
+                                                        ? Image.network(
+                                                            _profileImageUrl!,
+                                                            fit: BoxFit.cover,
+                                                            width: 64,
+                                                            height: 64,
+                                                            errorBuilder: (_, __, ___) =>
+                                                                const Icon(Icons.person,
+                                                                    size: 40,
+                                                                    color: Color(0xFF8B7355)),
+                                                          )
+                                                        : const Icon(Icons.person,
+                                                            size: 40,
+                                                            color: Color(0xFF8B7355)),
+                                          ),
+                                        ),
+                                        // Camera badge
+                                        Positioned(
+                                          bottom: 0,
+                                          right: 0,
+                                          child: Container(
+                                            width: 22,
+                                            height: 22,
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFFFB703),
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                  color: Colors.white, width: 2),
+                                            ),
+                                            child: const Icon(
+                                              Icons.camera_alt_rounded,
+                                              size: 11,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   const SizedBox(width: 14),
@@ -415,16 +844,42 @@ Future<void> _signOut() async {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                 children: [
-                                  const Icon(Icons.shield_outlined,
-                                      size: 20, color: Colors.black87),
-                                  const SizedBox(width: 8),
-                                  Text(
-                                    'Specializations',
-                                    style: GoogleFonts.montserrat(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w700,
-                                      color: Colors.black,
+                                  Row(
+                                    children: [
+                                      const Icon(Icons.shield_outlined,
+                                          size: 20, color: Colors.black87),
+                                      const SizedBox(width: 8),
+                                      Text(
+                                        'Specializations',
+                                        style: GoogleFonts.montserrat(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w700,
+                                          color: Colors.black,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  GestureDetector(
+                                    onTap: _showSpecializationsSheet,
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          'Edit',
+                                          style: GoogleFonts.inriaSans(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.w700,
+                                            color: const Color(0xFFFFB703),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 4),
+                                        const Icon(
+                                          Icons.edit_outlined,
+                                          size: 18,
+                                          color: Color(0xFFFFB703),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                 ],
@@ -433,8 +888,9 @@ Future<void> _signOut() async {
                               Wrap(
                                 spacing: 8,
                                 runSpacing: 8,
-                                children: ['Toyota', 'Honda', 'Mitsubibi', 'Engine', 'Transmission']
-                                    .map((s) => Container(
+                                children: _selectedSpecializations.isEmpty
+                                    ? [
+                                        Container(
                                           padding: const EdgeInsets.symmetric(
                                               horizontal: 14, vertical: 8),
                                           decoration: BoxDecoration(
@@ -444,15 +900,35 @@ Future<void> _signOut() async {
                                                 color: const Color(0xFFE8E8E8)),
                                           ),
                                           child: Text(
-                                            s,
+                                            'No specializations added',
                                             style: GoogleFonts.inriaSans(
                                               fontSize: 13,
                                               fontWeight: FontWeight.w600,
                                               color: Colors.black87,
                                             ),
                                           ),
-                                        ))
-                                    .toList(),
+                                        ),
+                                      ]
+                                    : _selectedSpecializations
+                                        .map((s) => Container(
+                                              padding: const EdgeInsets.symmetric(
+                                                  horizontal: 14, vertical: 8),
+                                              decoration: BoxDecoration(
+                                                color: const Color(0xFFF5F7FA),
+                                                borderRadius: BorderRadius.circular(20),
+                                                border: Border.all(
+                                                    color: const Color(0xFFE8E8E8)),
+                                              ),
+                                              child: Text(
+                                                s,
+                                                style: GoogleFonts.inriaSans(
+                                                  fontSize: 13,
+                                                  fontWeight: FontWeight.w600,
+                                                  color: Colors.black87,
+                                                ),
+                                              ),
+                                            ))
+                                        .toList(),
                               ),
                             ],
                           ),
@@ -493,12 +969,24 @@ Future<void> _signOut() async {
                                 title: 'Earnings & Payouts',
                                 subtitle: 'View payment history',
                                 isFirst: true,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => EarningsPayoutsScreen(),
+                                  ),
+                                ),
                               ),
                               const _Divider(),
                               _MenuRow(
                                 icon: Icons.description_outlined,
                                 title: 'Job History',
                                 subtitle: 'Past completed jobs',
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const JobHistoryScreen(),
+                                  ),
+                                ),
                               ),
                               const _Divider(),
                               _MenuRow(
@@ -506,6 +994,12 @@ Future<void> _signOut() async {
                                 title: 'Working Hours',
                                 subtitle: 'Set your weekly schedule',
                                 isLast: true,
+                                onTap: () => Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (_) => const WorkingHoursScreen(),
+                                  ),
+                                ),
                               ),
                             ],
                           ),
@@ -735,6 +1229,7 @@ class _MenuRow extends StatelessWidget {
   final String subtitle;
   final bool isFirst;
   final bool isLast;
+  final VoidCallback? onTap;
 
   const _MenuRow({
     required this.icon,
@@ -742,12 +1237,13 @@ class _MenuRow extends StatelessWidget {
     required this.subtitle,
     this.isFirst = false,
     this.isLast = false,
+    this.onTap,
   });
 
   @override
   Widget build(BuildContext context) {
     return GestureDetector(
-      onTap: () {},
+      onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
         decoration: BoxDecoration(

@@ -1,22 +1,28 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'user_dashboard_match.dart';
 
 class UserLookingMechanicScreen extends StatefulWidget {
   const UserLookingMechanicScreen({super.key});
 
   @override
-  State<UserLookingMechanicScreen> createState() => _UserLookingMechanicScreenState();
+  State<UserLookingMechanicScreen> createState() =>
+      _UserLookingMechanicScreenState();
 }
 
 class _UserLookingMechanicScreenState extends State<UserLookingMechanicScreen>
     with SingleTickerProviderStateMixin {
   late AnimationController _pulseController;
   late Animation<double> _scaleAnimation;
+  Timer? _checkTimer;
+  bool _isCancelled = false;
 
   @override
   void initState() {
     super.initState();
+
     // Setup pulse animation
     _pulseController = AnimationController(
       vsync: this,
@@ -24,15 +30,81 @@ class _UserLookingMechanicScreenState extends State<UserLookingMechanicScreen>
     )..repeat(reverse: true);
 
     _scaleAnimation = Tween<double>(begin: 0.90, end: 1.1).animate(
-      CurvedAnimation(
-        parent: _pulseController,
-        curve: Curves.easeInOut,
-      ),
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
     );
+
+    // ✅ Start checking for mechanic acceptance
+    _startCheckingForMechanic();
+  }
+
+  // ✅ Poll for mechanic acceptance every 3 seconds
+ void _startCheckingForMechanic() {
+  _checkTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+    if (_isCancelled || !mounted) return;
+
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) return;
+
+      // ✅ Check emergency_dispatches for accepted dispatch
+      final dispatches = await Supabase.instance.client
+          .from('emergency_dispatches')
+          .select('*, jobs!inner(*), mechanic:mechanic_id(first_name, last_name)')
+          .eq('jobs.user_id', userId)
+          .eq('status', 'accepted')
+          .order('created_at', ascending: false)
+          .limit(1);
+
+      if (dispatches.isNotEmpty && mounted) {
+        _checkTimer?.cancel();
+        
+        final dispatch = dispatches.first;
+        final job = dispatch['jobs'] as Map<String, dynamic>? ?? {};
+        final mechanic = dispatch['mechanic'] as Map<String, dynamic>? ?? {};
+        
+        final mechanicName = '${mechanic['first_name'] ?? ''} ${mechanic['last_name'] ?? ''}'.trim();
+        job['mechanic_name'] = mechanicName.isNotEmpty ? mechanicName : 'Mechanic';
+        job['mechanic_id'] = dispatch['mechanic_id'] ?? '';
+        
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => UserDashboardMatchScreen(jobData: job),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('[LookingForMechanic] Error: $e');
+    }
+  });
+}
+  void _cancelBooking() async {
+    _isCancelled = true;
+    _checkTimer?.cancel();
+
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId != null) {
+        // Cancel the pending emergency job
+        await Supabase.instance.client
+            .from('jobs')
+            .update({'status': 'cancelled'})
+            .eq('user_id', userId)
+            .eq('service_type', 'emergency')
+            .eq('status', 'pending');
+      }
+    } catch (e) {
+      debugPrint('Error cancelling: $e');
+    }
+
+    if (mounted) {
+      Navigator.pop(context);
+    }
   }
 
   @override
   void dispose() {
+    _checkTimer?.cancel();
     _pulseController.dispose();
     super.dispose();
   }
@@ -43,18 +115,16 @@ class _UserLookingMechanicScreenState extends State<UserLookingMechanicScreen>
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-          // 1. Map Background Placeholder
-          // (In a real app, this would be a GoogleMap widget, here we simulate the UI)
+          // Map Background Placeholder
           Positioned(
             top: 0,
             left: 0,
             right: 0,
             height: MediaQuery.of(context).size.height * 0.65,
             child: Container(
-              color: const Color(0xFFE4F0F5), // Light gray-blue simulating map tone
+              color: const Color(0xFFE4F0F5),
               child: Stack(
                 children: [
-                  // Dummy map lines and details mimicking the reference image
                   Positioned(
                     top: 100,
                     left: 20,
@@ -75,94 +145,28 @@ class _UserLookingMechanicScreenState extends State<UserLookingMechanicScreen>
                       transform: Matrix4.rotationZ(0.2),
                     ),
                   ),
-                  Positioned(
-                    top: 180,
-                    right: 80,
-                    child: Transform(
-                      transform: Matrix4.rotationZ(0.2),
-                      child: Text(
-                        "Arrabal River",
-                        style: GoogleFonts.montserrat(
-                          color: Colors.blue.shade300,
-                          fontWeight: FontWeight.w500,
-                          fontSize: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                  Positioned(
-                    top: 300,
-                    left: 20,
-                    child: Text(
-                      "University\nof Cebu...\nMaritime\nEducation...",
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.montserrat(
-                        color: Colors.grey.shade600,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ),
-                  // Dummy map pins (Start & End)
-                  Positioned(
-                    top: 200,
-                    left: MediaQuery.of(context).size.width * 0.4,
-                    child: Column(
-                      children: [
-                        Container(
-                          width: 20,
-                          height: 20,
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            border: Border.all(color: const Color(0xFF19456B), width: 3),
-                            color: Colors.white,
-                          ),
-                        ),
-                        Container(
-                          width: 3,
-                          height: 30,
-                          color: const Color(0xFF19456B),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Positioned(
-                    top: 340,
-                    left: MediaQuery.of(context).size.width * 0.5,
-                    child: Container(
-                      width: 14,
-                      height: 14,
-                      decoration: const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Color(0xFF005BAC), // Solid blue dot
-                      ),
-                      child: Center(
-                        child: Container(
-                          width: 6,
-                          height: 6,
-                          decoration: const BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.white,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),
           ),
 
-          // 2. Floating Info Card at the top
+          // Top info card
           SafeArea(
             child: Align(
               alignment: Alignment.topCenter,
               child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16.0,
+                  vertical: 16.0,
+                ),
                 child: Container(
                   width: double.infinity,
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 18.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 18.0,
+                  ),
                   decoration: BoxDecoration(
-                    color: const Color(0xFF19456B), // Deep Blue color matching main theme
+                    color: const Color(0xFF19456B),
                     borderRadius: BorderRadius.circular(12),
                     boxShadow: [
                       BoxShadow(
@@ -186,180 +190,145 @@ class _UserLookingMechanicScreenState extends State<UserLookingMechanicScreen>
             ),
           ),
 
-          // 3. Bottom White Card overlay
+          // Bottom White Card
           Align(
             alignment: Alignment.bottomCenter,
-            child: SingleChildScrollView(
-              child: Container(
-                width: double.infinity,
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.only(
-                    topLeft: Radius.circular(32),
-                    topRight: Radius.circular(32),
-                  ),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black12,
-                      blurRadius: 15,
-                      offset: Offset(0, -4),
-                    ),
-                  ],
+            child: Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.only(
+                  topLeft: Radius.circular(32),
+                  topRight: Radius.circular(32),
                 ),
-                padding: const EdgeInsets.only(top: 32.0, left: 24.0, right: 24.0, bottom: 40.0),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      "Looking for a mechanic",
-                      style: GoogleFonts.inriaSans(
-                        fontSize: 22,
-                        fontWeight: FontWeight.w700,
-                        color: Colors.black,
-                      ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 15,
+                    offset: Offset(0, -4),
+                  ),
+                ],
+              ),
+              padding: const EdgeInsets.only(
+                top: 32.0,
+                left: 24.0,
+                right: 24.0,
+                bottom: 40.0,
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    "Looking for a mechanic",
+                    style: GoogleFonts.inriaSans(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w700,
+                      color: Colors.black,
                     ),
-                    const SizedBox(height: 16),
+                  ),
+                  const SizedBox(height: 16),
 
-                    // Location Box
-                    Container(
-                      width: double.infinity,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: Colors.grey.shade300),
-                      ),
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 14.0),
-                      child: Row(
-                        children: [
-                          // Blue ring icon
-                          Container(
-                            width: 20,
-                            height: 20,
-                            decoration: const BoxDecoration(
-                              shape: BoxShape.circle,
-                              color: Color(0xFF005BAC), // Inner solid blue
-                            ),
-                            child: Center(
-                              child: Container(
-                                width: 8,
-                                height: 8,
-                                decoration: const BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white,
-                                ),
+                  // Location Box
+                  Container(
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0,
+                      vertical: 14.0,
+                    ),
+                    child: Row(
+                      children: [
+                        Container(
+                          width: 20,
+                          height: 20,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Color(0xFF005BAC),
+                          ),
+                          child: Center(
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                shape: BoxShape.circle,
+                                color: Colors.white,
                               ),
                             ),
                           ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              "Cebu Institute of Technology - University",
-                              style: GoogleFonts.montserrat(
-                                fontSize: 13,
-                                fontWeight: FontWeight.w400,
-                                color: Colors.black87,
-                              ),
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            "Cebu Institute of Technology - University",
+                            style: GoogleFonts.montserrat(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w400,
+                              color: Colors.black87,
                             ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 48),
-
-                    // Breathing Logo Area
-                    Center(
-                      child: SizedBox(
-                        height: 120, // Control logo size
-                        child: AnimatedBuilder(
-                          animation: _scaleAnimation,
-                          builder: (context, child) {
-                            return Transform.scale(
-                              scale: _scaleAnimation.value,
-                              child: child,
-                            );
-                          },
-                          child: Image.asset(
-                            'assets/images/AutoMate_logo.png',
-                            fit: BoxFit.contain,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
-                      ),
+                      ],
                     ),
+                  ),
 
-                    const SizedBox(height: 48),
+                  const SizedBox(height: 48),
 
-                    // Cancel Booking Button
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          // Handle cancel searching
-                          Navigator.pop(context);
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFFB71C1C), // Deep Red
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          elevation: 0,
-                        ),
-                        child: Text(
-                          "CANCEL BOOKING",
-                          style: GoogleFonts.inriaSans(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.5,
-                          ),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                    // Temporary Button to Navigate to UserDashHelpScreen
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const UserDashboardMatchScreen(),
-                            ),
+                  // Breathing Logo
+                  Center(
+                    child: SizedBox(
+                      height: 120,
+                      child: AnimatedBuilder(
+                        animation: _scaleAnimation,
+                        builder: (context, child) {
+                          return Transform.scale(
+                            scale: _scaleAnimation.value,
+                            child: child,
                           );
                         },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blueGrey,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                        ),
-                        child: Text(
-                          "TEMP: Go to Dash Help",
-                          style: GoogleFonts.inriaSans(
-                            fontSize: 15,
-                            fontWeight: FontWeight.w700,
-                          ),
+                        child: Image.asset(
+                          'assets/images/AutoMate_logo.png',
+                          fit: BoxFit.contain,
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+
+                  const SizedBox(height: 48),
+
+                  // Cancel Button
+                  SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton(
+                      onPressed: _cancelBooking,
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFB71C1C),
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        elevation: 0,
+                      ),
+                      child: Text(
+                        "CANCEL BOOKING",
+                        style: GoogleFonts.inriaSans(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
-          ),
-          
-          // Back Button overlaid on Map just for ease of testing navigation structure
-          Positioned(
-            top: MediaQuery.of(context).padding.top + 16,
-            left: 16,
-            child: const SizedBox.shrink(), // Add custom back arrow here if needed
           ),
         ],
       ),

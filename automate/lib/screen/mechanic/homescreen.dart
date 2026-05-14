@@ -27,16 +27,19 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen>  with WidgetsBi
   bool _isLoadingStatus = true;
   StreamSubscription? _dispatchSub;
   bool _isDialogShowing = false;
+    StreamSubscription<Position>? _positionStream;
+  Timer? _locationTimer;
 
-  @override
-  void initState() {
-    super.initState();
-     WidgetsBinding.instance.addObserver(this);  // ✅ ADD THIS
-    _setOnlineStatus(true);
-    _checkStatus();
-    _listenForEmergencyDispatches();
-    _checkActiveJob();
-  }
+@override
+void initState() {
+  super.initState();
+  WidgetsBinding.instance.addObserver(this);
+  _setOnlineStatus(true);
+  _startLocationTracking(); // ✅ Start location tracking
+  _checkStatus();
+  _listenForEmergencyDispatches();
+  _checkActiveJob();
+}
 
   void _checkStatus() async {
     try {
@@ -127,10 +130,90 @@ class _MechanicHomeScreenState extends State<MechanicHomeScreen>  with WidgetsBi
 
 @override
 void dispose() {
-  WidgetsBinding.instance.removeObserver(this);  // ✅ ADD THIS
-  _setOnlineStatus(false);  // ✅ ADD THIS
+  WidgetsBinding.instance.removeObserver(this);
+  _setOnlineStatus(false);
+  _stopLocationTracking(); // ✅ Stop location tracking
   _dispatchSub?.cancel();
   super.dispose();
+}
+// Start listening to location changes
+Future<void> _startLocationTracking() async {
+  try {
+    // Check permission
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+    
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      debugPrint('Location permission denied');
+      return;
+    }
+
+    // Option 1: Listen to continuous location updates
+    _positionStream = Geolocator.getPositionStream(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        distanceFilter: 50, // Update every 50 meters
+        timeLimit: null,     // No time limit
+      ),
+    ).listen((Position position) {
+      _updateLocation(position.latitude, position.longitude);
+    });
+
+    // Option 2: Also update every 30 seconds as fallback
+    _locationTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
+      try {
+        final position = await Geolocator.getCurrentPosition(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.low,
+            timeLimit: Duration(seconds: 5),
+          ),
+        );
+        _updateLocation(position.latitude, position.longitude);
+      } catch (e) {
+        debugPrint('Periodic location update failed: $e');
+      }
+    });
+
+    // Get initial position immediately
+    final initialPosition = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.low,
+        timeLimit: Duration(seconds: 5),
+      ),
+    );
+    _updateLocation(initialPosition.latitude, initialPosition.longitude);
+
+  } catch (e) {
+    debugPrint('Error starting location tracking: $e');
+  }
+}
+
+// Update location in database
+Future<void> _updateLocation(double latitude, double longitude) async {
+  try {
+    final uid = Supabase.instance.client.auth.currentUser?.id;
+    if (uid != null) {
+      await Supabase.instance.client
+          .from('mechanic')
+          .update({
+            'latitude': latitude,
+            'longitude': longitude,
+          })
+          .eq('uid', uid);
+      debugPrint('Location updated: $latitude, $longitude');
+    }
+  } catch (e) {
+    debugPrint('Error updating location: $e');
+  }
+}
+
+// Stop location tracking
+void _stopLocationTracking() {
+  _positionStream?.cancel();
+  _locationTimer?.cancel();
 }
 @override
 void didChangeAppLifecycleState(AppLifecycleState state) {
