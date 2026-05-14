@@ -8,9 +8,9 @@ import 'chat.dart';
 import '../authentication/login_screen.dart'; // Just in case for logout
 import 'earnings_payouts_screen.dart';
 import 'job_history_screen.dart';
-
 import 'dart:typed_data';
 import 'package:image_picker/image_picker.dart';
+import 'account_settings_screen.dart';
 
 class MechanicProfileScreen extends StatefulWidget {
   const MechanicProfileScreen({super.key});
@@ -522,7 +522,7 @@ Future<void> _signOut() async {
                                     }
                                   }
                                 },
-                                activeColor: Colors.white,
+                                activeThumbColor: Colors.white,
                                 activeTrackColor: const Color(0xFF3FDF21),
                                 inactiveThumbColor: Colors.white,
                                 inactiveTrackColor: Colors.black12,
@@ -626,6 +626,13 @@ Future<void> _signOut() async {
                                 subtitle: 'Edit profile & details',
                                 isFirst: true,
                                 isLast: true,
+                                onTap: () async {
+                                  final updated = await Navigator.push<bool>(
+                                    context,
+                                    MaterialPageRoute(builder: (_) => AccountSettingsScreen()),
+                                  );
+                                  if (updated == true) _loadMechanicInfo(); // refresh name on return
+                                },
                               ),
                             ],
                           ),
@@ -757,7 +764,7 @@ class _ProfileStat extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           Text(
-            '${sub ?? ''} ${label}',
+            '${sub ?? ''} $label',
             style: GoogleFonts.inriaSans(
               fontSize: 11,
               fontWeight: FontWeight.w600,
