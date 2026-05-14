@@ -121,8 +121,11 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
       setState(() {
         _isSearchingLocation = true;
       });
+      
+      final searchQuery = query.toLowerCase().contains('cebu') ? query : '$query, Cebu';
+      
       try {
-        final url = Uri.parse('https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(query)}&format=json&addressdetails=1&countrycodes=ph&limit=5');
+        final url = Uri.parse('https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(searchQuery)}&format=json&addressdetails=1&countrycodes=ph&limit=5');
         // Do NOT set User-Agent header to avoid CORS issues on Flutter Web
         final response = await http.get(url);
         if (response.statusCode == 200) {
