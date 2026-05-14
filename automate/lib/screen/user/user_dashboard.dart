@@ -83,10 +83,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
       final url = Uri.parse(
         'https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.latitude}&lon=${pos.longitude}&zoom=18&addressdetails=1',
       );
-      final response = await http.get(
-        url,
-        headers: {'User-Agent': 'AutomateApp/1.0 (contact@example.com)'},
-      );
+      final response = await http.get(url);
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
