@@ -22,12 +22,10 @@ class _AdminMechanicVerificationContentState
     _fetchPendingMechanics();
   }
 
-  // Fetch pending verifications from Supabase
   Future<void> _fetchPendingMechanics() async {
     try {
       setState(() => _isLoading = true);
 
-      // Get all pending verifications with mechanic details
       final data = await Supabase.instance.client
           .from('mechanic_verification')
           .select('''
@@ -71,60 +69,46 @@ class _AdminMechanicVerificationContentState
     }
   }
 
-  // Approve mechanic
-Future<void> _approveMechanic(String mechanicId, int verificationId) async {
-  try {
-    debugPrint("Approving mechanic: $mechanicId, verification: $verificationId");
-    
-    // Update verification status to approved
-    final verificationResult = await Supabase.instance.client
-        .from('mechanic_verification')
-        .update({'status': 'approved'})
-        .eq('id', verificationId)
-        .select();
-    
-    debugPrint("Verification update result: $verificationResult");
+  Future<void> _approveMechanic(String mechanicId, int verificationId) async {
+    try {
+      debugPrint("Approving mechanic: $mechanicId, verification: $verificationId");
+      
+      await Supabase.instance.client
+          .from('mechanic_verification')
+          .update({'status': 'approved'})
+          .eq('id', verificationId);
 
-    // Update mechanic verified status to true
-    final mechanicResult = await Supabase.instance.client
-        .from('mechanic')
-        .update({'verified': true})
-        .eq('uid', mechanicId)
-        .select();
-    
-    debugPrint("Mechanic update result: $mechanicResult");
+      await Supabase.instance.client
+          .from('mechanic')
+          .update({'verified': true})
+          .eq('uid', mechanicId);
 
-    if (mounted) {
-      _removeCard(verificationId, 'approved');
+      if (mounted) {
+        _removeCard(verificationId, 'approved');
+      }
+    } catch (e) {
+      debugPrint("Error approving mechanic: $e");
+      _showErrorSnackBar('Failed to approve mechanic');
     }
-  } catch (e) {
-    debugPrint("Error approving mechanic: $e");
-    _showErrorSnackBar('Failed to approve mechanic: $e');
   }
-}
 
-// Reject mechanic
-Future<void> _rejectMechanic(String mechanicId, int verificationId) async {
-  try {
-    debugPrint("Rejecting mechanic: $mechanicId, verification: $verificationId");
-    
-    // Update verification status to rejected
-    final result = await Supabase.instance.client
-        .from('mechanic_verification')
-        .update({'status': 'rejected'})
-        .eq('id', verificationId)
-        .select();
-    
-    debugPrint("Reject result: $result");
+  Future<void> _rejectMechanic(String mechanicId, int verificationId) async {
+    try {
+      debugPrint("Rejecting mechanic: $mechanicId, verification: $verificationId");
+      
+      await Supabase.instance.client
+          .from('mechanic_verification')
+          .update({'status': 'rejected'})
+          .eq('id', verificationId);
 
-    if (mounted) {
-      _removeCard(verificationId, 'rejected');
+      if (mounted) {
+        _removeCard(verificationId, 'rejected');
+      }
+    } catch (e) {
+      debugPrint("Error rejecting mechanic: $e");
+      _showErrorSnackBar('Failed to reject mechanic');
     }
-  } catch (e) {
-    debugPrint("Error rejecting mechanic: $e");
-    _showErrorSnackBar('Failed to reject mechanic: $e');
   }
-}
 
   void _removeCard(int verificationId, String action) {
     setState(() {
@@ -161,60 +145,61 @@ Future<void> _rejectMechanic(String mechanicId, int verificationId) async {
       );
     }
   }
-void _showImageDialog(String imageUrl) {
-  if (imageUrl.isEmpty) {
-    _showErrorSnackBar('No image available');
-    return;
-  }
 
-  showDialog(
-    context: context,
-    builder: (context) => Dialog(
-      backgroundColor: Colors.transparent,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Align(
-            alignment: Alignment.topRight,
-            child: IconButton(
-              icon: const Icon(Icons.close, color: Colors.white, size: 30),
-              onPressed: () => Navigator.pop(context),
-            ),
-          ),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(12),
-            child: InteractiveViewer(
-              maxScale: 5.0,
-              child: Image.network(
-                imageUrl,
-                fit: BoxFit.contain,
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return Container(
-                    height: 300,
-                    color: Colors.white,
-                    child: const Center(
-                      child: CircularProgressIndicator(color: Color(0xFF164D83)),
-                    ),
-                  );
-                },
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    height: 200,
-                    color: Colors.white,
-                    child: const Center(
-                      child: Text('Failed to load image', style: TextStyle(color: Colors.red)),
-                    ),
-                  );
-                },
+  void _showImageDialog(String imageUrl) {
+    if (imageUrl.isEmpty) {
+      _showErrorSnackBar('No image available');
+      return;
+    }
+
+    showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Align(
+              alignment: Alignment.topRight,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
               ),
             ),
-          ),
-        ],
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: InteractiveViewer(
+                maxScale: 5.0,
+                child: Image.network(
+                  imageUrl,
+                  fit: BoxFit.contain,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Container(
+                      height: 300,
+                      color: Colors.white,
+                      child: const Center(
+                        child: CircularProgressIndicator(color: Color(0xFF164D83)),
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return Container(
+                      height: 200,
+                      color: Colors.white,
+                      child: const Center(
+                        child: Text('Failed to load image', style: TextStyle(color: Colors.red)),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -224,13 +209,10 @@ void _showImageDialog(String imageUrl) {
         bottom: false,
         child: Stack(
           children: [
-            // Sidebar layers (keep as is)
             Positioned(
-              left: -28,
-              top: 87,
+              left: -28, top: 87,
               child: Container(
-                width: 258,
-                height: MediaQuery.of(context).size.height,
+                width: 258, height: MediaQuery.of(context).size.height,
                 decoration: ShapeDecoration(
                   color: const Color(0x4C164D83),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(19)),
@@ -238,11 +220,9 @@ void _showImageDialog(String imageUrl) {
               ),
             ),
             Positioned(
-              left: -18,
-              top: 87,
+              left: -18, top: 87,
               child: Container(
-                width: 176,
-                height: MediaQuery.of(context).size.height,
+                width: 176, height: MediaQuery.of(context).size.height,
                 decoration: ShapeDecoration(
                   color: const Color(0x7F164D83),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(19)),
@@ -250,11 +230,9 @@ void _showImageDialog(String imageUrl) {
               ),
             ),
             Positioned(
-              left: -18,
-              top: 87,
+              left: -18, top: 87,
               child: Container(
-                width: 103,
-                height: MediaQuery.of(context).size.height,
+                width: 103, height: MediaQuery.of(context).size.height,
                 decoration: ShapeDecoration(
                   color: const Color(0xFF164D83),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(19)),
@@ -262,24 +240,19 @@ void _showImageDialog(String imageUrl) {
               ),
             ),
 
-            // Main content
             Column(
               children: [
-                // Header (keep as is)
                 Padding(
                   padding: const EdgeInsets.fromLTRB(16, 12, 16, 0),
                   child: Row(
                     children: [
                       Container(
-                        width: 70,
-                        height: 70,
-                        decoration: ShapeDecoration(
-                          image: const DecorationImage(
-                            image: NetworkImage("https://placehold.co/98x98"),
-                            fit: BoxFit.cover,
-                          ),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9999)),
+                        width: 70, height: 70,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF164D83),
+                          borderRadius: BorderRadius.circular(35),
                         ),
+                        child: const Icon(Icons.verified_user, color: Colors.white, size: 35),
                       ),
                       const SizedBox(width: 12),
                       Column(
@@ -287,21 +260,11 @@ void _showImageDialog(String imageUrl) {
                         children: [
                           const Text(
                             'Mechanic Verification',
-                            style: TextStyle(
-                              color: Color(0xFF1A1A1A),
-                              fontSize: 16,
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: TextStyle(color: Color(0xFF1A1A1A), fontSize: 16, fontFamily: 'Poppins', fontWeight: FontWeight.w700),
                           ),
                           Text(
                             '${_pendingMechanics.length} Pending',
-                            style: const TextStyle(
-                              color: Color(0xFF666666),
-                              fontSize: 12,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w400,
-                            ),
+                            style: const TextStyle(color: Color(0xFF666666), fontSize: 12, fontFamily: 'Inter', fontWeight: FontWeight.w400),
                           ),
                         ],
                       ),
@@ -316,7 +279,6 @@ void _showImageDialog(String imageUrl) {
 
                 const SizedBox(height: 16),
 
-                // Cards list
                 Expanded(
                   child: _isLoading
                       ? const Center(child: CircularProgressIndicator(color: Color(0xFF164D83)))
@@ -360,20 +322,9 @@ void _showImageDialog(String imageUrl) {
         children: [
           Icon(Icons.check_circle_outline_rounded, size: 64, color: Colors.grey.shade300),
           const SizedBox(height: 12),
-          Text(
-            'No pending mechanics',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Colors.grey.shade400,
-              fontFamily: 'Poppins',
-            ),
-          ),
+          Text('No pending mechanics', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600, color: Colors.grey.shade400, fontFamily: 'Poppins')),
           const SizedBox(height: 6),
-          Text(
-            'All mechanics have been reviewed.',
-            style: TextStyle(fontSize: 13, color: Colors.grey.shade400),
-          ),
+          Text('All mechanics have been reviewed.', style: TextStyle(fontSize: 13, color: Colors.grey.shade400)),
         ],
       ),
     );
@@ -398,93 +349,25 @@ class _MechanicCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(14),
+      width: double.infinity, padding: const EdgeInsets.all(14),
       decoration: ShapeDecoration(
         color: Colors.white,
-        shape: RoundedRectangleBorder(
-          side: const BorderSide(width: 1, color: Color(0xFFE5E5E5)),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        shadows: const [
-          BoxShadow(
-            color: Color(0x3F000000),
-            blurRadius: 4,
-            offset: Offset(0, 4),
-            spreadRadius: 0,
-          ),
-        ],
+        shape: RoundedRectangleBorder(side: const BorderSide(width: 1, color: Color(0xFFE5E5E5)), borderRadius: BorderRadius.circular(12)),
+        shadows: const [BoxShadow(color: Color(0x3F000000), blurRadius: 4, offset: Offset(0, 4))],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Name:',
-            style: TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 18,
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Text(
-            mechanic['name'] ?? '—',
-            style: const TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 16,
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          const Text('Name:', style: TextStyle(color: Color(0xFF1A1A1A), fontSize: 18, fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+          Text(mechanic['name'] ?? '—', style: const TextStyle(color: Color(0xFF1A1A1A), fontSize: 16, fontFamily: 'Poppins', fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
-          const Text(
-            'Email:',
-            style: TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 16,
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Text(
-            mechanic['email'] ?? '—',
-            style: const TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 16,
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          const Text('Email:', style: TextStyle(color: Color(0xFF1A1A1A), fontSize: 16, fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+          Text(mechanic['email'] ?? '—', style: const TextStyle(color: Color(0xFF1A1A1A), fontSize: 16, fontFamily: 'Poppins', fontWeight: FontWeight.w500)),
           const SizedBox(height: 8),
-          const Text(
-            'Contact:',
-            style: TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 16,
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-          Text(
-            mechanic['contact'] ?? '—',
-            style: const TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 16,
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w500,
-            ),
-          ),
+          const Text('Contact:', style: TextStyle(color: Color(0xFF1A1A1A), fontSize: 16, fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
+          Text(mechanic['contact'] ?? '—', style: const TextStyle(color: Color(0xFF1A1A1A), fontSize: 16, fontFamily: 'Poppins', fontWeight: FontWeight.w500)),
           const SizedBox(height: 12),
-          const Text(
-            'CERTIFICATION:',
-            style: TextStyle(
-              color: Color(0xFF1A1A1A),
-              fontSize: 16,
-              fontFamily: 'Poppins',
-              fontWeight: FontWeight.w600,
-              decoration: TextDecoration.underline,
-            ),
-          ),
+          const Text('CERTIFICATION:', style: TextStyle(color: Color(0xFF1A1A1A), fontSize: 16, fontFamily: 'Poppins', fontWeight: FontWeight.w600, decoration: TextDecoration.underline)),
           const SizedBox(height: 10),
           Center(
             child: GestureDetector(
@@ -493,79 +376,30 @@ class _MechanicCard extends StatelessWidget {
                 padding: const EdgeInsets.symmetric(horizontal: 31, vertical: 8),
                 decoration: ShapeDecoration(
                   color: const Color(0xFF203C63),
-                  shape: RoundedRectangleBorder(
-                    side: BorderSide(color: Colors.black.withOpacity(0.50), width: 1),
-                    borderRadius: BorderRadius.circular(19),
-                  ),
+                  shape: RoundedRectangleBorder(side: BorderSide(color: Colors.black.withOpacity(0.50), width: 1), borderRadius: BorderRadius.circular(19)),
                 ),
-                child: const Text(
-                  'See Certification Here',
-                  style: TextStyle(
-                    color: Colors.white,
-                    fontSize: 14,
-                    fontFamily: 'Inter',
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
+                child: const Text('See Certification Here', style: TextStyle(color: Colors.white, fontSize: 14, fontFamily: 'Inter', fontWeight: FontWeight.w500)),
               ),
             ),
           ),
           const SizedBox(height: 12),
-          const Center(
-            child: Text(
-              'Waiting for approval',
-              style: TextStyle(
-                color: Color(0xFF666666),
-                fontSize: 12,
-                fontFamily: 'Inter',
-                fontWeight: FontWeight.w400,
-              ),
-            ),
-          ),
+          const Center(child: Text('Waiting for approval', style: TextStyle(color: Color(0xFF666666), fontSize: 12, fontFamily: 'Inter', fontWeight: FontWeight.w400))),
           const SizedBox(height: 12),
           Row(
             children: [
               Expanded(
                 child: OutlinedButton(
                   onPressed: onReject,
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    side: const BorderSide(color: Color(0xFFBF2D2D), width: 1.5),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(49)),
-                  ),
-                  child: const Text(
-                    'Reject',
-                    style: TextStyle(
-                      color: Color(0xFFBF2D2D),
-                      fontSize: 16,
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
+                  style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 12), side: const BorderSide(color: Color(0xFFBF2D2D), width: 1.5), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(49))),
+                  child: const Text('Reject', style: TextStyle(color: Color(0xFFBF2D2D), fontSize: 16, fontFamily: 'Poppins', fontWeight: FontWeight.w600)),
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
                   onPressed: onApprove,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF009227),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    elevation: 0,
-                    shape: RoundedRectangleBorder(
-                      side: const BorderSide(color: Color(0xFF22C55E)),
-                      borderRadius: BorderRadius.circular(49),
-                    ),
-                  ),
-                  child: const Text(
-                    'Approve',
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 16,
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF009227), padding: const EdgeInsets.symmetric(vertical: 12), elevation: 0, shape: RoundedRectangleBorder(side: const BorderSide(color: Color(0xFF22C55E)), borderRadius: BorderRadius.circular(49))),
+                  child: const Text('Approve', style: TextStyle(color: Colors.white, fontSize: 16, fontFamily: 'Poppins', fontWeight: FontWeight.w500)),
                 ),
               ),
             ],
