@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:intl/intl.dart';
 
 class EarningsPayoutsScreen extends StatefulWidget {
   const EarningsPayoutsScreen({super.key});
@@ -12,57 +14,150 @@ class _EarningsPayoutsScreenState extends State<EarningsPayoutsScreen> {
   String _selectedPeriod = 'This Week';
   final List<String> _periods = ['Today', 'This Week', 'This Month'];
 
-  // Dummy data per period — swap with Supabase later
-  final Map<String, Map<String, String>> _summaryByPeriod = {
-    'Today': {'earned': '₱4,500', 'pending': '₱0', 'jobs': '3 Jobs'},
-    'This Week': {'earned': '₱23,800', 'pending': '₱1,800', 'jobs': '14 Jobs'},
-    'This Month': {'earned': '₱87,200', 'pending': '₱3,200', 'jobs': '52 Jobs'},
+  bool _isLoading = true;
+
+  Map<String, Map<String, String>> _summaryByPeriod = {
+    'Today': {'earned': '₱0', 'pending': '₱0', 'jobs': '0 Jobs'},
+    'This Week': {'earned': '₱0', 'pending': '₱0', 'jobs': '0 Jobs'},
+    'This Month': {'earned': '₱0', 'pending': '₱0', 'jobs': '0 Jobs'},
   };
 
-  final List<_PayoutData> _payouts = const [
-    _PayoutData(
-      jobTitle: 'Engine Repair',
-      client: 'Ron Seldizo',
-      date: 'Apr 28, 2025',
-      amount: '₱2,000',
-      status: 'Paid',
-    ),
-    _PayoutData(
-      jobTitle: 'Flat Tire Fix',
-      client: 'Aaron Barnaija',
-      date: 'Apr 27, 2025',
-      amount: '₱1,200',
-      status: 'Paid',
-    ),
-    _PayoutData(
-      jobTitle: 'AC Repair',
-      client: 'Mambaling Motorcab',
-      date: 'Apr 26, 2025',
-      amount: '₱1,800',
-      status: 'Pending',
-    ),
-    _PayoutData(
-      jobTitle: 'Oil Change',
-      client: 'Jay Mercado',
-      date: 'Apr 25, 2025',
-      amount: '₱800',
-      status: 'Paid',
-    ),
-    _PayoutData(
-      jobTitle: 'Brake Replacement',
-      client: 'Liza Santos',
-      date: 'Apr 24, 2025',
-      amount: '₱2,500',
-      status: 'Paid',
-    ),
-    _PayoutData(
-      jobTitle: 'Transmission Check',
-      client: 'Bert Quizon',
-      date: 'Apr 23, 2025',
-      amount: '₱3,000',
-      status: 'Paid',
-    ),
-  ];
+  List<_PayoutData> _payouts = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchEarningsData();
+  }
+
+  Future<void> _fetchEarningsData() async {
+    try {
+      final uid = Supabase.instance.client.auth.currentUser?.id;
+      if (uid == null) {
+        setState(() => _isLoading = false);
+        return;
+      }
+
+      // Fetch jobs
+      final jobsList = await Supabase.instance.client
+          .from('jobs')
+          .select('id, title, status, created_at, scheduled_date, user_id')
+          .eq('mechanic_id', uid)
+          .inFilter('status', ['completed', 'in_progress', 'accepted', 'pending_payment'])
+          .order('created_at', ascending: false);
+
+      final userIds = jobsList.map((j) => j['user_id']).where((id) => id != null).toSet().toList();
+      final jobIds = jobsList.map((j) => j['id']).toList();
+
+      // Fetch related users
+      Map<String, Map<String, dynamic>> userMap = {};
+      if (userIds.isNotEmpty) {
+        try {
+          final usersRes = await Supabase.instance.client
+              .from('user')
+              .select('uid, first_name, last_name')
+              .inFilter('uid', userIds);
+          for (var u in usersRes) {
+            userMap[u['uid']] = u;
+          }
+        } catch (_) {}
+      }
+
+      // Fetch related diagnoses
+      Map<String, double> diagMap = {};
+      if (jobIds.isNotEmpty) {
+        try {
+          final diagRes = await Supabase.instance.client
+              .from('job_diagnosis')
+              .select('job_id, total_bill')
+              .inFilter('job_id', jobIds);
+          for (var d in diagRes) {
+            diagMap[d['job_id']] = double.tryParse(d['total_bill']?.toString() ?? '0') ?? 0.0;
+          }
+        } catch (_) {}
+      }
+
+      final now = DateTime.now();
+      
+      double earnedToday = 0, pendingToday = 0; int jobsToday = 0;
+      double earnedWeek = 0, pendingWeek = 0; int jobsWeek = 0;
+      double earnedMonth = 0, pendingMonth = 0; int jobsMonth = 0;
+
+      List<_PayoutData> loadedPayouts = [];
+
+      for (var job in jobsList) {
+        final status = job['status'];
+        final isCompleted = status == 'completed';
+        
+        final userObj = userMap[job['user_id']];
+        String clientName = 'Unknown Client';
+        if (userObj != null) {
+          clientName = '${userObj['first_name'] ?? ''} ${userObj['last_name'] ?? ''}'.trim();
+          if (clientName.isEmpty) clientName = 'Unknown Client';
+        }
+
+        final rawDate = job['scheduled_date'] ?? job['created_at'];
+        final date = rawDate != null ? DateTime.tryParse(rawDate.toString()) ?? now : now;
+        final dateStr = DateFormat('MMM d, yyyy').format(date);
+
+        double bill = diagMap[job['id']] ?? 0.0;
+
+        loadedPayouts.add(_PayoutData(
+          jobTitle: job['title']?.toString() ?? 'Job',
+          client: clientName,
+          date: dateStr,
+          amount: '₱${NumberFormat('#,##0').format(bill)}',
+          status: isCompleted ? 'Paid' : 'Pending',
+        ));
+
+        // Time checks
+        final isToday = date.year == now.year && date.month == now.month && date.day == now.day;
+        
+        final startOfWeek = now.subtract(Duration(days: now.weekday - 1));
+        final endOfWeek = startOfWeek.add(const Duration(days: 6));
+        final isThisWeek = date.isAfter(startOfWeek.subtract(const Duration(days: 1))) && 
+                           date.isBefore(endOfWeek.add(const Duration(days: 1)));
+                           
+        final isThisMonth = date.year == now.year && date.month == now.month;
+
+        if (isToday) {
+          if (isCompleted) { earnedToday += bill; jobsToday++; } else { pendingToday += bill; }
+        }
+        if (isThisWeek) {
+          if (isCompleted) { earnedWeek += bill; jobsWeek++; } else { pendingWeek += bill; }
+        }
+        if (isThisMonth) {
+          if (isCompleted) { earnedMonth += bill; jobsMonth++; } else { pendingMonth += bill; }
+        }
+      }
+
+      if (mounted) {
+        setState(() {
+          _summaryByPeriod = {
+            'Today': {
+              'earned': '₱${NumberFormat('#,##0').format(earnedToday)}',
+              'jobs': '$jobsToday Jobs'
+            },
+            'This Week': {
+              'earned': '₱${NumberFormat('#,##0').format(earnedWeek)}',
+              'jobs': '$jobsWeek Jobs'
+            },
+            'This Month': {
+              'earned': '₱${NumberFormat('#,##0').format(earnedMonth)}',
+              'jobs': '$jobsMonth Jobs'
+            },
+          };
+          _payouts = loadedPayouts;
+          _isLoading = false;
+        });
+      }
+    } catch (e, st) {
+      debugPrint('Error fetching earnings: $e\\n$st');
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -111,7 +206,9 @@ class _EarningsPayoutsScreenState extends State<EarningsPayoutsScreen> {
               ),
             ),
 
-            Column(
+            _isLoading 
+                ? const Center(child: CircularProgressIndicator(color: Color(0xFFFFB703)))
+                : Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 // ── Header ──
@@ -214,19 +311,12 @@ class _EarningsPayoutsScreenState extends State<EarningsPayoutsScreen> {
                             const SizedBox(width: 12),
                             Expanded(
                               child: _SummaryCard(
-                                label: 'PENDING',
-                                value: summary['pending']!,
-                                icon: Icons.hourglass_bottom_rounded,
+                                label: 'JOBS COMPLETED',
+                                value: summary['jobs']!,
+                                icon: Icons.build_circle_outlined,
                               ),
                             ),
                           ],
-                        ),
-                        const SizedBox(height: 12),
-                        _SummaryCard(
-                          label: 'JOBS COMPLETED',
-                          value: summary['jobs']!,
-                          icon: Icons.build_circle_outlined,
-                          wide: true,
                         ),
 
                         const SizedBox(height: 28),

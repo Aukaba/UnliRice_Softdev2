@@ -157,40 +157,15 @@ Future<void> _startLocationTracking() async {
       return;
     }
 
-    // Option 1: Listen to continuous location updates
+    // Listen to continuous location updates
     _positionStream = Geolocator.getPositionStream(
       locationSettings: const LocationSettings(
         accuracy: LocationAccuracy.high,
         distanceFilter: 50, // Update every 50 meters
-        timeLimit: null,     // No time limit
       ),
     ).listen((Position position) {
       _updateLocation(position.latitude, position.longitude);
     });
-
-    // Option 2: Also update every 30 seconds as fallback
-    _locationTimer = Timer.periodic(const Duration(seconds: 30), (_) async {
-      try {
-        final position = await Geolocator.getCurrentPosition(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.low,
-            timeLimit: Duration(seconds: 5),
-          ),
-        );
-        _updateLocation(position.latitude, position.longitude);
-      } catch (e) {
-        debugPrint('Periodic location update failed: $e');
-      }
-    });
-
-    // Get initial position immediately
-    final initialPosition = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.low,
-        timeLimit: Duration(seconds: 5),
-      ),
-    );
-    _updateLocation(initialPosition.latitude, initialPosition.longitude);
 
   } catch (e) {
     debugPrint('Error starting location tracking: $e');

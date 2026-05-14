@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -20,6 +22,10 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
   String _userPhone = '';
   List<Map<String, dynamic>> _userVehicles = [];
 
+  Uint8List? _profileImageBytes;
+  String? _profileImageUrl;
+  bool _isUploadingPhoto = false;
+
   @override
   void initState() {
     super.initState();
@@ -35,7 +41,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       // Query the 'user' table directly (driver/users tables don't exist)
       Map<String, dynamic>? data = await _supabase
           .from('user')
-          .select('first_name, last_name, phone_number')
+          .select('first_name, last_name, phone_number, profile_image_url')
           .eq('uid', user.id)
           .maybeSingle();
       setState(() {
@@ -44,6 +50,7 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         _userName = '$firstName $lastName'.trim();
         _userPhone = data?['phone_number'] ?? '';
         _userEmail = user.email ?? '';
+        _profileImageUrl = data?['profile_image_url'];
       });
     } catch (e) {
       print('Error fetching user info: $e');
@@ -79,6 +86,72 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
       print('Error fetching vehicles: $e');
     } finally {
       if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _pickAndUploadProfileImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 800,
+    );
+    if (picked == null || !mounted) return;
+
+    final bytes = await picked.readAsBytes();
+    setState(() {
+      _profileImageBytes = bytes;
+      _isUploadingPhoto = true;
+    });
+
+    try {
+      final uid = _supabase.auth.currentUser?.id;
+      if (uid == null) return;
+
+      final fileExt = picked.name.split('.').last;
+      final fileName = '$uid-${DateTime.now().millisecondsSinceEpoch}.$fileExt';
+
+      await _supabase.storage.from('profiles').uploadBinary(
+        fileName,
+        bytes,
+        fileOptions: const FileOptions(
+          contentType: 'image/jpeg',
+          upsert: true,
+        ),
+      );
+
+      final url = _supabase.storage.from('profiles').getPublicUrl(fileName);
+
+      await _supabase
+          .from('user')
+          .update({'profile_image_url': url})
+          .eq('uid', uid);
+
+      if (mounted) {
+        setState(() => _profileImageUrl = url);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Profile photo updated!',
+                style: GoogleFonts.inriaSans(
+                    fontWeight: FontWeight.w600, color: Colors.white)),
+            backgroundColor: const Color(0xFF009227),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Failed to upload profile image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload photo.',
+                style: GoogleFonts.inriaSans(
+                    fontWeight: FontWeight.w600, color: Colors.white)),
+            backgroundColor: const Color(0xFFD32F2F),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingPhoto = false);
     }
   }
 
@@ -297,14 +370,59 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
         children: [
           Row(
             children: [
-              Container(
-                width: 70,
-                height: 70,
-                decoration: BoxDecoration(
-                  color: Colors.grey.shade300,
-                  borderRadius: BorderRadius.circular(16),
+              GestureDetector(
+                onTap: _pickAndUploadProfileImage,
+                child: Stack(
+                  children: [
+                    Container(
+                      width: 70,
+                      height: 70,
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade300,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: ClipRRect(
+                        borderRadius: BorderRadius.circular(16),
+                        child: _isUploadingPhoto
+                            ? const Center(
+                                child: SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child: CircularProgressIndicator(strokeWidth: 2, color: Color(0xFF19456B)),
+                                ),
+                              )
+                            : _profileImageBytes != null
+                                ? Image.memory(
+                                    _profileImageBytes!,
+                                    fit: BoxFit.cover,
+                                    width: 70,
+                                    height: 70,
+                                  )
+                                : _profileImageUrl != null
+                                    ? Image.network(
+                                        _profileImageUrl!,
+                                        fit: BoxFit.cover,
+                                        width: 70,
+                                        height: 70,
+                                      )
+                                    : const Icon(Icons.person, size: 40, color: Colors.white),
+                      ),
+                    ),
+                    Positioned(
+                      bottom: -2,
+                      right: -2,
+                      child: Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF19456B),
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(Icons.camera_alt, size: 10, color: Colors.white),
+                      ),
+                    ),
+                  ],
                 ),
-                child: const Icon(Icons.person, size: 40, color: Colors.white),
               ),
               const SizedBox(width: 16),
               Expanded(
