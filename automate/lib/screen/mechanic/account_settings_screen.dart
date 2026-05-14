@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import '../authentication/reset_password_screen.dart';
 
 class AccountSettingsScreen extends StatefulWidget {
   const AccountSettingsScreen({super.key});
@@ -24,8 +25,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   final _phoneController = TextEditingController();
   final _addressController = TextEditingController();
   final _bioController = TextEditingController();
-  final _newPasswordController = TextEditingController();
-  final _confirmPasswordController = TextEditingController();
 
   @override
   void initState() {
@@ -41,8 +40,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
     _phoneController.dispose();
     _addressController.dispose();
     _bioController.dispose();
-    _newPasswordController.dispose();
-    _confirmPasswordController.dispose();
     super.dispose();
   }
 
@@ -73,18 +70,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
   Future<void> _saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
 
-    // Check password match if user entered a new password
-    if (_newPasswordController.text.isNotEmpty) {
-      if (_newPasswordController.text != _confirmPasswordController.text) {
-        _showSnack('Passwords do not match.', isError: true);
-        return;
-      }
-      if (_newPasswordController.text.length < 6) {
-        _showSnack('Password must be at least 6 characters.', isError: true);
-        return;
-      }
-    }
-
     setState(() => _isSaving = true);
 
     try {
@@ -106,15 +91,6 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
         await _supabase.auth.updateUser(
           UserAttributes(email: _emailController.text.trim()),
         );
-      }
-
-      // Update password if provided
-      if (_newPasswordController.text.isNotEmpty) {
-        await _supabase.auth.updateUser(
-          UserAttributes(password: _newPasswordController.text),
-        );
-        _newPasswordController.clear();
-        _confirmPasswordController.clear();
       }
 
       if (mounted) {
@@ -409,47 +385,38 @@ class _AccountSettingsScreenState extends State<AccountSettingsScreen> {
 
                                 // ── Change Password ──
                                 _SectionLabel(label: 'CHANGE PASSWORD'),
-                                const SizedBox(height: 4),
-                                Padding(
-                                  padding: const EdgeInsets.only(
-                                      left: 4, bottom: 12),
-                                  child: Text(
-                                    'Leave blank to keep current password',
-                                    style: GoogleFonts.inriaSans(
-                                      fontSize: 12,
-                                      color: Colors.black38,
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ),
+                                const SizedBox(height: 12),
                                 _Card(
-                                  child: Column(
-                                    children: [
-                                      _PasswordFieldRow(
-                                        label: 'New Password',
-                                        icon: Icons.lock_outline_rounded,
-                                        controller: _newPasswordController,
-                                        hint: 'Min. 6 characters',
-                                        obscure: _obscurePassword,
-                                        onToggle: () => setState(() =>
-                                            _obscurePassword =
-                                                !_obscurePassword),
-                                        isFirst: true,
+                                  child: ListTile(
+                                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                    leading: Container(
+                                      width: 36,
+                                      height: 36,
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF5F7FA),
+                                        borderRadius: BorderRadius.circular(10),
                                       ),
-                                      _CardDivider(),
-                                      _PasswordFieldRow(
-                                        label: 'Confirm Password',
-                                        icon: Icons.lock_outline_rounded,
-                                        controller:
-                                            _confirmPasswordController,
-                                        hint: 'Re-enter new password',
-                                        obscure: _obscurePassword,
-                                        onToggle: () => setState(() =>
-                                            _obscurePassword =
-                                                !_obscurePassword),
-                                        isLast: true,
-                                      ),
-                                    ],
+                                      child: const Icon(Icons.lock_outline_rounded, size: 18, color: Colors.black54),
+                                    ),
+                                    title: Text('Reset Password',
+                                        style: GoogleFonts.inriaSans(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.w600,
+                                          color: Colors.black87,
+                                        )),
+                                    subtitle: Text('Change your account password',
+                                        style: GoogleFonts.inriaSans(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.black38,
+                                        )),
+                                    trailing: const Icon(Icons.arrow_forward_ios_rounded, size: 16, color: Colors.black38),
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
+                                      );
+                                    },
                                   ),
                                 ),
                               ],

@@ -27,11 +27,13 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
   final TextEditingController _vehicleController = TextEditingController();
   final TextEditingController _plateController = TextEditingController();
   final TextEditingController _locationController = TextEditingController();
+  final FocusNode _locationFocusNode = FocusNode();
   final TextEditingController _descriptionController = TextEditingController();
   DateTime? _selectedDate;
   TimeOfDay? _selectedTime;
   bool _isLoading = false;
   Timer? _debounce;
+  Timer? _searchDebounce;
 
   List<Map<String, dynamic>> _userVehicles = [];
   String? _selectedVehicleId;
@@ -70,10 +72,12 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
   @override
   void dispose() {
     _debounce?.cancel();
+    _searchDebounce?.cancel();
     _titleController.dispose();
     _vehicleController.dispose();
     _plateController.dispose();
     _locationController.dispose();
+    _locationFocusNode.dispose();
     _descriptionController.dispose();
     super.dispose();
   }
@@ -498,7 +502,7 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                           ),
                           const SizedBox(height: 20),
                           Text(
-                            "Pickup Location",
+                            "Location",
                             style: GoogleFonts.montserrat(
                               fontSize: 14,
                               fontWeight: FontWeight.w400,
@@ -506,34 +510,117 @@ class _UserDashboardScreenState extends State<UserDashboardScreen> {
                             ),
                           ),
                           const SizedBox(height: 8),
-                          Container(
-                            decoration: BoxDecoration(
-                              color: const Color(
-                                0xFFEFEFEF,
-                              ), // Light gray background
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: TextField(
-                              controller: _locationController,
-                              decoration: InputDecoration(
-                                hintText:
-                                    "Cebu Institute of Technology - University",
-                                hintStyle: GoogleFonts.montserrat(
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w400,
-                                  color: Colors.black54,
+                          RawAutocomplete<Map<String, dynamic>>(
+                            textEditingController: _locationController,
+                            focusNode: _locationFocusNode,
+                            optionsBuilder: (TextEditingValue textEditingValue) async {
+                              if (textEditingValue.text.isEmpty || textEditingValue.text.length < 3) {
+                                return const Iterable<Map<String, dynamic>>.empty();
+                              }
+                              
+                              if (_searchDebounce?.isActive ?? false) _searchDebounce!.cancel();
+                              
+                              final Completer<Iterable<Map<String, dynamic>>> completer = Completer();
+                              
+                              _searchDebounce = Timer(const Duration(milliseconds: 1000), () async {
+                                try {
+                                  final String query = '${textEditingValue.text}, Cebu';
+                                  final url = Uri.parse(
+                                      'https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(query)}&countrycodes=ph&format=json&addressdetails=1&limit=5');
+                                  final response = await http.get(url, headers: {
+                                    'User-Agent': 'AutomateApp/1.0 (contact@example.com)'
+                                  });
+                                  if (response.statusCode == 200) {
+                                    final List data = json.decode(response.body);
+                                    completer.complete(data.cast<Map<String, dynamic>>());
+                                  } else {
+                                    completer.complete(const Iterable<Map<String, dynamic>>.empty());
+                                  }
+                                } catch (e) {
+                                  debugPrint("Search error: $e");
+                                  completer.complete(const Iterable<Map<String, dynamic>>.empty());
+                                }
+                              });
+                              
+                              return completer.future;
+                            },
+                            displayStringForOption: (option) {
+                              final parts = option['display_name'].toString().split(',');
+                              return parts.take(2).join(', ');
+                            },
+                            onSelected: (option) {
+                              final lat = double.tryParse(option['lat'].toString());
+                              final lon = double.tryParse(option['lon'].toString());
+                              if (lat != null && lon != null) {
+                                setState(() {
+                                  _selectedLocation = LatLng(lat, lon);
+                                  _mapController.move(_selectedLocation, 15.0);
+                                });
+                              }
+                            },
+                            fieldViewBuilder: (context, controller, focusNode, onFieldSubmitted) {
+                              return Container(
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFEFEFEF),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
-                                suffixIcon: const Icon(
-                                  Icons.location_on_outlined,
-                                  color: Colors.black54,
+                                child: TextField(
+                                  controller: controller,
+                                  focusNode: focusNode,
+                                  decoration: InputDecoration(
+                                    hintText: "e.g. Cebu Institute of Technology",
+                                    hintStyle: GoogleFonts.montserrat(
+                                      fontSize: 14,
+                                      fontWeight: FontWeight.w400,
+                                      color: Colors.black54,
+                                    ),
+                                    suffixIcon: const Icon(
+                                      Icons.location_on_outlined,
+                                      color: Colors.black54,
+                                    ),
+                                    border: InputBorder.none,
+                                    contentPadding: const EdgeInsets.symmetric(
+                                      horizontal: 16,
+                                      vertical: 16,
+                                    ),
+                                  ),
                                 ),
-                                border: InputBorder.none,
-                                contentPadding: const EdgeInsets.symmetric(
-                                  horizontal: 16,
-                                  vertical: 16,
+                              );
+                            },
+                            optionsViewBuilder: (context, onSelected, options) {
+                              return Align(
+                                alignment: Alignment.topLeft,
+                                child: Material(
+                                  elevation: 4.0,
+                                  borderRadius: BorderRadius.circular(12),
+                                  child: Container(
+                                    width: MediaQuery.of(context).size.width - 48,
+                                    constraints: const BoxConstraints(maxHeight: 250),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: ListView.separated(
+                                      padding: EdgeInsets.zero,
+                                      shrinkWrap: true,
+                                      itemCount: options.length,
+                                      separatorBuilder: (context, index) => const Divider(height: 1),
+                                      itemBuilder: (context, index) {
+                                        final option = options.elementAt(index);
+                                        return ListTile(
+                                          leading: const Icon(Icons.location_on, color: Color(0xFF19456B)),
+                                          title: Text(
+                                            option['display_name'] ?? '',
+                                            style: GoogleFonts.montserrat(fontSize: 12),
+                                          ),
+                                          onTap: () => onSelected(option),
+                                        );
+                                      },
+                                    ),
+                                  ),
                                 ),
-                              ),
-                            ),
+                              );
+                            },
                           ),
                           const SizedBox(height: 20),
                           Text(

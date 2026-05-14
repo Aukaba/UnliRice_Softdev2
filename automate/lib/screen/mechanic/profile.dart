@@ -306,15 +306,7 @@ Future<void> _signOut() async {
                           ),
                         ),
                       ),
-                      Container(
-                        width: 44,
-                        height: 44,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Icon(Icons.notifications_none, color: Colors.black87),
-                      ),
+
                     ],
                   ),
                 ),

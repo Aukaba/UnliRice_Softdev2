@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import '../Authentication/login_screen.dart';
+import '../authentication/reset_password_screen.dart';
 
 class UserProfileScreen extends StatefulWidget {
   const UserProfileScreen({super.key});
@@ -305,6 +306,38 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
                       value: _isLoading ? 'Loading...' : (_userPhone.isEmpty ? 'N/A' : _userPhone),
                     ),
                   const SizedBox(height: 28),
+
+                  // ── Reset Password Button ─────────────────────────────
+                  SizedBox(
+                    width: double.infinity,
+                    height: 52,
+                    child: ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(builder: (_) => const ResetPasswordScreen()),
+                        );
+                      },
+                      icon: const Icon(Icons.lock_reset, color: Color(0xFF19456B), size: 20),
+                      label: Text(
+                        'Reset Password',
+                        style: GoogleFonts.montserrat(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: const Color(0xFF19456B),
+                        ),
+                      ),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(14),
+                          side: const BorderSide(color: Color(0xFF19456B), width: 1.5),
+                        ),
+                        elevation: 0,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
 
                   // ── Log Out Button ──────────────────────────────────
                   SizedBox(
