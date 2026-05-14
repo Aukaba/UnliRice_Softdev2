@@ -73,7 +73,7 @@ class _MechanicScheduleScreenState extends State<MechanicScheduleScreen> {
         vehicle: j['vehicle'] ?? 'Vehicle',
         description: j['issue_description'] ?? 'No description',
         location: j['pickup_location'] ?? 'Unknown location',
-        time: '${date.hour > 12 ? date.hour - 12 : date.hour == 0 ? 12 : date.hour}:${date.minute.toString().padLeft(2, '0')} ${date.hour >= 12 ? 'PM' : 'AM'}',
+        time: '${date.hour > 12 ? date.hour - 12 : date.hour == 0 ? 12 : date.hour}:${date.minute.toString().padLeft(2, '0')} ${date.hour >= 12 ? 'PM' : 'AM'} PST',
         price: 'Pending Estimate', 
         tag: tag,
         date: date,

@@ -1351,7 +1351,7 @@ class _ScheduleSection extends StatelessWidget {
                       ? 12
                       : date.hour;
                   final timeString =
-                      '$hourStr:${date.minute.toString().padLeft(2, '0')} ${date.hour >= 12 ? 'PM' : 'AM'}';
+                      '$hourStr:${date.minute.toString().padLeft(2, '0')} ${date.hour >= 12 ? 'PM' : 'AM'} PST';
 
                   final now = DateTime.now();
                   final today = DateTime(now.year, now.month, now.day);
