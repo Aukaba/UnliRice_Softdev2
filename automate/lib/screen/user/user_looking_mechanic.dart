@@ -47,10 +47,13 @@ class _UserLookingMechanicScreenState extends State<UserLookingMechanicScreen>
       if (userId == null) return;
 
       // ✅ Check emergency_dispatches for accepted dispatch
+      // Also filter jobs.status = 'accepted' so we never match old completed jobs
+      // whose dispatch column is still 'accepted' from a prior session.
       final dispatches = await Supabase.instance.client
           .from('emergency_dispatches')
           .select('*, jobs!inner(*), mechanic:mechanic_id(first_name, last_name)')
           .eq('jobs.user_id', userId)
+          .eq('jobs.status', 'accepted')   // ← only freshly-accepted jobs
           .eq('status', 'accepted')
           .order('created_at', ascending: false)
           .limit(1);
@@ -79,22 +82,46 @@ class _UserLookingMechanicScreenState extends State<UserLookingMechanicScreen>
   });
 }
   void _cancelBooking() async {
+    if (_isCancelled) return; // guard against double-call
     _isCancelled = true;
     _checkTimer?.cancel();
 
     try {
       final userId = Supabase.instance.client.auth.currentUser?.id;
       if (userId != null) {
-        // Cancel the pending emergency job
-        await Supabase.instance.client
+        // 1. Find ALL active emergency jobs for this user
+        //    (pending OR accepted — catches the race where mechanic accepted
+        //     just before the user pressed cancel)
+        final activeJobs = await Supabase.instance.client
             .from('jobs')
-            .update({'status': 'cancelled'})
+            .select('id')
             .eq('user_id', userId)
             .eq('service_type', 'emergency')
-            .eq('status', 'pending');
+            .inFilter('status', ['pending', 'accepted']);
+
+        final jobIds = (activeJobs as List)
+            .map((j) => j['id'].toString())
+            .toList();
+
+        // 2. Cancel any dispatches (pending or accepted) linked to those jobs
+        if (jobIds.isNotEmpty) {
+          await Supabase.instance.client
+              .from('emergency_dispatches')
+              .update({'status': 'cancelled'})
+              .inFilter('job_id', jobIds)
+              .inFilter('status', ['pending', 'accepted']);
+        }
+
+        // 3. Cancel the jobs themselves
+        if (jobIds.isNotEmpty) {
+          await Supabase.instance.client
+              .from('jobs')
+              .update({'status': 'cancelled'})
+              .inFilter('id', jobIds);
+        }
       }
     } catch (e) {
-      debugPrint('Error cancelling: $e');
+      debugPrint('Error cancelling emergency: $e');
     }
 
     if (mounted) {
@@ -111,9 +138,15 @@ class _UserLookingMechanicScreenState extends State<UserLookingMechanicScreen>
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      body: Stack(
+    return PopScope(
+      // Intercept system back button — run the same cancel logic
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _cancelBooking();
+      },
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: Stack(
         children: [
           // Map Background Placeholder
           Positioned(
@@ -332,6 +365,7 @@ class _UserLookingMechanicScreenState extends State<UserLookingMechanicScreen>
           ),
         ],
       ),
-    );
+    ),  // closes Scaffold
+    ); // closes PopScope
   }
 }
