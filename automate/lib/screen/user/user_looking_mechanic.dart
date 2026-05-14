@@ -38,50 +38,46 @@ class _UserLookingMechanicScreenState extends State<UserLookingMechanicScreen>
   }
 
   // ✅ Poll for mechanic acceptance every 3 seconds
-  void _startCheckingForMechanic() {
-    _checkTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
-      if (_isCancelled || !mounted) return;
+ void _startCheckingForMechanic() {
+  _checkTimer = Timer.periodic(const Duration(seconds: 3), (_) async {
+    if (_isCancelled || !mounted) return;
 
-      try {
-        final userId = Supabase.instance.client.auth.currentUser?.id;
-        if (userId == null) return;
+    try {
+      final userId = Supabase.instance.client.auth.currentUser?.id;
+      if (userId == null) return;
 
-        // Check if any emergency job was accepted
-        final jobs = await Supabase.instance.client
-            .from('jobs')
-            .select(
-              'id, status, mechanic_id, mechanic:mechanic_id(first_name, last_name)',
-            )
-            .eq('user_id', userId)
-            .eq('service_type', 'emergency')
-            .eq('status', 'accepted')
-            .order('created_at', ascending: false)
-            .limit(1);
+      // ✅ Check emergency_dispatches for accepted dispatch
+      final dispatches = await Supabase.instance.client
+          .from('emergency_dispatches')
+          .select('*, jobs!inner(*), mechanic:mechanic_id(first_name, last_name)')
+          .eq('jobs.user_id', userId)
+          .eq('status', 'accepted')
+          .order('created_at', ascending: false)
+          .limit(1);
 
-        if (jobs.isNotEmpty && mounted) {
-          _checkTimer?.cancel();
-
-          final job = jobs.first;
-          final mechanic = job['mechanic'] as Map<String, dynamic>? ?? {};
-          final mechanicName =
-              '${mechanic['first_name'] ?? ''} ${mechanic['last_name'] ?? ''}'
-                  .trim();
-
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => UserDashboardMatchScreen(
-                jobData: job, // ✅ Only pass jobData
-              ),
-            ),
-          );
-        }
-      } catch (e) {
-        debugPrint('Error checking for mechanic: $e');
+      if (dispatches.isNotEmpty && mounted) {
+        _checkTimer?.cancel();
+        
+        final dispatch = dispatches.first;
+        final job = dispatch['jobs'] as Map<String, dynamic>? ?? {};
+        final mechanic = dispatch['mechanic'] as Map<String, dynamic>? ?? {};
+        
+        final mechanicName = '${mechanic['first_name'] ?? ''} ${mechanic['last_name'] ?? ''}'.trim();
+        job['mechanic_name'] = mechanicName.isNotEmpty ? mechanicName : 'Mechanic';
+        job['mechanic_id'] = dispatch['mechanic_id'] ?? '';
+        
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => UserDashboardMatchScreen(jobData: job),
+          ),
+        );
       }
-    });
-  }
-
+    } catch (e) {
+      debugPrint('[LookingForMechanic] Error: $e');
+    }
+  });
+}
   void _cancelBooking() async {
     _isCancelled = true;
     _checkTimer?.cancel();
