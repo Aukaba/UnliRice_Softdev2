@@ -167,6 +167,13 @@ class JobsLogic {
       final today = DateTime(now.year, now.month, now.day);
 
       for (var job in allJobs) {
+        // ✅ Emergency jobs have no scheduled_date — never auto-cancel them by date
+        final isEmergency = (job['service_type'] as String?) == 'emergency';
+        if (isEmergency) {
+          jobs.add(job);
+          continue;
+        }
+
         final dateStr = job['scheduled_date'] ?? job['created_at'];
         bool lapsed = false;
         if (dateStr != null) {
@@ -393,11 +400,36 @@ class JobsLogic {
       throw Exception('No mechanics currently available for emergency');
     }
 
+    // 2b. Exclude mechanics that currently have an active (accepted / in_progress) job
+    final allMechanicIds =
+        mechanicsRes.map((m) => m['uid'] as String).toList();
+
+    final busyJobsRes = await _supabase
+        .from('jobs')
+        .select('mechanic_id')
+        .inFilter('mechanic_id', allMechanicIds)
+        .inFilter('status', ['accepted', 'in_progress']);
+
+    final busyIds =
+        busyJobsRes.map((j) => j['mechanic_id'] as String).toSet();
+
+    final availableMechanics =
+        mechanicsRes.where((m) => !busyIds.contains(m['uid'])).toList();
+
+    debugPrint(
+      '[JobsLogic] dispatchEmergency - free mechanics after busy filter: ${availableMechanics.length}',
+    );
+
+    if (availableMechanics.isEmpty) {
+      debugPrint('[JobsLogic] dispatchEmergency - ALL MECHANICS ARE BUSY');
+      throw Exception('No mechanics currently available for emergency');
+    }
+
     // 3. Find nearest mechanic using Haversine formula
     String? nearestMechanicId;
     double shortestDistance = double.infinity;
 
-    for (final mechanic in mechanicsRes) {
+    for (final mechanic in availableMechanics) {
       if (latitude != null &&
           longitude != null &&
           mechanic['latitude'] != null &&
@@ -420,8 +452,8 @@ class JobsLogic {
       }
     }
 
-    // ✅ Fallback: if no mechanic has coordinates, pick the first one
-    nearestMechanicId ??= (mechanicsRes.first['uid'] as String);
+    // ✅ Fallback: if no mechanic has coordinates, pick the first free one
+    nearestMechanicId ??= (availableMechanics.first['uid'] as String);
 
     debugPrint(
       '[JobsLogic] dispatchEmergency - nearest: $nearestMechanicId (${shortestDistance.toStringAsFixed(2)} km)',
