@@ -94,7 +94,7 @@ class _MechMateChatScreenState extends State<MechMateChatScreen> {
       source: source,
       maxWidth: 800,
       maxHeight: 800,
-      imageQuality: 80,
+      imageQuality: 50,
     );
     if (photo != null) {
       setState(() => _selectedImage = File(photo.path));
@@ -117,9 +117,9 @@ Future<void> _sendMessageWithImage() async {
   final base64String = base64Encode(bytes);  // This is a String
   
   // Prepare prompt
-  final prompt = hasText
-      ? text
-      : "Look at this vehicle image. What visible issues or potential problems can you identify? List 3 possibilities.";
+ final prompt = hasText
+  ? text
+  : "Look at this vehicle image. What visible issues or potential problems can you identify? List the top 3 possibilities with brief explanations.";
 
   // Save the image reference for display
   final imageForDisplay = _selectedImage;
