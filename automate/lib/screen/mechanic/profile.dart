@@ -9,6 +9,8 @@ import '../authentication/login_screen.dart'; // Just in case for logout
 import 'earnings_payouts_screen.dart';
 import 'job_history_screen.dart';
 import 'working_hours_screen.dart';
+import 'dart:typed_data';
+import 'package:image_picker/image_picker.dart';
 
 class MechanicProfileScreen extends StatefulWidget {
   const MechanicProfileScreen({super.key});
@@ -29,6 +31,10 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
   String _reviewCount = '0';
   String _jobsDone = '0';
   String _yearJoined = '—';
+
+  Uint8List? _profileImageBytes;   // holds picked image in memory
+  String? _profileImageUrl;        // holds the URL from Supabase Storage
+  bool _isUploadingPhoto = false;
   
   final List<String> _presetSpecializations = [
   'Toyota', 'Honda', 'Mitsubishi', 'Suzuki', 'Ford', 'Nissan', 'Mazda',
@@ -46,6 +52,85 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
     _loadMechanicInfo();
   }
 
+  Future<void> _pickAndUploadProfileImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 800,
+    );
+    if (picked == null || !mounted) return;
+ 
+    final bytes = await picked.readAsBytes();
+    setState(() {
+      _profileImageBytes = bytes;
+      _isUploadingPhoto = true;
+    });
+ 
+    try {
+      final uid = _supabase.auth.currentUser?.id;
+      if (uid == null) return;
+ 
+      final fileName = 'profile_$uid.jpg';
+      final storagePath = 'mechanic-profiles/$fileName';
+ 
+      // Upload to Supabase Storage bucket named "mechanic-profiles"
+      await _supabase.storage.from('mechanic-profiles').uploadBinary(
+        fileName,
+        bytes,
+        fileOptions: const FileOptions(
+          contentType: 'image/jpeg',
+          upsert: true, // overwrite if exists
+        ),
+      );
+ 
+      // Get public URL
+      final url = _supabase.storage
+          .from('mechanic-profiles')
+          .getPublicUrl(fileName);
+ 
+      // Save URL to mechanic table
+      await _supabase
+          .from('mechanic')
+          .update({'profile_image_url': url})
+          .eq('uid', uid);
+ 
+      if (mounted) {
+        setState(() => _profileImageUrl = url);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Profile photo updated!',
+                style: GoogleFonts.inriaSans(
+                    fontWeight: FontWeight.w600, color: Colors.white)),
+            backgroundColor: const Color(0xFF2F8A48),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Failed to upload profile image: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload photo.',
+                style: GoogleFonts.inriaSans(
+                    fontWeight: FontWeight.w600, color: Colors.white)),
+            backgroundColor: const Color(0xFFD72B2B),
+            behavior: SnackBarBehavior.floating,
+            shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(14)),
+            margin: const EdgeInsets.all(16),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isUploadingPhoto = false);
+    }
+  }
+
   Future<void> _loadMechanicInfo() async {
     try {
       final uid = _supabase.auth.currentUser?.id;
@@ -53,7 +138,7 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
 
       final data = await _supabase
           .from('mechanic')
-          .select('first_name, last_name, available_for_emergency, created_at')
+          .select('first_name, last_name, available_for_emergency, created_at, profile_image_url')
           .eq('uid', uid)
           .single();
 
@@ -92,6 +177,7 @@ class _MechanicProfileScreenState extends State<MechanicProfileScreen> {
       setState(() {
         final firstName = data['first_name'] ?? '';
         final lastName = data['last_name'] ?? '';
+        _profileImageUrl = data['profile_image_url'];
         _mechanicName = '$firstName $lastName'.trim();
         _availableForEmergency = data['available_for_emergency'] ?? false;
         _avgRating = avgRating;
@@ -545,20 +631,74 @@ Future<void> _signOut() async {
                               // Avatar + name
                               Row(
                                 children: [
-                                  Container(
-                                    width: 64,
-                                    height: 64,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(20),
-                                      color: const Color(0xFFE0D6C8),
-                                    ),
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(20),
-                                      child: const Icon(
-                                        Icons.person,
-                                        size: 40,
-                                        color: Color(0xFF8B7355),
-                                      ),
+                                  GestureDetector(
+                                    onTap: _pickAndUploadProfileImage,
+                                    child: Stack(
+                                      children: [
+                                        Container(
+                                          width: 64,
+                                          height: 64,
+                                          decoration: BoxDecoration(
+                                            borderRadius: BorderRadius.circular(20),
+                                            color: const Color(0xFFE0D6C8),
+                                          ),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.circular(20),
+                                            child: _isUploadingPhoto
+                                                ? const Center(
+                                                    child: SizedBox(
+                                                      width: 24,
+                                                      height: 24,
+                                                      child: CircularProgressIndicator(
+                                                        color: Color(0xFFFFB703),
+                                                        strokeWidth: 2.5,
+                                                      ),
+                                                    ),
+                                                  )
+                                                : _profileImageBytes != null
+                                                    ? Image.memory(
+                                                        _profileImageBytes!,
+                                                        fit: BoxFit.cover,
+                                                        width: 64,
+                                                        height: 64,
+                                                      )
+                                                    : _profileImageUrl != null
+                                                        ? Image.network(
+                                                            _profileImageUrl!,
+                                                            fit: BoxFit.cover,
+                                                            width: 64,
+                                                            height: 64,
+                                                            errorBuilder: (_, __, ___) =>
+                                                                const Icon(Icons.person,
+                                                                    size: 40,
+                                                                    color: Color(0xFF8B7355)),
+                                                          )
+                                                        : const Icon(Icons.person,
+                                                            size: 40,
+                                                            color: Color(0xFF8B7355)),
+                                          ),
+                                        ),
+                                        // Camera badge
+                                        Positioned(
+                                          bottom: 0,
+                                          right: 0,
+                                          child: Container(
+                                            width: 22,
+                                            height: 22,
+                                            decoration: BoxDecoration(
+                                              color: const Color(0xFFFFB703),
+                                              shape: BoxShape.circle,
+                                              border: Border.all(
+                                                  color: Colors.white, width: 2),
+                                            ),
+                                            child: const Icon(
+                                              Icons.camera_alt_rounded,
+                                              size: 11,
+                                              color: Colors.black,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
                                     ),
                                   ),
                                   const SizedBox(width: 14),
