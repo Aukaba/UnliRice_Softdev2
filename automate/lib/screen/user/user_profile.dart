@@ -456,8 +456,8 @@ class _UserProfileScreenState extends State<UserProfileScreen> {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               _buildStatsBox(Icons.library_books, '24', 'Total Requests'),
-              _buildStatsBox(Icons.check, '21', 'Total Requests'),
-              _buildStatsBox(Icons.calendar_month_outlined, '2025', 'Total Requests'),
+              _buildStatsBox(Icons.check, '21', 'Completed'),
+              _buildStatsBox(Icons.calendar_month_outlined, '2025', 'Joined Year'),
             ],
           ),
         ],
