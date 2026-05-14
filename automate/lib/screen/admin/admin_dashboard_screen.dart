@@ -120,9 +120,7 @@ class _NavItem extends StatelessWidget {
               style: TextStyle(
                 fontSize: 11,
                 fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
-                color: isActive
-                    ? const Color(0xFF19456B)
-                    : Colors.grey.shade400,
+                color: isActive ? const Color(0xFF19456B) : Colors.grey.shade400,
               ),
             ),
           ],
@@ -148,7 +146,6 @@ class _DashboardTabState extends State<_DashboardTab> {
   bool _isLoading = true;
   String _adminName = 'Admin';
   int _pendingMechanics = 0;
-  int _activeRequests = 0;
   int _registeredDrivers = 0;
   int _verifiedMechanics = 0;
 
@@ -161,7 +158,7 @@ class _DashboardTabState extends State<_DashboardTab> {
   Future<void> _loadData() async {
     try {
       final uid = _supabase.auth.currentUser?.id;
-      
+
       // Get admin name
       if (uid != null) {
         try {
@@ -184,28 +181,17 @@ class _DashboardTabState extends State<_DashboardTab> {
             .from('mechanic_verification')
             .select('id')
             .eq('status', 'pending');
-        _pendingMechanics = pending.length;
+        _pendingMechanics = (pending as List).length;
       } catch (e) {
         debugPrint("Error fetching pending: $e");
-      }
-
-      // Get active requests (adjust table name to match your database)
-      try {
-        final active = await _supabase
-            .from('jobs')  // Changed from 'requests' - adjust to your table name
-            .select('id')
-            .or('status.eq.active,status.eq.in-progress');  // Active or in-progress
-        _activeRequests = active.length;
-      } catch (e) {
-        debugPrint("Error fetching active requests: $e");
       }
 
       // Get registered users/drivers
       try {
         final drivers = await _supabase
-            .from('users')  // Your users table
-            .select('id');
-        _registeredDrivers = drivers.length;
+            .from('user')
+            .select('uid');
+        _registeredDrivers = (drivers as List).length;
       } catch (e) {
         debugPrint("Error fetching drivers: $e");
       }
@@ -213,12 +199,12 @@ class _DashboardTabState extends State<_DashboardTab> {
       // Get verified mechanics
       try {
         final verified = await _supabase
-            .from('mechanic_verification')
-            .select('id')
-            .eq('status', 'approved');
-        _verifiedMechanics = verified.length;
+            .from('mechanic')
+            .select('uid')
+            .eq('verified', true);
+        _verifiedMechanics = (verified as List).length;
       } catch (e) {
-        debugPrint("Error fetching verified: $e");
+        debugPrint("Error fetching verified mechanics: $e");
       }
 
     } catch (e) {
@@ -238,44 +224,32 @@ class _DashboardTabState extends State<_DashboardTab> {
           children: [
             // Sidebar layers
             Positioned(
-              left: -28,
-              top: 87,
+              left: -28, top: 87,
               child: Container(
-                width: 258,
-                height: MediaQuery.of(context).size.height,
+                width: 258, height: MediaQuery.of(context).size.height,
                 decoration: ShapeDecoration(
                   color: const Color(0x4C164D83),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(19),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(19)),
                 ),
               ),
             ),
             Positioned(
-              left: -18,
-              top: 87,
+              left: -18, top: 87,
               child: Container(
-                width: 176,
-                height: MediaQuery.of(context).size.height,
+                width: 176, height: MediaQuery.of(context).size.height,
                 decoration: ShapeDecoration(
                   color: const Color(0x7F164D83),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(19),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(19)),
                 ),
               ),
             ),
             Positioned(
-              left: -18,
-              top: 87,
+              left: -18, top: 87,
               child: Container(
-                width: 103,
-                height: MediaQuery.of(context).size.height,
+                width: 103, height: MediaQuery.of(context).size.height,
                 decoration: ShapeDecoration(
                   color: const Color(0xFF164D83),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(19),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(19)),
                 ),
               ),
             ),
@@ -289,40 +263,21 @@ class _DashboardTabState extends State<_DashboardTab> {
                   child: Row(
                     children: [
                       Container(
-                        width: 70,
-                        height: 70,
-                        decoration: ShapeDecoration(
-                          image: const DecorationImage(
-                            image: NetworkImage("https://placehold.co/98x98"),
-                            fit: BoxFit.cover,
-                          ),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(9999),
-                          ),
+                        width: 70, height: 70,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF164D83),
+                          borderRadius: BorderRadius.circular(35),
                         ),
+                        child: const Icon(Icons.admin_panel_settings, color: Colors.white, size: 35),
                       ),
                       const SizedBox(width: 12),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            'Welcome, $_adminName',
-                            style: const TextStyle(
-                              color: Color(0xFF1A1A1A),
-                              fontSize: 18,
-                              fontFamily: 'Poppins',
-                              fontWeight: FontWeight.w700,
-                            ),
-                          ),
-                          const Text(
-                            'Management System',
-                            style: TextStyle(
-                              color: Color(0xFF666666),
-                              fontSize: 12,
-                              fontFamily: 'Inter',
-                              fontWeight: FontWeight.w400,
-                            ),
-                          ),
+                          Text('Welcome, $_adminName',
+                            style: const TextStyle(color: Color(0xFF1A1A1A), fontSize: 18, fontFamily: 'Poppins', fontWeight: FontWeight.w700)),
+                          const Text('Management System',
+                            style: TextStyle(color: Color(0xFF666666), fontSize: 12, fontFamily: 'Inter', fontWeight: FontWeight.w400)),
                         ],
                       ),
                       const Spacer(),
@@ -339,11 +294,7 @@ class _DashboardTabState extends State<_DashboardTab> {
                 // Stat cards
                 Expanded(
                   child: _isLoading
-                      ? const Center(
-                          child: CircularProgressIndicator(
-                            color: Color(0xFF19456B),
-                          ),
-                        )
+                      ? const Center(child: CircularProgressIndicator(color: Color(0xFF19456B)))
                       : SingleChildScrollView(
                           padding: const EdgeInsets.fromLTRB(36, 0, 36, 24),
                           child: Column(
@@ -354,16 +305,7 @@ class _DashboardTabState extends State<_DashboardTab> {
                                 subtitle: 'Waiting for approval',
                                 icon: Icons.pending_actions,
                                 color: const Color(0xFFFFB703),
-                                onTap: () => widget.onSwitchTab(1), // Switch to verification tab
-                              ),
-                              const SizedBox(height: 16),
-                              _StatCard(
-                                title: 'Active Requests',
-                                value: '$_activeRequests',
-                                subtitle: 'Drivers requesting help',
-                                icon: Icons.build_circle,
-                                color: const Color(0xFF19456B),
-                                onTap: null,
+                                onTap: () => widget.onSwitchTab(1),
                               ),
                               const SizedBox(height: 16),
                               _StatCard(
@@ -439,10 +381,8 @@ class _StatCard extends StatelessWidget {
         ),
         child: Row(
           children: [
-            // Icon container
             Container(
-              width: 56,
-              height: 56,
+              width: 56, height: 56,
               decoration: BoxDecoration(
                 color: color.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(16),
@@ -450,44 +390,21 @@ class _StatCard extends StatelessWidget {
               child: Icon(icon, color: color, size: 28),
             ),
             const SizedBox(width: 16),
-            // Text content
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    title,
-                    style: const TextStyle(
-                      color: Color(0xFF666666),
-                      fontSize: 13,
-                      fontFamily: 'Poppins',
-                      fontWeight: FontWeight.w500,
-                    ),
-                  ),
+                  Text(title,
+                    style: const TextStyle(color: Color(0xFF666666), fontSize: 13, fontFamily: 'Poppins', fontWeight: FontWeight.w500)),
                   const SizedBox(height: 4),
-                  Text(
-                    value,
-                    style: const TextStyle(
-                      color: Color(0xFF1A1A1A),
-                      fontSize: 32,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w700,
-                    ),
-                  ),
+                  Text(value,
+                    style: const TextStyle(color: Color(0xFF1A1A1A), fontSize: 32, fontFamily: 'Inter', fontWeight: FontWeight.w700)),
                   const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      color: Color(0xFF999999),
-                      fontSize: 12,
-                      fontFamily: 'Inter',
-                      fontWeight: FontWeight.w400,
-                    ),
-                  ),
+                  Text(subtitle,
+                    style: const TextStyle(color: Color(0xFF999999), fontSize: 12, fontFamily: 'Inter', fontWeight: FontWeight.w400)),
                 ],
               ),
             ),
-            // Arrow icon if tappable
             if (onTap != null)
               Icon(Icons.arrow_forward_ios, color: Colors.grey.shade400, size: 16),
           ],
